@@ -115,8 +115,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
 .tgh i{position:absolute;left:46px;right:0;top:0;height:1px;background:var(--line);display:block}
 .tgnow{position:absolute;left:40px;right:0;height:2px;background:var(--red);z-index:3;border-radius:2px}
 .tgnow::before{content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--red)}
-.tgev{position:absolute;z-index:2;background:rgba(11,166,120,.92);border-left:3px solid var(--emerald-dark);
-  border-radius:6px;padding:4px 6px;overflow:hidden;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+/* 事项区：从时间刻度右边开始 → 里面的百分比才是「可用宽度」的百分比 */
+.tgcols{position:absolute;left:46px;right:0;top:0;bottom:0;z-index:2}
+.tgev{position:absolute;background:rgba(11,166,120,.92);border-left:3px solid var(--emerald-dark);
+  border-radius:6px;padding:4px 6px;overflow:hidden;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);
+  box-sizing:border-box;margin-right:2px}
+.tgev.narrow{padding:3px 4px}
+.tgev.narrow b{font-size:10.5px}
+.tgev.narrow span{font-size:8.5px}
 .tgev b{display:block;font-size:11.5px;font-weight:800;color:#fff;line-height:1.25;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tgev span{display:block;font-size:9.5px;color:rgba(255,255,255,.8);font-variant-numeric:tabular-nums;line-height:1.3}
@@ -405,6 +411,19 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
 #add.paste .add-top{padding-bottom:10px}
 #add.paste .catgrid,#add.paste .subrow,#add.paste .amtline,#add.paste .datechip,#add.paste .pad,#add.paste #ieSeg,#add.paste .cur{display:none}
 #add.paste .pastepanel{display:block}
+/* v8.0 事项 tab：把记账那套全收起来，只留事项表单 */
+.eventpanel{display:none;padding:12px 20px calc(18px + env(safe-area-inset-bottom));overflow-y:auto}
+.eventpanel .fl{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin:10px 2px 6px}
+.eventpanel input[type="text"]{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--card);
+  color:var(--ink);border-radius:12px;padding:12px;font-size:15px;font-family:inherit}
+.eventpanel input[type="text"]:focus{outline:none;border-color:var(--brand)}
+.eventpanel .save{width:100%;background:var(--emerald);color:#fff;border:none;font-family:inherit;font-size:17px;
+  font-weight:700;padding:15px;border-radius:16px;box-shadow:0 4px 14px rgba(11,166,120,.35);cursor:pointer;margin-top:14px}
+.eventpanel .save:active{background:var(--emerald-dark)}
+.eventpanel .cdel{width:100%;margin-top:10px}
+#add.event .add-top{padding-bottom:10px}
+#add.event .catgrid,#add.event .subrow,#add.event .amtline,#add.event .datechip,#add.event .pad,#add.event #ieSeg,#add.event .cur,#add.event .pastepanel{display:none}
+#add.event .eventpanel{display:block}
 /* v6.7 tile 固定 68px 高 → catgrid 的 154px 正好 = 完整 2 行，不会切到一半。
    （v6.4 压高度时没算行高，切在第二排中间，图标露一半、名字被吃掉。） */
 .catpick{background:none;border:none;font-family:inherit;cursor:pointer;height:68px;padding:4px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:.15s;scroll-snap-align:start}
@@ -932,7 +951,7 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
     <input type="file" id="bgFile" accept="image/*" style="display:none">
   </div>
 
-  <div style="text-align:center;color:#B9BFC6;font-size:11px;font-weight:500;letter-spacing:.5px;padding:22px 0 6px">花费 · Zheng　v7.9</div>
+  <div style="text-align:center;color:#B9BFC6;font-size:11px;font-weight:500;letter-spacing:.5px;padding:22px 0 6px">花费 · Zheng　v8.0</div>
 </div>
 
 <div class="mp-scrim" id="mpScrim"></div>
@@ -1086,35 +1105,6 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
   </div>
 </div>
 
-<div class="cmScrim" id="evScrim"></div>
-<div class="cmod" id="evMod" role="dialog" aria-label="事项">
-  <div class="eh" id="evTitle">加事项</div>
-  <span class="fl">要做什么</span>
-  <input type="text" id="evName" placeholder="例：牙医 / 打球" autocomplete="off">
-  <div class="evrow evrow-sw">
-    <span class="evlbl">全天</span>
-    <button class="evsw" id="evAllday" type="button" role="switch" aria-checked="false"><i></i></button>
-  </div>
-  <div class="evrow">
-    <span class="evlbl">开始</span>
-    <input type="date" id="evDay">
-    <input type="time" id="evTime" class="evt">
-  </div>
-  <div class="evrow">
-    <span class="evlbl">结束</span>
-    <input type="date" id="evEnd">
-    <input type="time" id="evETime" class="evt">
-  </div>
-  <div class="evmeta" id="evSpan"></div>
-  <span class="fl">备注（可留空）</span>
-  <input type="text" id="evNote" placeholder="地点、要带的东西…" autocomplete="off">
-  <div class="ebtns">
-    <button class="ecancel" id="evCancel">取消</button>
-    <button class="econfirm" id="evSave">保存</button>
-  </div>
-  <button class="cdel" id="evDel">删除这个事项</button>
-</div>
-
 <div class="cmScrim" id="rmScrim"></div>
 <div class="cmod" id="rmod" role="dialog" aria-label="定期账单">
   <div class="eh" id="rmTitle">定期账单</div>
@@ -1181,7 +1171,7 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
     <div class="ie" id="ieSeg"><button data-t="expense" class="on">支出</button><button data-t="income">收入</button></div>
     <div class="cur"><button class="curbtn" id="curBtn">SGD</button></div>
   </div>
-  <div class="addtabs" id="addTabs"><button data-am="manual" class="on">手动</button><button data-am="paste">粘贴短信</button></div>
+  <div class="addtabs" id="addTabs"><button data-am="manual" class="on">手动</button><button data-am="paste">粘贴短信</button><button data-am="event">事项</button></div>
   <div class="catgrid" id="catgrid"></div>
   <div class="subrow hide" id="subRow"></div>
   <div class="amtline">
@@ -1195,6 +1185,29 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
     <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
     <button data-k=".">.</button><button data-k="0">0</button><button data-k="bk" class="bk">⌫</button>
     <button class="save" id="save">保存</button>
+  </div>
+  <div class="eventpanel" id="eventPanel">
+    <span class="fl">要做什么</span>
+    <input type="text" id="evName" placeholder="例：牙医 / 打球" autocomplete="off">
+    <div class="evrow evrow-sw">
+      <span class="evlbl">全天</span>
+      <button class="evsw" id="evAllday" type="button" role="switch" aria-checked="false"><i></i></button>
+    </div>
+    <div class="evrow">
+      <span class="evlbl">开始</span>
+      <input type="date" id="evDay">
+      <input type="time" id="evTime" class="evt">
+    </div>
+    <div class="evrow">
+      <span class="evlbl">结束</span>
+      <input type="date" id="evEnd">
+      <input type="time" id="evETime" class="evt">
+    </div>
+    <div class="evmeta" id="evSpan"></div>
+    <span class="fl">备注（可留空）</span>
+    <input type="text" id="evNote" placeholder="地点、要带的东西…" autocomplete="off">
+    <button class="save" id="evSave">保存</button>
+    <button class="cdel" id="evDel">删除这个事项</button>
   </div>
   <div class="pastepanel" id="pastePanel">
     <textarea id="pasteText" placeholder="把银行的消费短信 / 邮件内容整段复制粘贴进来，例如 DBS PayLah! 或 OCBC 的提醒…"></textarea>
@@ -1529,13 +1542,14 @@ function buildCalTodo(y,m,first,dim,isCur,t){
         +`<span class="dn">${d}</span></div>`;
     });
     segs.filter(sg=>sg.lane<MAX_LANE).forEach(sg=>{
-      const multi=evEnd(sg.e)>sg.e.day;
       const cls=['cbar'];
       if(isPastEvent(sg.e))cls.push('past');
       if(sg.cutL)cls.push('cutL');
       if(sg.cutR)cls.push('cutR');
+      /* v8.0：月视图不显示时间 —— 照 iPhone：上面日期、下面就是事情的名字。
+         格子才 42px，塞个「19」进去只会把名字挤掉。要看几点 → 点进那天的时间格。 */
       h+=`<i class="${cls.join(' ')}" style="grid-column:${sg.c1}/${sg.c2+1};grid-row:${sg.lane+2}">`
-        +`${(!multi&&sg.e.time)?'<b>'+esc(sg.e.time.slice(0,2))+'</b> ':''}${esc(sg.e.title)}</i>`;
+        +`${esc(sg.e.title)}</i>`;
     });
     Object.entries(over).forEach(([c,n])=>{
       h+=`<i class="cmore" style="grid-column:${c};grid-row:${shown+2}">+${n}</i>`;
@@ -1828,14 +1842,20 @@ function buildTimeGrid(dayKey,evs){
   }
   const now=todayKey()===dayKey?hmMin(sgtHM(new Date())):-1;
   if(now>=0)h+=`<div class="tgnow" style="top:${(now/60*HOUR).toFixed(1)}px"></div>`;
+  /* ⚠️ v8.0：事项装在 .tgcols 里（它从时间刻度右边才开始）→ 里面用纯百分比。
+     v7.9 的写法是 left:calc(25%*i + 46px) / width:calc(25% - 48px)：
+     那个 25% 是「整个容器（含左边刻度）」的 25%，又从每格再扣 48px
+     → 4 个事项时每格只剩 37px，又窄又散（用户截图那个）。
+     现在：1 个占满整条 · 2 个各一半 · 3 个各 1/3 —— 平均分，边对边。 */
+  h+='<div class="tgcols">';
   timed.forEach(x=>{
     const top=x.s/60*HOUR, hgt=Math.max(MINH,(x.en-x.s)/60*HOUR);
     const w=100/x.cols, left=x.col*w;
-    h+=`<div class="tgev${isPastEvent(x.ev)?' past':''}${hgt<34?' tiny':''}" data-evopen="${x.ev.id}"
-         style="top:${top.toFixed(1)}px;height:${hgt.toFixed(1)}px;left:calc(${left}% + 46px);width:calc(${w}% - 48px)">`
+    h+=`<div class="tgev${isPastEvent(x.ev)?' past':''}${hgt<34?' tiny':''}${x.cols>2?' narrow':''}" data-evopen="${x.ev.id}"
+         style="top:${top.toFixed(1)}px;height:${hgt.toFixed(1)}px;left:${left.toFixed(3)}%;width:${w.toFixed(3)}%">`
       +`<b>${esc(x.ev.title)}</b><span>${minHM(x.s)}–${minHM(x.en)}</span></div>`;
   });
-  h+='</div></div>';
+  h+='</div></div></div>';
   return h;
 }
 /* v7.9 打开事项 tab 时，自动滚到有事的时段（不然 24 小时你要自己滚半天） */
@@ -2167,6 +2187,7 @@ function openSheet(dayKey){
   /* v7.1：从日期页按 ＋ 进来 → 预填那天。以前用 toISOString()（UTC）→ 早上 8 点前默认日期会变成昨天 */
   document.getElementById('date').value=(typeof dayKey==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(dayKey))?dayKey:todayKey();
   buildCatGrid();updAmt();scrim.classList.add('show');add.classList.add('show');
+  evEditId=null;evEditDay=null;document.getElementById('evDay').value='';   /* 清掉事项态，免得下次 ＋ 还停在上次编辑的那件事 */
   setAddMode('manual');
 }
 function closeSheet(){scrim.classList.remove('show');add.classList.remove('show');}
@@ -2174,10 +2195,31 @@ document.getElementById('fab').onclick=()=>openSheet();
 
 /* v6.3 手动/粘贴 tab */
 function setAddMode(m){
-  document.getElementById('add').classList.toggle('paste',m==='paste');
+  const el=document.getElementById('add');
+  el.classList.toggle('paste',m==='paste');
+  el.classList.toggle('event',m==='event');     /* v8.0 第三个 tab：事项 */
   [...document.getElementById('addTabs').children].forEach(b=>b.classList.toggle('on',b.dataset.am===m));
+  if(m==='event'&&!document.getElementById('evDay').value){
+    evEditId=null;evEditDay=todayKey();
+    document.getElementById('evName').value='';document.getElementById('evNote').value='';
+    document.getElementById('evDay').value=todayKey();document.getElementById('evEnd').value=todayKey();
+    document.getElementById('evTime').value='';document.getElementById('evETime').value='';
+    document.getElementById('evDel').style.display='none';
+    evSetAllday(false);
+  }
 }
-document.getElementById('addTabs').addEventListener('click',e=>{const b=e.target.closest('[data-am]');if(b)setAddMode(b.dataset.am);});
+document.getElementById('addTabs').addEventListener('click',e=>{
+  const b=e.target.closest('[data-am]');if(!b)return;
+  if(b.dataset.am==='event'&&!evEditId){        /* 从 tab 点进来 = 新增今天的事项 */
+    evEditId=null;evEditDay=openDayKey&&dayOpen()?openDayKey:todayKey();
+    document.getElementById('evName').value='';document.getElementById('evNote').value='';
+    document.getElementById('evDay').value=evEditDay;document.getElementById('evEnd').value=evEditDay;
+    document.getElementById('evTime').value='';document.getElementById('evETime').value='';
+    document.getElementById('evDel').style.display='none';
+    evSetAllday(false);
+  }
+  setAddMode(b.dataset.am);
+});
 document.getElementById('pasteBtn').onclick=async()=>{
   const ta=document.getElementById('pasteText');const text=ta.value.trim();
   if(!text){toast('先把短信内容贴进来','err');return;}
@@ -3016,7 +3058,6 @@ window.addEventListener('mouseup',dsEnd);
    一个发现不了的手势就是不存在的功能，还会在滚动时误触。
    现在只留 设置 → 🧩 总览排序 这一个永久入口。 */
 
-const evScrim=document.getElementById('evScrim'),evMod=document.getElementById('evMod');
 let evEditId=null,evEditDay=null;
 /* v7.5 跨天：开始 → 结束。end 为 null/等于开始 = 就一天。 */
 const dayAdd=(k,n)=>{const d=new Date(k+'T00:00:00+08:00');d.setDate(d.getDate()+n);return isoDay(d);};
@@ -3025,16 +3066,20 @@ const evEnd=e=>(e.end&&e.end>e.day)?e.end:e.day;
 function openEvEdit(id,day){
   const e=id?EV.find(x=>String(x.id)===String(id)):null;
   evEditId=e?e.id:null;evEditDay=e?e.day:day;
-  document.getElementById('evTitle').textContent=e?'编辑事项':'加事项';
+
   document.getElementById('evName').value=e?e.title:'';
   document.getElementById('evDay').value=e?e.day:day;
   document.getElementById('evEnd').value=e?evEnd(e):day;
   document.getElementById('evTime').value=(e&&e.time)?e.time:'';
   document.getElementById('evETime').value=(e&&e.etime)?e.etime:'';
   document.getElementById('evNote').value=(e&&e.note)?e.note:'';
-  document.getElementById('evDel').style.display=e?'block':'none';
   evSetAllday(e?!e.time:false);        /* 有开始时间 = 不是全天；新增默认给时间（大部分事都有时间） */
-  evScrim.classList.add('show');evMod.classList.add('show');
+  /* v8.0：事项表单搬进记账 sheet 的第三个 tab（手动/粘贴/事项）→
+     ① 主页右下角 ＋ 一按就能加事项（以前只能加钱）
+     ② 表单只有一份：新增和编辑走同一个，不会两边不同步 */
+  document.getElementById('evDel').style.display=e?'block':'none';
+  if(!add.classList.contains('show')){scrim.classList.add('show');add.classList.add('show');}
+  setAddMode('event');
   if(!e)setTimeout(()=>document.getElementById('evName').focus(),120);
 }
 /* v7.9 照 iPhone 那套：全天开关 + 开始(日期+时间) + 结束(日期+时间)。
@@ -3088,9 +3133,7 @@ function evSpanText(d,e,days){
 ['evDay','evEnd','evTime','evETime'].forEach(id=>{
   document.getElementById(id).addEventListener('change',evSyncDates);
 });
-function evClose(){evScrim.classList.remove('show');evMod.classList.remove('show');evEditId=null;evEditDay=null;}
-document.getElementById('evCancel').onclick=evClose;
-evScrim.onclick=evClose;
+function evClose(){closeSheet();evEditId=null;evEditDay=null;}
 document.getElementById('dpAddEv').onclick=()=>{
   if(!openDayKey)return;
   /* v7.1 ＋ 跟着当前 tab 走：花费页 → 记一笔（日期预填成这天）；事项页 → 加事项 */
