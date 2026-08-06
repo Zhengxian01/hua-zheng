@@ -2949,11 +2949,22 @@ function buildInsights(){
   if(!rows.length){el.innerHTML='<div class="gdhint" style="text-align:center;padding:20px 0">本月还没有支出</div>';return;}
   const exp=rows.reduce((s,r)=>s+sgdOf(r),0);
   const prev=new Date(viewMonth.getFullYear(),viewMonth.getMonth()-1,1);
-  const lastExp=monthsIn(prev).reduce((s,r)=>s+sgdOf(r),0);
   const isCur=mkOf(viewMonth)===mkOf(sgMonthDate(Date.now()));
   const dim=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,0).getDate();
-  const days=isCur?new Date().getDate():dim;
+  /* v11.05 「今天几号」一律走 SGT 锚定（todayKey），不用 new Date().getDate()（设备时区，出国那几天月初/月末会算差一天）。 */
+  const todaySg=parseInt(todayKey().slice(8,10),10)||dim;
+  const days=isCur?todaySg:dim;
   const avg=exp/Math.max(1,days);
+  /* v11.05 同期对比（MTD）：以前拿「本月到今天」比「上月整月」= 6 天比 31 天，月初永远暴跌、没信息量（截图那个 ↓67% 就是这么来的）。
+     改成一个截止日 cutDay = min(今天几号, 上月总天数) 把两边框住：
+       · 当月正常 → 上月只取 1..今天 → 同期比同期；
+       · 月末边界（今天>上月天数，如 3/30 对 2 月）→ cutDay 落回上月天数=整月，标签退成「比上月」；
+       · 看历史月（isCur=false）→ 两边都整月，照旧。 */
+  const prevDim=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),0).getDate();
+  const cutDay=isCur?Math.min(todaySg,prevDim):prevDim;
+  const samePeriod=isCur&&todaySg<=prevDim;   /* 今天没超过上月天数，才是真·同期 */
+  const lastExp=monthsIn(prev).reduce((s,r)=>(parseInt(isoDay(r.ts).slice(8,10),10)<=cutDay?s+sgdOf(r):s),0);
+  const kCmp=samePeriod?'<span class="k" style="font-size:12px">比上月同期</span>':'<span class="k">比上月</span>';
   let big=rows[0];for(const r of rows)if(sgdOf(r)>sgdOf(big))big=r;
   let h='<div class="glance">';
   h+=`<div class="gl"><span class="k">本月共</span><span class="val">S$${fmt(exp)} · ${rows.length} 笔</span></div>`;
@@ -2962,8 +2973,8 @@ function buildInsights(){
   if(lastExp>0){
     const d=exp-lastExp,pc=Math.round(d/lastExp*100);
     const cls=d>0?'up':'down',arr=d>0?'↑':'↓';
-    h+=`<div class="gl"><span class="k">比上月</span><span class="val ${cls}">${arr} ${Math.abs(pc)}% · ${d>0?'+':'−'}S$${fmt(Math.abs(d))}</span></div>`;
-  }else h+=`<div class="gl"><span class="k">比上月</span><span class="val">上月没有支出</span></div>`;
+    h+=`<div class="gl">${kCmp}<span class="val ${cls}">${arr} ${Math.abs(pc)}% · ${d>0?'+':'−'}S$${fmt(Math.abs(d))}</span></div>`;
+  }else h+=`<div class="gl">${kCmp}<span class="val">${samePeriod?'上月同期没有支出':'上月没有支出'}</span></div>`;
   h+=`<div class="gl"><span class="k">最大一笔</span><span class="val">S$${fmt(sgdOf(big))} · ${esc(big.merchant||catInfo(big).n)}</span></div>`;
   if(isCur){
     const {by}=catAgg(rows);let warn='';
