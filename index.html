@@ -1237,6 +1237,9 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
 .rawbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px;font-size:11px;line-height:1.6;white-space:pre-wrap;word-break:break-all;max-height:38vh;overflow-y:auto;font-family:ui-monospace,Menlo,monospace;color:var(--muted)}
 .badge{display:inline-block;min-width:18px;padding:1px 6px;border-radius:100px;background:#E0574E;color:#fff;font-size:11px;font-weight:800;text-align:center;margin-left:6px}
 .badge.warn{background:#E0A93E;min-width:10px;width:10px;height:10px;padding:0;border-radius:50%;vertical-align:middle}
+/* v11.05 系统自检那颗徽章：以前一切正常时是 display:none（什么都不显示）。改成永远显示一颗圆点 —— 绿=正常 / 黄=注意 / 红=要处理，一眼就看到状态。 */
+.badge.ok{background:#39C07C;min-width:10px;width:10px;height:10px;padding:0;border-radius:50%;vertical-align:middle}
+.badge.err{background:#E0574E;min-width:10px;width:10px;height:10px;padding:0;border-radius:50%;vertical-align:middle}
 
 /* ===== v3.0 通用确认弹窗 ===== */
 .okScrim{position:fixed;inset:0;z-index:95;background:rgba(12,16,20,.5);opacity:0;pointer-events:none;transition:.2s}
@@ -1746,7 +1749,7 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
     </div>
   </div>
 
-  <div style="text-align:center;color:#B9BFC6;font-size:11px;font-weight:500;letter-spacing:.5px;padding:22px 0 6px"><span id="brandFoot">Expenses</span>　v23.27</div>
+  <div style="text-align:center;color:#B9BFC6;font-size:11px;font-weight:500;letter-spacing:.5px;padding:22px 0 6px"><span id="brandFoot">Expenses</span>　v11.05</div>
 </div>
 
 <!-- ⚠️ v9.93：这两个本来在 #tab2 里面。它们是 position:fixed，DOM 放哪不影响定位，
@@ -7163,9 +7166,9 @@ document.getElementById('hpopGo').onclick=()=>{closeHpop();healthPage.classList.
 function setHealthBadge(errN,warnN){
   var badge=document.getElementById('healthBadge'),hsd=document.getElementById('healthSd');
   if(badge){
-    if(errN){badge.style.display='';badge.className='badge';badge.textContent='!';}
-    else if(warnN){badge.style.display='';badge.className='badge warn';badge.textContent='';}
-    else{badge.style.display='none';}
+    /* v11.05 永远显示一颗圆点：绿=正常 / 黄=注意 / 红=要处理（以前正常时是 display:none） */
+    badge.style.display='';badge.textContent='';
+    badge.className='badge '+(errN?'err':warnN?'warn':'ok');
   }
   if(hsd)hsd.textContent=errN?(errN+' 项要处理 · 点进去看'):(warnN?(warnN+' 项可留意 · 不急'):'一切正常 · 不卡不用等');
 }
@@ -7175,9 +7178,9 @@ async function healthQuietCheck(){
     const badge=document.getElementById('healthBadge'),hsd=document.getElementById('healthSd');
     const setBadge=(errN,warnN)=>{
       if(badge){
-        if(errN){badge.style.display='';badge.className='badge';badge.textContent='!';}          /* 真问题→红 */
-        else if(warnN){badge.style.display='';badge.className='badge warn';badge.textContent='';}  /* 可选没设置→黄点 */
-        else{badge.style.display='none';}
+        /* v11.05 永远显示一颗圆点：绿=正常 / 黄=注意 / 红=要处理（以前正常时是 display:none） */
+        badge.style.display='';badge.textContent='';
+        badge.className='badge '+(errN?'err':warnN?'warn':'ok');
       }
       if(hsd)hsd.textContent=errN?`${errN} 项要处理 · 点进去看`:(warnN?`${warnN} 项可留意 · 不急`:'一切正常 · 不卡不用等');
     };
