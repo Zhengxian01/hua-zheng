@@ -5590,7 +5590,7 @@ function ibRender(keep){
   }else{
     const _nu=INBOX.filter(x=>x.kind!=='parsed').length;
     _ibHint.innerHTML='这些邮件我没看懂（对账单、通知之类）。要是里面其实有消费，点开自己记一笔。'+
-      (_nu?`<div class="ibclearbar"><button id="ibClearAll" class="ibclear">🗑️ 清空全部读不到</button></div>`:'');
+      (_nu?`<div class="ibclearbar"><button id="ibClearAll" class="ibclear">🗑️ 清空本月读不到</button></div>`:'');
     const _cb=document.getElementById('ibClearAll'); if(_cb)_cb.onclick=ibClearAll;
   }
 
@@ -5618,16 +5618,17 @@ function ibRender(keep){
   /* 其余的交给「滚到哪画到哪」的引擎（见下面 scheduleInboxFill 那一大段） */
   scheduleInboxFill(all);
 }
-/* v11.05 一键清空「读不到」：删掉所有 unparsed 占位邮件（所有月份）。
-   ⚠️ 只删读不懂的通知，一笔账都不会动（后端只 DELETE inbox WHERE kind='unparsed'，
-   遵守「删邮件不动明细」）。删完清缓存重拉，红角标当场归零。 */
+/* v11.05 一键清空「读不到」：删掉**当前这个月**(IB_MONTH)的 unparsed 占位邮件 —— 不是所有月份。
+   ⚠️ 只删读不懂的通知，一笔账都不会动（后端 DELETE inbox WHERE kind='unparsed' AND 该月，
+   遵守「删邮件不动明细」）。删完清缓存重拉，红角标当场更新。 */
 async function ibClearAll(){
   if(!LIVE){toast('还没连上 Worker','err');return;}
-  const ok=await askConfirm('删除全部「读不到」的邮件？\n（所有月份 · 只删这些读不懂的通知，你的每一笔账都不受影响）','删除全部');
+  if(!IB_MONTH){toast('月份还没就绪，稍等一下','err');return;}
+  const ok=await askConfirm(`删除「${IB_MONTH}」这个月「读不到」的邮件？\n（只删这个月读不懂的通知，你的每一笔账都不受影响）`,'删除本月');
   if(!ok)return;
   const btn=document.getElementById('ibClearAll'); if(btn){btn.disabled=true;btn.textContent='删除中…';}
   try{
-    const r=await fetch(`${CONFIG.WORKER_URL}/api/inbox`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:CONFIG.TOKEN,action:'clear-unparsed'})});
+    const r=await fetch(`${CONFIG.WORKER_URL}/api/inbox`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:CONFIG.TOKEN,action:'clear-unparsed',month:IB_MONTH})});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const j=await r.json();
     IB_AT=0; IB_MCACHE={};                    /* 作废收件箱缓存，强制重拉 */
@@ -5636,7 +5637,7 @@ async function ibClearAll(){
     toast(`已清空 ${j.deleted||0} 封`);
   }catch(e){
     toast('删除失败，检查网络','err');
-    const b=document.getElementById('ibClearAll'); if(b){b.disabled=false;b.textContent='🗑️ 清空全部读不到';}
+    const b=document.getElementById('ibClearAll'); if(b){b.disabled=false;b.textContent='🗑️ 清空本月读不到';}
   }
 }
 function ibRowHTML(x){
