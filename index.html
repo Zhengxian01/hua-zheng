@@ -1683,9 +1683,12 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
            · 「Google Calendar」是同步，不是备份，却被丢在「备份」
            · 「通知」「总览排序」既不是分类也不是定期账单
          所以光换顺序没用，得连东西放哪一起理。 -->
+    <div class="setcard">
+      <button class="setrow" id="reconnect"><span class="si">🔄</span><div class="st"><div class="sn">重新连接 · 刷新数据</div><div class="sd" id="reconnectSd">断网/弱信号后，网络回来了点这里立刻重拉最新</div></div></button>
+    </div>
     <div class="section-h"><span class="h">自动记账</span></div>
     <div class="setcard">
-      
+
       <button class="setrow" id="openRules"><span class="si">🧠</span><div class="st"><div class="sn">商家记忆</div><div class="sd">它学过的商家→分类 · 左滑改/删</div></div><span class="sar">›</span></button>
       <button class="setrow" id="openSubs"><span class="si">🔁</span><div class="st"><div class="sn">订阅侦测<span class="badge" id="subBadge" style="display:none">0</span></div><div class="sd" id="subSd">从你的账里找出定期扣款 · 只看不记</div></div><span class="sar">›</span></button>
     </div>
@@ -2722,6 +2725,38 @@ async function loadRest(){
     if(_restTries++<3)setTimeout(loadRest,5000);   /* 拿不到就背景重试几次，再不行等下次开机；已显示的当月不受影响 */
   }
 }
+/* ============ v11.05 断网/弱信号后重新连接 ============
+   场景：开 App 时没网 → 看到的是缓存/快照；网回来了却不会自动刷新（主数据 load() 开机只跑一次、
+   没有 online 监听）。这里补两条：
+     ① 设置顶部一颗「🔄 重新连接」手动按钮（兜底，随时能救）。
+     ② window 'online' 事件自动触发一次（无感自愈）。
+   ⚠️ online 事件在 iOS/PWA 上不是 100% 可靠（它报的是「网络接口通了」不等于「真的能上网」），
+      所以那颗手动按钮不是多余的，是它的安全网。
+   自己先 fetch 一发 /api/data 拿到成功/失败的**确切**信号，再把这发响应交给 load() 解析/去重/重画，
+   不重复请求（load(pre) 会直接用传进去的 Response）。 */
+let _reconBusy=false,_reconLast=0;
+async function reconnectNow(src){
+  const row=document.getElementById('reconnect'),sd=document.getElementById('reconnectSd');
+  const DEFT='断网/弱信号后，网络回来了点这里立刻重拉最新';
+  if(!LIVE){if(src==='manual')toast('还没设定 Worker（先到「应用设置」填）','err');return;}
+  if(_reconBusy)return;_reconBusy=true;
+  if(row)row.disabled=true;if(sd)sd.textContent='正在重新连接…';
+  try{
+    const r=await fetch(`${CONFIG.WORKER_URL}/api/data?token=${encodeURIComponent(CONFIG.TOKEN)}`,{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    await load(r);                                   /* 把已拿到的响应交给 load()：解析 / 去重 / buildAll，一发请求搞定 */
+    if(sd)sd.textContent=DEFT;
+    if(typeof loadInbox==='function')loadInbox({badgeOnly:true});   /* 顺手把收件箱角标 / 日历也刷一下 */
+    if(typeof gcSyncQuiet==='function')gcSyncQuiet(true);
+    toast(src==='online'?`网络恢复 · 已刷新（${DATA.length} 笔）`:`已更新 · ${DATA.length} 笔`);
+  }catch(e){
+    if(sd)sd.textContent='还是连不上 · 检查网络后再试';
+    if(src==='manual')toast('还是连不上，检查网络','err');          /* 自动(online)失败不弹，不烦你 */
+  }finally{_reconBusy=false;if(row)row.disabled=false;}
+}
+{const _rb=document.getElementById('reconnect');if(_rb)_rb.onclick=()=>reconnectNow('manual');}
+/* 网络一恢复自动重连；去抖：短时间多次触发只跑一次（online 事件常连着弹好几下） */
+window.addEventListener('online',()=>{const n=Date.now();if(n-_reconLast<3000)return;_reconLast=n;reconnectNow('online');});
 /* ============ v6.9 日历事项 ============ */
 let EV=[];
 async function loadEvents(){
