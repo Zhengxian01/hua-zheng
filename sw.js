@@ -145,19 +145,40 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // 其它一律「网络优先」——HTML、JS 永远拿线上最新；只有断网才回退缓存。
-  e.respondWith(
-    fetch(req, { cache: 'no-store' })
-      .then((res) => {
-        if (res && res.ok && res.type === 'basic') {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        }
-        return res;
-      })
-      // 原版兜底写 'index.html'（相对路径，深层路由匹配不上），改绝对路径
-      .catch(() => caches.match(req).then((c) => c || caches.match('/index.html')))
-  );
+  /* 其它一律「网络优先」——HTML、JS 永远拿线上最新；断网 / 弱信号才回退缓存。
+     ⚠️⚠️ v11.05 网络优先「加超时」：以前这里的 fetch **没有超时** —— 飞行模式（fetch 立刻失败）反而秒开，
+     但地铁那种「连得上、慢得要死」的弱信号下，fetch 既不失败也不回来，一直挂着 → **白屏干等到 TCP 超时**。
+     现在网络跟一个 NET_TIMEOUT 赛跑：
+       · 网络在时限内回来 → 用最新（照旧：basic 就顺手写回缓存）。**正常网速下网络几乎都在时限内赢，行为跟以前一模一样**，
+         「上传新档 → 刷新 → 拿最新」这个保证完全不受影响。
+       · 超时没回来 → 先把缓存那份给出去让 App 立刻开，**同一发网络请求继续在背景跑、回来了照样写回缓存** → 下次开就是新的。
+       · 完全没缓存（第一次、还没存过）→ 只能等网络；等不到退到 /index.html（跟原本兜底一致）。
+     ⚠️ 只动这一段；上面 /api/bg、unpkg、图标预缓存、/api 直通那几段一个字没碰。 */
+  const NET_TIMEOUT = 3000;
+  e.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    // 网络那一发：成功且是 basic 就顺手写回缓存（跟以前逐字一致）
+    const net = fetch(req, { cache: 'no-store' }).then((res) => {
+      if (res && res.ok && res.type === 'basic') cache.put(req, res.clone()).catch(() => {});
+      return res;
+    });
+    const cached = await cache.match(req);
+    if (!cached) {
+      // 没缓存：只能等网络；连网络都失败才退到 /index.html（原本的兜底）
+      try { return await net; }
+      catch (e) { return (await cache.match('/index.html')) || Response.error(); }
+    }
+    // 有缓存：网络 vs 超时赛跑
+    try {
+      return await Promise.race([
+        net,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('net-timeout')), NET_TIMEOUT)),
+      ]);
+    } catch (e) {
+      net.catch(() => {});   // 让背景那发继续更新缓存，别变成 unhandled rejection
+      return cached;         // 超时或断网 → 先给缓存，App 立刻开
+    }
+  })());
 });
 
 /* ════════════════════════════════════════════════════════════════════
