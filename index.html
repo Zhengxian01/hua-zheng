@@ -1221,6 +1221,11 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
   font-size:10.5px;font-weight:800;margin-left:4px;vertical-align:1px}
 .cpseg button.on .ibn{background:rgba(11,166,120,.35)}
 .ibhint{font-size:11.5px;color:var(--muted);line-height:1.7;margin:12px 2px}
+/* v11.05 「读不到」一键清空按钮 */
+.ibclear{display:inline-block;margin-left:8px;padding:4px 11px;border-radius:9px;border:1px solid rgba(219,90,84,.42);background:rgba(219,90,84,.10);color:var(--red);font-size:11.5px;font-weight:700;font-family:inherit;vertical-align:middle;cursor:pointer;white-space:nowrap}
+.ibclear:active{background:rgba(219,90,84,.2)}
+.ibclear:disabled{opacity:.5}
+body.phototheme .ibclear{color:#ff8a84;border-color:rgba(255,138,132,.35);background:rgba(255,138,132,.12)}
 .ibsum{font-size:11.5px;color:#7EE7C7;font-weight:600;margin-top:3px}
 .ibrow{width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:8px;font-family:inherit;display:block}
 .ibrow.done{opacity:.5}
@@ -5575,9 +5580,16 @@ function ibRender(keep){
   const _fresh=INBOX.length>0;
   document.getElementById('ibNP').textContent=_fresh?_np:(IB_COUNTS.parsed||0);
   document.getElementById('ibNU').textContent=_fresh?_nu:(IB_COUNTS.unparsed||0);
-  document.getElementById('ibHint').textContent = IB_KIND==='parsed'
-    ? '这些邮件我读懂了，已经自动记进账。下面写的是记了什么。'
-    : '这些邮件我没看懂（对账单、通知之类）。要是里面其实有消费，点开自己记一笔。';
+  /* v11.05 「读不到」tab 多一颗一键清空按钮（当月有 unparsed 才显示）。删的是全部 unparsed 占位，不碰任何真账 */
+  const _ibHint=document.getElementById('ibHint');
+  if(IB_KIND==='parsed'){
+    _ibHint.textContent='这些邮件我读懂了，已经自动记进账。下面写的是记了什么。';
+  }else{
+    const _nu=INBOX.filter(x=>x.kind!=='parsed').length;
+    _ibHint.innerHTML='这些邮件我没看懂（对账单、通知之类）。要是里面其实有消费，点开自己记一笔。'+
+      (_nu?`<button id="ibClearAll" class="ibclear">🗑️ 清空全部读不到</button>`:'');
+    const _cb=document.getElementById('ibClearAll'); if(_cb)_cb.onclick=ibClearAll;
+  }
 
   const el=document.getElementById('ibList');
   /* v9.68 INBOX 存两个 tab 全部；按当前 tab 过滤 */
@@ -5602,6 +5614,27 @@ function ibRender(keep){
   el.innerHTML=shown.map(ibRowHTML).join('');
   /* 其余的交给「滚到哪画到哪」的引擎（见下面 scheduleInboxFill 那一大段） */
   scheduleInboxFill(all);
+}
+/* v11.05 一键清空「读不到」：删掉所有 unparsed 占位邮件（所有月份）。
+   ⚠️ 只删读不懂的通知，一笔账都不会动（后端只 DELETE inbox WHERE kind='unparsed'，
+   遵守「删邮件不动明细」）。删完清缓存重拉，红角标当场归零。 */
+async function ibClearAll(){
+  if(!LIVE){toast('还没连上 Worker','err');return;}
+  const ok=await askConfirm('删除全部「读不到」的邮件？\n（所有月份 · 只删这些读不懂的通知，你的每一笔账都不受影响）','删除全部');
+  if(!ok)return;
+  const btn=document.getElementById('ibClearAll'); if(btn){btn.disabled=true;btn.textContent='删除中…';}
+  try{
+    const r=await fetch(`${CONFIG.WORKER_URL}/api/inbox`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:CONFIG.TOKEN,action:'clear-unparsed'})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    IB_AT=0; IB_MCACHE={};                    /* 作废收件箱缓存，强制重拉 */
+    await loadInbox();
+    ibRender();
+    toast(`已清空 ${j.deleted||0} 封`);
+  }catch(e){
+    toast('删除失败，检查网络','err');
+    const b=document.getElementById('ibClearAll'); if(b){b.disabled=false;b.textContent='🗑️ 清空全部读不到';}
+  }
 }
 function ibRowHTML(x){
   const t=(x.ts||'').slice(5,16).replace('T',' ');   /* MM-DD HH:MM，最下面那行只留这个 */
