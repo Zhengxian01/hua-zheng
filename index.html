@@ -4296,12 +4296,24 @@ document.getElementById('q').addEventListener('input',e=>{
    键盘弹着时点按钮，第一下常被「收键盘」吃掉（先触发 input blur 收键盘，按钮的 click 反而没触发）。
    改用 pointerdown（手指一按下就触发，早于收键盘那一下）+ preventDefault（阻止这一下去夺焦/触发 blur），
    closeSearch 当场同步跑完 → 第一下就关、变回🔍。open 没了就不重复关。
-   （headless 的 .click() 复制不出这个真机行为，所以旧测试是绿的、真机却坏——这次改按 pointerdown 测。） */
+   （headless 的 .click() 复制不出这个真机行为，所以旧测试是绿的、真机却坏——这次改按 pointerdown 测。）
+   ⚠️⚠️ v11.06e 「幽灵点击」穿透（真·E2E 用真实触摸抓到的）：pointerdown 上把搜索框关掉后，
+   同一次手势尾随的那记 click 会落到搜索框原位【底下】的元素上 —— 实测穿透到底部 nav 的「设置」，
+   触发 switchTab(3) → 掉出「明细」页 → on-feed 没了 → 🔍 反而不见（这才是「按✕不回到symbol」的真凶）。
+   修：关掉后立刻在 document 捕获阶段吞掉【下一记】click（stopPropagation，别让它到达底下元素的 onclick），
+   400ms 内没有尾随 click 就自动撤掉这个吞钩，绝不误吞之后真正的点击。 */
 (function(){
   const qx=document.getElementById('qx');if(!qx)return;
-  const doClose=(e)=>{if(e)e.preventDefault();if(_sbar.classList.contains('open'))closeSearch();};
-  qx.addEventListener('pointerdown',doClose);   // 手指/鼠标：第一下就关（早于收键盘）
-  qx.addEventListener('click',doClose);          // 兜底：键盘 Enter / 无障碍激活（open 守卫挡重复关）
+  const eatNextClick=()=>{
+    const swallow=(ev)=>{ev.stopPropagation();ev.preventDefault();document.removeEventListener('click',swallow,true);};
+    document.addEventListener('click',swallow,true);
+    setTimeout(()=>document.removeEventListener('click',swallow,true),400);
+  };
+  qx.addEventListener('pointerdown',(e)=>{
+    e.preventDefault();
+    if(_sbar.classList.contains('open')){closeSearch();eatNextClick();}   // 关 + 吞掉尾随幽灵点击
+  });
+  qx.addEventListener('click',(e)=>{e.preventDefault();if(_sbar.classList.contains('open'))closeSearch();});  // 兜底：键盘 Enter / 无障碍
 })();
 
 /* ============ v3.0 折叠 ============ */
