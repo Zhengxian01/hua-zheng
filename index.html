@@ -1113,11 +1113,10 @@ body.booting .hero .fxlines{opacity:.72}
 @media(max-width:556px){.searchfab{right:18px}}
 body.searching .fab,body.searching .searchfab{opacity:0;pointer-events:none;transform:scale(.85)}
 body.searching #feed{padding-bottom:88px}
-/* v23.26 打字时只留搜寻框：iOS Safari 会把所有 position:fixed 的东西一起顶到键盘上面
-   —— 搜寻框该顶，但底下那排 tab 跟着上来就变成挡在键盘和搜寻框中间的一条废物。
-   （没有用 visualViewport 监听：那要在每一帧算位置，iOS 上会抖；用 class 切换零成本。）
-   focus 时加 .kbup：tab 列滑下去藏起来，搜寻框顺势降到最底 → 键盘一顶就贴在键盘正上方。
-   blur 时自动还原。 */
+/* v23.26 打字时只留搜寻框；focus 时加 .kbup：tab 列滑下去藏起来，搜寻框贴到键盘上方。
+   ⚠️ v11.06：下面 `body.kbup .searchbar{bottom:10px}` 只是【退路】——独立 PWA 里键盘不顶
+      fixed 元素，这条会让栏落到键盘后面（见 JS 里 positionSearchBar 那段的详解）。真正把栏
+      顶到键盘上方的是 JS 用 visualViewport 设的内联 bottom；visualViewport 不在时才退回这条。 */
 body.kbup .nav{transform:translateY(120%);opacity:0;pointer-events:none;transition:transform .18s ease,opacity .18s ease}
 body.kbup .searchbar{bottom:calc(10px + env(safe-area-inset-bottom))}
 body.kbup #feed{padding-bottom:64px}
@@ -4234,14 +4233,30 @@ document.getElementById('searchFab').onclick=()=>{
      .searchbar.open 的 visibility 是 `transition 0s 0s`＝瞬间可见，所以这里同步 focus 就能焦点＋弹键盘一次到位。 */
   document.getElementById('q').focus();
 };
-/* v23.26 见上面 body.kbup 那段：打字时把 tab 列收起来，只留搜寻框贴在键盘上 */
+/* v23.26 见上面 body.kbup 那段：打字时把 tab 列收起来，只留搜寻框贴在键盘上。
+   ⚠️⚠️ v11.06 修：以前只靠 CSS `body.kbup .searchbar{bottom:10px}` 想让它贴键盘上方 ——
+     这在【Safari 浏览器】里成立（iOS 会把 fixed 元素一起顶到键盘上面），但使用者是把 app
+     加到主屏当【独立 PWA】跑，独立模式下键盘**不会**顶 fixed 元素、也不缩布局视口 →
+     `position:fixed` 的 bottom:10px 就落在键盘**后面**，搜寻框整条被挡住看不见（照片 IMG_6956：
+     键盘弹了、bar 不在；要关掉键盘 bar 才冒出来）。
+     改用 visualViewport 手动算键盘高度、把栏顶到键盘正上方：键盘挡住的高度 = 布局视口底 -
+     视觉视口底(vv.height + vv.offsetTop)，bottom 设成这个 + 8px 的小间隙。栏本身 transition
+     不含 bottom → 内联改 bottom 是瞬间的、不抖。visualViewport 不存在时（老浏览器）自动退回
+     上面那条 CSS。 */
+const _vv=window.visualViewport;
+function positionSearchBar(){
+  if(!_vv||!document.body.classList.contains('kbup')){_sbar.style.bottom='';return;}
+  const kb=Math.max(0,Math.round(window.innerHeight-_vv.height-_vv.offsetTop));
+  _sbar.style.bottom=(kb+8)+'px';
+}
+if(_vv){_vv.addEventListener('resize',positionSearchBar);_vv.addEventListener('scroll',positionSearchBar);}
 (function(){
   const q=document.getElementById('q');if(!q)return;
-  q.addEventListener('focus',()=>document.body.classList.add('kbup'));
-  q.addEventListener('blur', ()=>document.body.classList.remove('kbup'));
+  q.addEventListener('focus',()=>{document.body.classList.add('kbup');positionSearchBar();});
+  q.addEventListener('blur', ()=>{document.body.classList.remove('kbup');_sbar.style.bottom='';});
 })();
 function closeSearch(){
-  document.body.classList.remove('kbup');
+  document.body.classList.remove('kbup');_sbar.style.bottom='';
   document.getElementById('q').value='';QRY='';buildFeed();
   _sbar.classList.remove('open');document.body.classList.remove('searching');
   document.getElementById('q').blur();
