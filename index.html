@@ -822,6 +822,9 @@ body.phototheme .dp-donut,body.phototheme .searchbar,body.phototheme .crow,
 body.phototheme .cseg,body.phototheme .ibrow,body.phototheme .hero,body.phototheme .dp-sum{
   background:rgba(8,10,16,var(--cardop,.30));border:1px solid rgba(255,255,255,.14);box-shadow:none;
   backdrop-filter:none;-webkit-backdrop-filter:none}
+/* v11.06 照片主题的玻璃卡共用上面那条边框（淡白）——但搜索框的「框」要跟着数值颜色，单独盖回 --num。
+   只挑 .searchbar，其他卡(donut/hero/ibrow…)一律不动。 */
+body.phototheme .searchbar{border-color:var(--num,rgba(255,255,255,.14))}
 /* 弹窗要挡住底下的东西 → 必须实底 + 模糊，不能透明 */
 /* ⚠️ v7.1：这里原本挂了 backdrop-filter: blur(14px)。
    但底色是 rgba(8,10,16,.96) —— 96% 不透明，模糊只透出 4%，肉眼几乎看不见，
@@ -1106,9 +1109,16 @@ body.booting .hero .fxlines{opacity:.72}
 .ch.fold .cv{transform:rotate(-90deg)}
 
 /* ===== v3.0 搜索 ===== */
-.searchbar{display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 14px;position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));width:min(480px,calc(100vw - 36px));transform:translateX(-50%) translateY(14px);opacity:0;pointer-events:none;visibility:hidden;z-index:41;box-shadow:var(--shadow-lg);transition:opacity .2s,transform .2s,visibility 0s .2s}
+/* v11.06 搜索图标 + 搜索框都跟着「设置→数值颜色」(--num) 走。
+   ⚠️ 🔍 是彩色 emoji，CSS `color` 染不动 → 换成描边 SVG（stroke=currentColor），
+      currentColor 再吃 --num，图标就真的变成你选的颜色了。--num 由 applyTheme() 恒设在 body 上，
+      这里带 fallback（首帧 applyTheme 还没跑时用奶油色兜底）。 */
+.sicon{width:20px;height:20px;flex:0 0 auto;display:block}
+.searchbar{display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--num,var(--line));border-radius:14px;padding:10px 14px;position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));width:min(480px,calc(100vw - 36px));transform:translateX(-50%) translateY(14px);opacity:0;pointer-events:none;visibility:hidden;z-index:41;box-shadow:var(--shadow-lg);transition:opacity .2s,transform .2s,visibility 0s .2s}
+.searchbar>.sicon{color:var(--num,#f5e9c8)}
 .searchbar.open{opacity:1;pointer-events:auto;visibility:visible;transform:translateX(-50%);transition:opacity .2s,transform .2s,visibility 0s 0s}
-.searchfab{position:fixed;z-index:40;right:calc(50% - 260px + 18px);bottom:calc(84px + env(safe-area-inset-bottom));background:rgba(20,24,32,.92);color:#fff;border:1px solid rgba(255,255,255,.14);width:52px;height:52px;border-radius:50%;font-size:22px;line-height:1;display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;transition:transform .15s,opacity .2s;transform:translateZ(0)}
+.searchfab{position:fixed;z-index:40;right:calc(50% - 260px + 18px);bottom:calc(84px + env(safe-area-inset-bottom));background:rgba(20,24,32,.92);color:var(--num,#fff);border:1px solid var(--num,rgba(255,255,255,.14));width:52px;height:52px;border-radius:50%;font-size:22px;line-height:1;display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;transition:transform .15s,opacity .2s;transform:translateZ(0)}
+.searchfab .sicon{width:24px;height:24px}
 .searchfab:active{transform:scale(.92)}
 @media(max-width:556px){.searchfab{right:18px}}
 body.searching .fab,body.searching .searchfab{opacity:0;pointer-events:none;transform:scale(.85)}
@@ -1381,6 +1391,9 @@ body.theme-journal .cseg{background:#EFE9DF!important;border:1px solid #E4DCCF!i
 body.theme-journal .searchbar{background:#FBF9F4!important;border:1px solid #E4DCCF!important;box-shadow:var(--shadow)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 body.theme-journal .searchbar input{color:#2A2521!important;}
 body.theme-journal .searchbar input::placeholder{color:#A79D8E!important;}
+/* v11.06 手账是浅纸底：搜索框里的 🔍 若跟 --num（多为浅色）会糊在纸上看不见 → 钉成深墨色。
+   （搜索框边框上面那条 journal override 已经用 #E4DCCF 盖住 --num；悬浮的🔍按钮是深底，--num 图标照样看得见，不用改。） */
+body.theme-journal .searchbar>.sicon{color:#2A2521!important;}
 body.theme-journal .ibrow .t1{color:#2A2521!important;}
 body.theme-journal .ibrow .ibsum{color:#256B5E!important;}
 body.theme-journal .ibrow .t2{color:#A79D8E!important;}
@@ -1767,11 +1780,11 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
      就从视口变成那个祖先：bottom:84px 会从**整页内容的底部**算起，这两个东西直接掉出屏幕。
      所以搬出 .wrap。原本靠 #tab2{display:none} 顺带隐藏，现在改成 body.on-feed 明写。 -->
 <div class="searchbar" id="searchbar">
-  <span>🔍</span>
+  <svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
   <input id="q" placeholder="搜商家/分类/付款 · &gt;100 找大额" autocomplete="off">
   <button class="sx" id="qx">✕</button>
 </div>
-<button class="searchfab" id="searchFab" aria-label="搜索">🔍</button>
+<button class="searchfab" id="searchFab" aria-label="搜索"><svg class="sicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg></button>
 
 <div class="mp-scrim" id="mpScrim"></div>
 <div class="mpick" id="mpick">
