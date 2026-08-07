@@ -4266,7 +4266,16 @@ if(_vv){_vv.addEventListener('resize',positionSearchBar);_vv.addEventListener('s
 (function(){
   const q=document.getElementById('q');if(!q)return;
   q.addEventListener('focus',()=>{document.body.classList.add('kbup');positionSearchBar();});
-  q.addEventListener('blur', ()=>{document.body.classList.remove('kbup');_sbar.style.bottom='';});
+  q.addEventListener('blur', ()=>{
+    document.body.classList.remove('kbup');_sbar.style.bottom='';
+    /* v11.06b 收键盘就关搜索、变回🔍（照片 IMG_6958：以前收了键盘那条空框还浮在内容上，要手动点✕）。
+       只在【框是空的】时关：已经打了字＝下面有筛选结果，留着让你收起键盘慢慢滑/点结果，
+       不会把结果从手指底下抽走（避免点错行）。setTimeout 让「点✕/点结果/切 tab」这类会先 blur
+       的手势先跑完；若中途又聚焦回来（kbup 重新加上）就不关。已经关了(open 没了)也不重复关。 */
+    setTimeout(()=>{
+      if(!document.body.classList.contains('kbup') && _sbar.classList.contains('open') && !q.value.trim()) closeSearch();
+    },140);
+  });
 })();
 function closeSearch(){
   document.body.classList.remove('kbup');_sbar.style.bottom='';
