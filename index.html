@@ -4292,7 +4292,17 @@ document.getElementById('q').addEventListener('input',e=>{
   clearTimeout(qT);
   qT=setTimeout(()=>{QRY=v;buildFeed();},180);   /* 防抖，别每敲一个字就重画 */
 });
-document.getElementById('qx').onclick=closeSearch;   /* ✕ = 关掉搜索并清空 */
+/* ⚠️⚠️ v11.06d ✕ 必须第一下就关 —— 真机坑（使用者反映：有键盘有字时按✕不会立刻回到🔍）：
+   键盘弹着时点按钮，第一下常被「收键盘」吃掉（先触发 input blur 收键盘，按钮的 click 反而没触发）。
+   改用 pointerdown（手指一按下就触发，早于收键盘那一下）+ preventDefault（阻止这一下去夺焦/触发 blur），
+   closeSearch 当场同步跑完 → 第一下就关、变回🔍。open 没了就不重复关。
+   （headless 的 .click() 复制不出这个真机行为，所以旧测试是绿的、真机却坏——这次改按 pointerdown 测。） */
+(function(){
+  const qx=document.getElementById('qx');if(!qx)return;
+  const doClose=(e)=>{if(e)e.preventDefault();if(_sbar.classList.contains('open'))closeSearch();};
+  qx.addEventListener('pointerdown',doClose);   // 手指/鼠标：第一下就关（早于收键盘）
+  qx.addEventListener('click',doClose);          // 兜底：键盘 Enter / 无障碍激活（open 守卫挡重复关）
+})();
 
 /* ============ v3.0 折叠 ============ */
 let FOLD={};    /* {cal:true, donut:false, cats:false, cmp:false} 存进 D1 的 theme_prefs */
