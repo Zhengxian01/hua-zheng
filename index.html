@@ -907,7 +907,13 @@ body.phototheme.gxon .hero .amt{filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
 body.phototheme.gxon .hero .amt,body.phototheme.gxon .hero .amt .int,body.phototheme.gxon .hero .amt .dec,body.phototheme.gxon .hero .amt .s{
   background:var(--gx);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;
   -webkit-text-fill-color:transparent;color:transparent}
-body.phototheme.gxon .hero .amt,body.gxon .section-h .h{animation:gflow 7s linear infinite}
+/* ⚠️ v11.07 大数字要真的流动：渐变上色是在 .int/.dec/.s 这几个【子元素】上（background-clip:text 只
+   染元素自己的字，不会染子孙），可动画以前只挂在容器 .hero .amt 上 —— CSS 动画不会往子元素继承，
+   所以子元素的 background-position 一直是静止的 → 数字看起来不流动。把 gflow 也挂到这三个子元素上，
+   它们跟容器同一条 keyframe、同步滑动 → 大数字整体渐变真的流起来。 */
+body.phototheme.gxon .hero .amt,
+body.phototheme.gxon .hero .amt .int,body.phototheme.gxon .hero .amt .dec,body.phototheme.gxon .hero .amt .s,
+body.gxon .section-h .h{animation:gflow 7s linear infinite}
 
 
 /* 设置页：主题选择 UI */
