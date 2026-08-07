@@ -1131,7 +1131,11 @@ body.kbup .nav{transform:translateY(120%);opacity:0;pointer-events:none;transiti
 body.kbup .searchbar{bottom:calc(10px + env(safe-area-inset-bottom))}
 body.kbup #feed{padding-bottom:64px}
 .searchbar input{flex:1;border:0;background:transparent;color:var(--ink);font-size:14px;font-family:inherit;font-weight:600;outline:none}
-.searchbar .sx{border:0;background:transparent;color:var(--muted);font-size:15px;font-family:inherit}
+/* v11.06c ✕ 放大成好按的大圆钮（使用者反映原来太小难点）。40px 的可点范围（≈苹果 44 指南），
+   负 margin 让它盖进搜索框的内边距 → 按钮变大但搜索框本身不变高。填一层淡灰圆底＝一眼看出是个钮，
+   按下去有缩放反馈。灰底是中性半透明，暗玻璃/浅纸底两种主题都看得见。 */
+.searchbar .sx{flex:0 0 auto;width:40px;height:40px;margin:-8px -6px -8px 0;border:0;border-radius:50%;background:rgba(140,140,140,.2);color:var(--muted);font-size:19px;line-height:1;font-family:inherit;display:grid;place-items:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s ease,background .12s ease}
+.searchbar .sx:active{transform:scale(.86);background:rgba(140,140,140,.34)}
 
 /* ===== v4.3 每月支出柱状图 ===== */
 /* ===== v5.2 方案 B：横向条形（一月一条，3 个月）=====
