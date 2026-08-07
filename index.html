@@ -4229,7 +4229,10 @@ let qT=null;
 const _sbar=document.getElementById('searchbar');
 document.getElementById('searchFab').onclick=()=>{
   _sbar.classList.add('open');document.body.classList.add('searching');
-  setTimeout(()=>document.getElementById('q').focus(),60);
+  /* ⚠️ iOS 键盘只在「用户手势的同一个同步调用栈里」focus 才会弹出来。以前包在 setTimeout(…,60)
+     里 → 手势链断了 → 光标进了框、键盘却不弹，要再点一次 bar 才打得了字（使用者反映的正是这个）。
+     .searchbar.open 的 visibility 是 `transition 0s 0s`＝瞬间可见，所以这里同步 focus 就能焦点＋弹键盘一次到位。 */
+  document.getElementById('q').focus();
 };
 /* v23.26 见上面 body.kbup 那段：打字时把 tab 列收起来，只留搜寻框贴在键盘上 */
 (function(){
