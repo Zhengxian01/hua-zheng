@@ -1833,6 +1833,9 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
 <div class="emod" id="emod" role="dialog" aria-label="编辑记录">
   <div class="eh" id="emTitle">编辑记录</div>
   <div class="esub" id="emSub"></div>
+  <!-- v11.08 支出/收入切换：以前编辑弹窗没有这个 → 银行误记成支出的账（如 PayNow 收款）没法在这里改成收入，
+       只能删了重记。加上它，任何一笔都能就地在支出/收入之间改。 -->
+  <div class="ie" id="emIeSeg" style="margin-bottom:12px"><button data-t="expense" class="on">支出</button><button data-t="income">收入</button></div>
   <span class="fl">金额</span>
   <div class="erow">
     <input class="eamt" id="emAmt" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00">
@@ -3998,9 +4001,21 @@ function openEdit(r){
   emIsPerson=detectPerson(r);
   emRemember=!emIsPerson;                 // 人=OFF，商家=ON
   emBuildRemember();
+  [...document.getElementById('emIeSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t===emType));   // v11.08 同步支出/收入切换的高亮
   emBuildCats();emValidate();
   emScrim.classList.add('show');emod.classList.add('show');lockScroll(true);
 }
+/* v11.08 编辑弹窗里改支出↔收入：换 emType → 分类换成对应那套(收入 INC / 支出 CAT)、
+   标题/付款选择器/记住开关跟着刷新。存的时候 emConfirm 已经带 type:emType，/api/update 也早就读 type，所以存得对。 */
+function emSetType(t){
+  if((t!=='income'&&t!=='expense')||t===emType)return;
+  emType=t;
+  emCat=Object.keys(t==='income'?INC:CAT)[0]||(t==='income'?'incother':'other');
+  [...document.getElementById('emIeSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+  document.getElementById('emTitle').textContent=t==='income'?'编辑收入':'编辑支出';
+  emBuildPayRow();emBuildRemember();emBuildCats();emValidate();
+}
+document.getElementById('emIeSeg').addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(b)emSetType(b.dataset.t);});
 /* 编辑弹窗的付款选择器：只在「手动支出」显示（银行来的自动分、不给改）。用共用 chip 渲染。 */
 function emBuildPayRow(){
   const wrap=document.getElementById('emPayWrap'),row=document.getElementById('emPayRow');if(!wrap||!row)return;
