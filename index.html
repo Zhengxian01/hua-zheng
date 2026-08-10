@@ -2603,12 +2603,16 @@ function classifyKeyword(m){const s=(m||"").toLowerCase();
 const GENERIC=['PAYLAH TRANSFER','PAYLAH WALLET','PAYLAH','TRANSFER','MANUAL',''];
 function isGeneric(k){return GENERIC.indexOf((k||'').toUpperCase().trim())>=0;}
 function ruleOf(k){if(isGeneric(k))return null;const v=RULES[k];if(!v)return null;return (typeof v==='string')?{c:v,d:null}:v;}
-function catKey(r){if(r.type==='income')return (r.category&&INC[r.category])?r.category:'incother';
+/* v11.11 抵扣退款按【支出分类】归类（你选的那个），跟支出一起进环形/分类，只是金额是负的。 */
+function catSetType(r){return isOffset(r)?'expense':r.type;}
+function catKey(r){
+  if(isOffset(r))return (r.category&&CAT[r.category])?r.category:'other';
+  if(r.type==='income')return (r.category&&INC[r.category])?r.category:'incother';
   if(r.category&&CAT[r.category])return r.category;
   const ru=ruleOf(merchantKey(r.merchant));
   if(ru&&ru.c&&CAT[ru.c])return ru.c;
   return classifyKeyword(r.merchant);}
-function catInfo(r){return catDef(catKey(r), r.type);}
+function catInfo(r){return catDef(catKey(r), catSetType(r));}
 /* 餐饮(Food)：子分类按交易时间(SGT)自动算，不存商家记忆。system 分类，不可删。 */
 const FOOD_KEY='food';
 /* v9.63 记忆化：foodSub 走 subShown()，每一列渲染 + 每一次搜寻按键都会叫一次。
@@ -2647,8 +2651,6 @@ const isInc=r=>r.type==='income';
    isOffset：这笔是「拿去抵扣支出」的收入。netInc：真正算进收入的（排除 offset）。 */
 const isOffset=r=>r.type==='income'&&!!r.offset;
 const isNetInc=r=>r.type==='income'&&!r.offset;
-/* v11.10 某月被退款抵扣掉的总额（SGD）—— hero / 环形中心 / 各处「本月支出」总额都减掉它，口径统一。 */
-function offsetSumOf(rows){return rows.filter(isOffset).reduce((s,r)=>s+sgdOf(r),0);}
 
 /* ═══════════════ v9.94 开机三件事 ═══════════════
    现象（实测，每个 API 延迟 900ms 模拟 4G）：
@@ -3370,9 +3372,10 @@ function buildCalTodo(y,m,first,dim,isCur,t){
 function catAgg(rows){
   const by={},cnt={},subs={};
   rows.forEach(r=>{
-    const k=catKey(r);const info=catDef(k);const v=sgdOf(r);
+    const k=catKey(r);const info=catDef(k,catSetType(r));const v=sgdOf(r)*(isOffset(r)?-1:1);   /* v11.11 抵扣退款 = 该分类的负数 */
     if(!by[k])by[k]={v:0,c:info.c};
-    by[k].v+=v;cnt[k]=(cnt[k]||0)+1;
+    by[k].v+=v;
+    if(!isOffset(r))cnt[k]=(cnt[k]||0)+1;   /* 退款抵扣不算「一笔花费」，只减金额 */
     const sk=subShown(r)||'（不分）';
     if(!subs[k])subs[k]={};
     subs[k][sk]=(subs[k][sk]||0)+v;
@@ -3380,23 +3383,25 @@ function catAgg(rows){
   return {by,cnt,subs};
 }
 function buildDonut(){
-  const rows=DATA.filter(x=>sameMonth(x.ts)&&!isInc(x));const tot=rows.reduce((s,r)=>s+sgdOf(r),0);
-  const wrap=document.getElementById('donutWrap');const {by}=catAgg(rows);
-  if(!Object.keys(by).length||!tot){wrap.style.display='none';return;}wrap.style.display='block';
-  /* v9.78 环形只画 Top 5 + 其他：分类多时小弧糊成一团、颜色分不清（研究：环形超过 5 类就乱）。
-     把最小的几类合成「其他」灰色一块，圆环清爽。你的配色/箭头/弧逻辑一律不动 —— 只改喂进去的数据。 */
+  /* v11.11 环形喂进「支出 + 抵扣退款」：退款按它选的支出分类记成负数 → 那个分类跟着减，
+     各扇形之和 = 中心净额 = hero 大数字，全对上。某分类被退款减成负数（很少见）就跳过不画。 */
+  const rows=DATA.filter(x=>sameMonth(x.ts)&&(!isInc(x)||isOffset(x)));
+  const wrap=document.getElementById('donutWrap');const agg=catAgg(rows);
+  const by={};Object.entries(agg.by).forEach(([k,o])=>{if(o.v>0)by[k]=o;});   // 环形只画正的分类
+  const tot=Object.values(agg.by).reduce((s,o)=>s+o.v,0);                     // 净支出（含负分类）
+  if(!Object.keys(by).length||tot<=0){wrap.style.display='none';return;}wrap.style.display='block';
+  /* v9.78 环形只画 Top 5 + 其他 */
   const byTop=donutTop(by,5);
-  document.getElementById('donutSvg').innerHTML=donutSegs(byTop,tot);
-  /* v11.10 环形中心显示【净支出】= 毛额 − 退款抵扣，跟 hero 大数字口径一致；圆环各扇形仍按毛额画（退款不属于任何支出分类）。 */
-  const _net=tot-offsetSumOf(DATA.filter(x=>sameMonth(x.ts)));
-  document.getElementById('donutTotal').innerHTML='<span class="s">S$</span>'+fmt(_net); fitDonutCenter();
+  const ringTot=Object.values(byTop).reduce((s,o)=>s+o.v,0);                  // 画出来那几块的和（当扇形分母）
+  document.getElementById('donutSvg').innerHTML=donutSegs(byTop,ringTot);
+  document.getElementById('donutTotal').innerHTML='<span class="s">S$</span>'+fmt(tot); fitDonutCenter();
   /* v9.79 环形图例：色块 + 名字 + %，让人一眼知道每个颜色是什么（以前只有圈，看不懂）。
      跟环形用同一份 byTop → 颜色/分块完全对得上。名字：__other__ 显示「其他」，其余用 catDef。 */
   const leg=document.getElementById('donutLegend');
   if(leg){
     leg.innerHTML=Object.entries(byTop).sort((a,b)=>b[1].v-a[1].v).map(([k,o])=>{
-      const nm=(k==='__other__')?'其他':catDef(k).n;
-      const pct=Math.round(o.v/(tot||1)*100);
+      const nm=(k==='__other__')?'其他':catDef(k,'expense').n;
+      const pct=Math.round(o.v/(ringTot||1)*100);
       return `<div class="dlg"><span class="dlgdot" style="background:${o.c}"></span><span class="dlgn">${esc(nm)}</span><span class="dlgp">${pct}%</span></div>`;
     }).join('');
   }
@@ -3414,11 +3419,13 @@ function donutTop(by,n){
 /* 环形中心金额自动缩放：按字数算字号（不依赖元素可见），任何主题任何金额都不会被环圈压到 */
 function fitDonutCenter(){ const v=document.getElementById('donutTotal'); if(!v)return; const len=(v.textContent||'').length; const fs=Math.max(13,Math.min(24,Math.floor(118/(len*0.56)))); v.style.fontSize=fs+'px'; }
 function buildCats(){
-  const rows=DATA.filter(x=>sameMonth(x.ts)&&!isInc(x));const tot=rows.reduce((s,r)=>s+sgdOf(r),0);
-  const {by,cnt,subs}=catAgg(rows);const ce=document.getElementById('cats');const entries=Object.entries(by).sort((a,b)=>b[1].v-a[1].v);
+  const rows=DATA.filter(x=>sameMonth(x.ts)&&(!isInc(x)||isOffset(x)));   /* v11.11 含抵扣退款（负数），分类跟着减 */
+  const {by,cnt,subs}=catAgg(rows);const ce=document.getElementById('cats');
+  const entries=Object.entries(by).filter(([,o])=>o.v>0.005).sort((a,b)=>b[1].v-a[1].v);   /* 被退款减到 0 的分类不列 */
+  const tot=entries.reduce((s,[,o])=>s+o.v,0);
   if(!entries.length){ce.innerHTML='<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">本月还没有支出</div>';return;}
   const maxV=entries[0][1].v;
-  ce.innerHTML=entries.map(([k,o])=>{const c=catDef(k);const pct=Math.round(o.v/(tot||1)*100);
+  ce.innerHTML=entries.map(([k,o])=>{const c=catDef(k,'expense');const pct=Math.round(o.v/(tot||1)*100);
     /* 子分类明细：默认收着，点分类行才展开 */
     const sb=Object.entries(subs[k]||{}).sort((a,b)=>b[1]-a[1]);
     const detail=(sb.length>1||(sb.length===1&&sb[0][0]!=='（不分）'))
@@ -3999,7 +4006,7 @@ function subHintFor(m){
   return (v&&typeof v==='object'&&v.s)?v.s:'';
 }
 function emBuildCats(){
-  const set=emType==='income'?INC:CAT;
+  const set=(emType==='income'&&!emOffset)?INC:CAT;   /* v11.11 开抵扣的收入用支出分类，选要抵扣哪个 */
   document.getElementById('emCats').innerHTML=Object.entries(set).map(([k,c])=>
     `<button class="ecat${k===emCat?' on':''}" data-c="${k}"><span class="ei" style="background:${soft(c.c)};${k===emCat?'border-color:'+c.c:''}">${c.i}</span><span class="en">${c.n}</span></button>`).join('');
   emBuildSubs();
@@ -4103,7 +4110,11 @@ function emBuildOffset(){
   wrap.style.display=show?'':'none';
   if(show)document.getElementById('emOffBtn').setAttribute('aria-checked',emOffset?'true':'false');
 }
-document.getElementById('emOffBtn').onclick=()=>{emOffset=!emOffset;document.getElementById('emOffBtn').setAttribute('aria-checked',emOffset?'true':'false');};
+document.getElementById('emOffBtn').onclick=()=>{
+  emOffset=!emOffset;document.getElementById('emOffBtn').setAttribute('aria-checked',emOffset?'true':'false');
+  /* 开抵扣 → 分类换成支出分类（选抵扣哪个）；关掉 → 换回收入分类。重置成新那套第一个。 */
+  emCat=Object.keys((emType==='income'&&!emOffset)?INC:CAT)[0]||(emOffset?'other':'incother');emBuildCats();emValidate();
+};
 document.getElementById('emSubs').addEventListener('click',e=>{const b=e.target.closest('.subchip');if(!b)return;emSubVal=b.dataset.s||'';emBuildSubs();});
 /* v4.0 确认 = 立刻生效，网络在后台跑。
    以前是 await 网络 → 按钮卡在「保存中…」半秒到两秒，手感很差。
@@ -4634,7 +4645,9 @@ document.addEventListener('touchcancel',tsEnd);
 
 /* add/edit sheet */
 const scrim=document.getElementById('scrim'),add=document.getElementById('add');
-function curSet(){return selType==='income'?INC:CAT;}
+/* v11.11 抵扣的收入用【支出分类】—— 你选这笔退款抵扣哪个支出分类，那个分类就跟着减，环形/hero 才对得上。
+   普通收入用收入分类 INC；支出和「开了抵扣的收入」都用支出分类 CAT。 */
+function curSet(){return (selType==='income'&&!selOffset)?INC:CAT;}
 function buildCatGrid(){const set=curSet();document.getElementById('catgrid').innerHTML=Object.entries(set).map(([k,c])=>`<button class="catpick" data-c="${k}"><div class="pi" style="background:${soft(c.c)};${k===selCat?'border-color:'+c.c:''}">${c.i}</div><div class="pn">${c.n}</div></button>`).join('');buildSubRow();}
 /* 子分类 chips：选中的分类有 subs 才出现 */
 function buildSubRow(){
@@ -4663,7 +4676,13 @@ function addBuildOffset(){
   if(ru&&typeof ru.o!=='undefined')selOffset=!!ru.o;   // 这家记过 → 用记忆；没记过 → 保持当前
   document.getElementById('addOffBtn').setAttribute('aria-checked',selOffset?'true':'false');
 }
-document.getElementById('addOffBtn').onclick=()=>{selOffset=!selOffset;document.getElementById('addOffBtn').setAttribute('aria-checked',selOffset?'true':'false');};
+function addToggleOffset(){
+  selOffset=!selOffset;
+  document.getElementById('addOffBtn').setAttribute('aria-checked',selOffset?'true':'false');
+  /* 开抵扣 → 分类网格切成支出分类（选要抵扣哪个）；关掉 → 切回收入分类。选中项重置成新那套的第一个。 */
+  selCat=Object.keys(curSet())[0]||'other';selSub='';buildCatGrid();
+}
+document.getElementById('addOffBtn').onclick=addToggleOffset;
 /* 只用于「新增」。编辑走 .emod 弹窗，跟这里没关系了。 */
 function openSheet(dayKey){
   _saveLock=false;      /* v9.59 每次打开记账 = 允许保存一次 */
