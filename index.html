@@ -753,6 +753,9 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .datechip label{background:var(--card);border:1px solid var(--line);border-radius:100px;padding:6px 14px;font-size:12.5px;color:var(--ink-2);font-weight:500;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .datechip input{border:none;background:none;font-family:inherit;font-size:12.5px;color:var(--ink-2);width:120px}
 .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 10px;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+/* v11.09 记账时点「备注」→ 冒 iOS 文字键盘：把自定义数字盘收起来，免得两个键盘叠一起（使用者反映很奇怪）。
+   只收数字盘（备注在上方、离键盘远，不会被挡）；备注失焦、回车、或点金额区 → 数字盘立刻回来。 */
+#add.noteedit .pad{display:none}
 .pad button{background:var(--card);border:none;font-family:inherit;font-weight:600;font-size:23px;color:var(--ink);padding:11px 0;border-radius:14px;cursor:pointer;box-shadow:var(--shadow);transition:.08s}
 .pad button:active{background:var(--faint);transform:scale(.97)}
 .pad .save{grid-column:span 3;background:var(--emerald);color:#fff;font-size:17px;font-weight:700;box-shadow:0 4px 14px rgba(11,166,120,.35);padding:13px}
@@ -4821,6 +4824,16 @@ document.getElementById('note').addEventListener('input',e=>{
   const ru=ruleOf(merchantKey(e.target.value.trim()));
   if(ru&&ru.c&&CAT[ru.c]&&ru.c!==selCat){selCat=ru.c;selSub='';buildCatGrid();}
 });
+/* v11.09 记账键盘：数字盘是默认主键盘（开弹窗就在）。点「备注」→ iOS 文字键盘上来，这时收起数字盘，
+   免得两个键盘叠一起（使用者反映很奇怪）。备注失焦 / 回车 / 点金额区 → 数字盘立刻回来、可继续按保存。 */
+(function(){
+  const note=document.getElementById('note'),add=document.getElementById('add'),amtd=document.getElementById('amtDisp');
+  if(!note||!add)return;
+  note.addEventListener('focus',()=>add.classList.add('noteedit'));
+  note.addEventListener('blur',()=>add.classList.remove('noteedit'));
+  note.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();note.blur();}});
+  if(amtd)amtd.addEventListener('pointerdown',e=>{if(document.activeElement===note){e.preventDefault();note.blur();}});   // 点金额区=收文字键盘、回数字盘（pointerdown 早于收键盘，第一下就生效）
+})();
 document.getElementById('pad').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(!b)return;const k=b.dataset.k;
   if(k==='bk'){amtStr=amtStr.length<=1?'0':amtStr.slice(0,-1);if(!amtStr)amtStr='0';}
   else if(k==='.'){if(!amtStr.includes('.'))amtStr+='.';}
