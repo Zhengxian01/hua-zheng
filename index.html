@@ -1857,6 +1857,11 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
     <div><div class="emrl1">记住这个名字的分类</div><div class="emrl2" id="emRemHint">转账给朋友：关掉的话下次只预填、不锁死</div></div>
     <button class="emtoggle" id="emRemBtn" role="switch" aria-checked="false"><span class="emknob"></span></button>
   </div>
+  <!-- v11.10 退款/返现抵扣支出：只在「收入」时出现。开=这笔从总支出里减掉、不算收入；且记住这家，下次同名自动开。 -->
+  <div class="emremember" id="emOffWrap" style="display:none">
+    <div><div class="emrl1">从总支出里扣掉（退款/返现）</div><div class="emrl2">开了这笔就不算收入，改成抵扣本月支出 · 以后同一家自动记得</div></div>
+    <button class="emtoggle" id="emOffBtn" role="switch" aria-checked="false"><span class="emknob"></span></button>
+  </div>
   <div class="ebtns">
     <button class="ecancel" id="emCancel">取消</button>
     <button class="econfirm" id="emConfirm">确认</button>
@@ -2618,6 +2623,10 @@ function sgtHM(ts){
   return v;}
 const soft=c=>c+'26';
 const isInc=r=>r.type==='income';
+/* v11.10 退款抵扣：offset 收入＝退款/返现 → 从【总支出】里减掉、且**不算进收入**。
+   isOffset：这笔是「拿去抵扣支出」的收入。netInc：真正算进收入的（排除 offset）。 */
+const isOffset=r=>r.type==='income'&&!!r.offset;
+const isNetInc=r=>r.type==='income'&&!r.offset;
 
 /* ═══════════════ v9.94 开机三件事 ═══════════════
    现象（实测，每个 API 延迟 900ms 模拟 4G）：
@@ -3102,7 +3111,13 @@ function updateHeader(){
   const per={};
   rows.forEach(r=>{
     const v=sgdOf(r);
-    if(isInc(r)){inc+=v;return;}
+    if(isInc(r)){
+      /* v11.10 退款抵扣：offset 收入从总支出减掉、不算进收入；原币小计也一起减，hero 才对得上。
+         普通收入照旧进 inc。 */
+      if(r.offset){exp-=v;const c=r.currency||'SGD';per[c]=(per[c]||0)-r.amount;}
+      else inc+=v;
+      return;
+    }
     exp+=v;
     const c=r.currency||'SGD';
     per[c]=(per[c]||0)+r.amount;   /* 分币种时显示原币金额 */
@@ -3941,7 +3956,7 @@ rowActions(document.getElementById('dpBody'),()=>{if(openDayKey)buildDayPage(ope
 
 /* ============ 编辑弹窗（必须按确认才保存） ============ */
 const emScrim=document.getElementById('emScrim'),emod=document.getElementById('emod');
-let emRow=null,emCat='food',emSubVal='',emCur='SGD',emType='expense',emPay='cash',emRemember=false,emIsPerson=false;
+let emRow=null,emCat='food',emSubVal='',emCur='SGD',emType='expense',emPay='cash',emRemember=false,emIsPerson=false,emOffset=false;
 /* v9.72 判断这笔是不是「转账给人」：
    ① 该商家在记忆表里是 is_hint（h:1）→ 之前就当人处理过
    ② PayLah/TnG 转账、或 Maybank Transfer to Wallet（这些 parser 已标 isPerson，但没存进 expenses，
@@ -4004,6 +4019,8 @@ function openEdit(r){
   emIsPerson=detectPerson(r);
   emRemember=!emIsPerson;                 // 人=OFF，商家=ON
   emBuildRemember();
+  emOffset=!!r.offset;                     // v11.10 这笔本来有没有抵扣
+  emBuildOffset();
   [...document.getElementById('emIeSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t===emType));   // v11.08 同步支出/收入切换的高亮
   emBuildCats();emValidate();
   emScrim.classList.add('show');emod.classList.add('show');lockScroll(true);
@@ -4016,7 +4033,10 @@ function emSetType(t){
   emCat=Object.keys(t==='income'?INC:CAT)[0]||(t==='income'?'incother':'other');
   [...document.getElementById('emIeSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t===t));
   document.getElementById('emTitle').textContent=t==='income'?'编辑收入':'编辑支出';
-  emBuildPayRow();emBuildRemember();emBuildCats();emValidate();
+  /* v11.10 改成收入时：这家以前设过「默认抵扣」就自动打开（记忆）；改回支出 → 关掉 */
+  if(t==='income'){const ru=ruleOf(merchantKey(document.getElementById('emNote').value.trim()||emRow&&emRow.merchant));emOffset=!!(emRow&&emRow.offset)|| !!(ru&&ru.o);}
+  else emOffset=false;
+  emBuildPayRow();emBuildRemember();emBuildOffset();emBuildCats();emValidate();
 }
 document.getElementById('emIeSeg').addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(b)emSetType(b.dataset.t);});
 /* 编辑弹窗的付款选择器：只在「手动支出」显示（银行来的自动分、不给改）。用共用 chip 渲染。 */
@@ -4052,6 +4072,14 @@ function emBuildRemember(){
   btn.setAttribute('aria-checked',emRemember?'true':'false');
 }
 document.getElementById('emRemBtn').onclick=()=>{emRemember=!emRemember;document.getElementById('emRemBtn').setAttribute('aria-checked',emRemember?'true':'false');};
+/* v11.10 退款抵扣开关：只在「收入」时显示。 */
+function emBuildOffset(){
+  const wrap=document.getElementById('emOffWrap');if(!wrap)return;
+  const show=emType==='income';
+  wrap.style.display=show?'':'none';
+  if(show)document.getElementById('emOffBtn').setAttribute('aria-checked',emOffset?'true':'false');
+}
+document.getElementById('emOffBtn').onclick=()=>{emOffset=!emOffset;document.getElementById('emOffBtn').setAttribute('aria-checked',emOffset?'true':'false');};
 document.getElementById('emSubs').addEventListener('click',e=>{const b=e.target.closest('.subchip');if(!b)return;emSubVal=b.dataset.s||'';emBuildSubs();});
 /* v4.0 确认 = 立刻生效，网络在后台跑。
    以前是 await 网络 → 按钮卡在「保存中…」半秒到两秒，手感很差。
@@ -4071,8 +4099,11 @@ document.getElementById('emConfirm').onclick=()=>{
 
   /* 1) 本地立刻生效 */
   const fsub=(emCat===FOOD_KEY&&emType==='expense')?foodSub(ts):(emSubVal||null);
-  r.amount=amt;r.currency=emCur;r.category=emCat;r.sub=fsub;r.merchant=note;r.type=emType;r.ts=ts;
+  const eoff=(emType==='income'&&emOffset)?1:0;   /* v11.10 只有收入能抵扣；改成支出自动清 0 */
+  r.amount=amt;r.currency=emCur;r.category=emCat;r.sub=fsub;r.merchant=note;r.type=emType;r.ts=ts;r.offset=eoff;
   if(r.source!=='ocbc'&&r.source!=='dbs'&&emType==='expense')r.card_last4=(emPay==='cash'?null:(emPay==='paylah'?'PayLah':emPay));   /* v9.21 非银行来的可改付款方式 */
+  /* v11.10 记住这家「默认抵扣」：本地 RULES.o 更新，下次同名收入自动开 */
+  if(emType==='income'){const ko=merchantKey(note)||merchantKey(origMerchant);if(ko&&!isGeneric(ko))RULES[ko]=Object.assign(RULES[ko]||{},{o:eoff});}
   /* 2) 记住这家商家：以后同一家 → 名字和分类都自动填 */
   if(emType!=='income'&&emCat){
     /* v9.72 转账给人 + 开关关 → 只当提示（h:1），不锁死；商家或开关开 → 硬规则（旧行为）。 */
@@ -4089,7 +4120,7 @@ document.getElementById('emConfirm').onclick=()=>{
 
   /* 3) 后台写库；orig_merchant 让 worker 知道拿哪个 key 去记 */
   apiUpdate(r.id,{amount:amt,currency:emCur,category:emCat,sub:fsub,merchant:note,
-                  type:emType,ts,orig_merchant:origMerchant,
+                  type:emType,ts,orig_merchant:origMerchant,offset:eoff,   /* v11.10 抵扣旗标 */
                   isPerson:emIsPerson,lockPerson:emRemember,   /* v9.72 人 vs 商家记忆 */
                   ...((r.source!=='ocbc'&&r.source!=='dbs'&&emType==='expense')?{card_last4:r.card_last4}:{})}).then(ok=>{
     if(ok)return;
