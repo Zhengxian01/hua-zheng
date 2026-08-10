@@ -802,6 +802,18 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 /* 渐变文字：--gx 由设置页选择；gflow 让它流动 */
 @keyframes gflow{to{background-position:220% 0}}
 
+/* v11.11 横屏提示（只在矮屏＝手机横放时出现；平板/桌面横屏更高，不会触发）。纯 CSS。 */
+#rotateHint{display:none}
+@media (orientation:landscape) and (max-height:540px){
+  #rotateHint{display:flex;position:fixed;inset:0;z-index:99999;background:#06070b;color:#f5e9c8;
+    flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px;
+    font-family:inherit;-webkit-user-select:none;user-select:none}
+  #rotateHint .rhi{font-size:44px;animation:rotHint 1.8s ease-in-out infinite}
+  #rotateHint>div:nth-child(2){font-size:19px;font-weight:800}
+  #rotateHint .rhs{font-size:13px;opacity:.7;font-weight:600}
+}
+@keyframes rotHint{0%,60%{transform:rotate(0)}80%{transform:rotate(-90deg)}100%{transform:rotate(-90deg)}}
+
 /* --- 照片主题：整页背景 = 遮罩(--mask) 叠在照片(--custom-bg)上 --- */
 body.phototheme::before{content:'';position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;background-repeat:no-repeat;
   background-image:linear-gradient(rgba(10,12,16,var(--mask,.42)),rgba(10,12,16,calc(var(--mask,.42) + .12))),var(--custom-bg,linear-gradient(160deg,#1f2933,#0d1117));}
@@ -1805,6 +1817,9 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
   <div class="mp-grid" id="mpGrid"></div>
 </div>
 
+<!-- v11.11 横屏提示：这个 app 是竖屏设计的，iOS 主屏 PWA 又不认 manifest 的 orientation 锁，
+     横过来排版会走样。所以横屏（矮屏＝手机横放）时盖一层提示转回竖屏。纯 CSS，没有 JS。 -->
+<div id="rotateHint"><div class="rhi">📱</div><div>请把手机转回竖屏使用</div><div class="rhs">这个记账页是竖屏排版的</div></div>
 <div class="toast" id="toast"></div>
 <!-- v8.9 撤销 toast：删错了 10 秒内可以按「撤销」拿回来 -->
 <div class="utoast" id="utoast" role="status" aria-live="polite">
@@ -2144,6 +2159,11 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
   </div>
   <div class="datechip"><label>📅 <input type="date" id="date"></label></div>
   <div class="paywrap" id="payWrap"><span class="paylbl">付款方式</span><div class="payrow" id="payRow"></div></div>
+  <!-- v11.10 记一笔·收入时的退款抵扣开关（跟编辑弹窗同一套） -->
+  <div class="emremember" id="addOffWrap" style="display:none;margin:2px 14px 6px">
+    <div><div class="emrl1">从总支出里扣掉（退款/返现）</div><div class="emrl2">开了这笔就不算收入，改成抵扣本月支出 · 以后同一家自动记得</div></div>
+    <button class="emtoggle" id="addOffBtn" role="switch" aria-checked="false"><span class="emknob"></span></button>
+  </div>
   <div class="pad" id="pad">
     <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
     <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
@@ -2542,7 +2562,7 @@ function sgdOf(r){const rate=FX[r.currency];
   if(r.currency&&r.currency!=='SGD')FX_MISS.add(r.currency);
   return r.amount;}
 const LIVE=!!(CONFIG.WORKER_URL&&CONFIG.TOKEN);   /* v9.64 没 token 先走 DEMO，别拿空 token 打 API */
-let DATA=[], RULES={}, viewMonth=sgMonthDate(Date.now()), selCat="food", selSub="", selCur="SGD", selType="expense", selPay="cash", amtStr="0", openDayKey=null, pickYear=sgMonthDate(Date.now()).getFullYear();
+let DATA=[], RULES={}, viewMonth=sgMonthDate(Date.now()), selCat="food", selSub="", selCur="SGD", selType="expense", selPay="cash", amtStr="0", openDayKey=null, pickYear=sgMonthDate(Date.now()).getFullYear(), selOffset=false;
 
 const DEMO=[
   {id:11,ts:"2026-07-01T09:00:00+08:00",amount:4500,currency:"SGD",merchant:"月薪",type:"income",category:"salary",raw:""},
@@ -2627,6 +2647,8 @@ const isInc=r=>r.type==='income';
    isOffset：这笔是「拿去抵扣支出」的收入。netInc：真正算进收入的（排除 offset）。 */
 const isOffset=r=>r.type==='income'&&!!r.offset;
 const isNetInc=r=>r.type==='income'&&!r.offset;
+/* v11.10 某月被退款抵扣掉的总额（SGD）—— hero / 环形中心 / 各处「本月支出」总额都减掉它，口径统一。 */
+function offsetSumOf(rows){return rows.filter(isOffset).reduce((s,r)=>s+sgdOf(r),0);}
 
 /* ═══════════════ v9.94 开机三件事 ═══════════════
    现象（实测，每个 API 延迟 900ms 模拟 4G）：
@@ -3365,7 +3387,9 @@ function buildDonut(){
      把最小的几类合成「其他」灰色一块，圆环清爽。你的配色/箭头/弧逻辑一律不动 —— 只改喂进去的数据。 */
   const byTop=donutTop(by,5);
   document.getElementById('donutSvg').innerHTML=donutSegs(byTop,tot);
-  document.getElementById('donutTotal').innerHTML='<span class="s">S$</span>'+fmt(tot); fitDonutCenter();
+  /* v11.10 环形中心显示【净支出】= 毛额 − 退款抵扣，跟 hero 大数字口径一致；圆环各扇形仍按毛额画（退款不属于任何支出分类）。 */
+  const _net=tot-offsetSumOf(DATA.filter(x=>sameMonth(x.ts)));
+  document.getElementById('donutTotal').innerHTML='<span class="s">S$</span>'+fmt(_net); fitDonutCenter();
   /* v9.79 环形图例：色块 + 名字 + %，让人一眼知道每个颜色是什么（以前只有圈，看不懂）。
      跟环形用同一份 byTop → 颜色/分块完全对得上。名字：__other__ 显示「其他」，其余用 catDef。 */
   const leg=document.getElementById('donutLegend');
@@ -4628,11 +4652,23 @@ function buildSubRow(){
     subs.map(x=>`<button class="subchip${x===selSub?' on':''}" data-s="${esc(x)}">${esc(x)}</button>`).join('');
 }
 function updAmt(){const el=document.getElementById('amtDisp');el.innerHTML=`<span class="s">${esc(curSym(selCur))}</span>${amtStr}`;el.classList.toggle('zero',amtStr==='0');el.classList.toggle('inc',selType==='income');document.getElementById('save').disabled=(parseFloat(amtStr)||0)<=0;}
-function setType(t){selType=t;selCat=Object.keys(t==='income'?INC:CAT)[0]||'other';selSub='';[...document.getElementById('ieSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t===t));buildCatGrid();buildPayRow();updAmt();}
+function setType(t){selType=t;selCat=Object.keys(t==='income'?INC:CAT)[0]||'other';selSub='';[...document.getElementById('ieSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t===t));buildCatGrid();buildPayRow();addBuildOffset();updAmt();}
+/* v11.10 记一笔·退款抵扣开关：只在收入时显示；切到收入时按当前备注这家的记忆预设默认值。 */
+function addBuildOffset(){
+  const wrap=document.getElementById('addOffWrap');if(!wrap)return;
+  const show=selType==='income';
+  wrap.style.display=show?'':'none';
+  if(!show){selOffset=false;return;}
+  const ru=ruleOf(merchantKey((document.getElementById('note').value||'').trim()));
+  if(ru&&typeof ru.o!=='undefined')selOffset=!!ru.o;   // 这家记过 → 用记忆；没记过 → 保持当前
+  document.getElementById('addOffBtn').setAttribute('aria-checked',selOffset?'true':'false');
+}
+document.getElementById('addOffBtn').onclick=()=>{selOffset=!selOffset;document.getElementById('addOffBtn').setAttribute('aria-checked',selOffset?'true':'false');};
 /* 只用于「新增」。编辑走 .emod 弹窗，跟这里没关系了。 */
 function openSheet(dayKey){
   _saveLock=false;      /* v9.59 每次打开记账 = 允许保存一次 */
-  selType='expense';selCat=Object.keys(CAT)[0]||'other';selSub='';selCur='SGD';selPay='cash';amtStr='0';
+  selType='expense';selCat=Object.keys(CAT)[0]||'other';selSub='';selCur='SGD';selPay='cash';amtStr='0';selOffset=false;
+  document.getElementById('addOffWrap').style.display='none';   /* v11.10 默认支出 → 抵扣开关先藏起来 */
   [...document.getElementById('ieSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t===selType));
   document.getElementById('curBtn').textContent=selCur;
   document.getElementById('note').value='';
@@ -4851,8 +4887,11 @@ document.getElementById('catgrid').addEventListener('click',e=>{const b=e.target
 document.getElementById('subRow').addEventListener('click',e=>{const b=e.target.closest('.subchip');if(!b)return;selSub=b.dataset.s||'';buildSubRow();});
 /* v4.0：备注里打的是商家名的话，只要以前记过这家 → 分类自动跳过去 */
 document.getElementById('note').addEventListener('input',e=>{
-  if(selType==='income')return;
   const ru=ruleOf(merchantKey(e.target.value.trim()));
+  if(selType==='income'){   /* v11.10 收入：打到记过的退款商家 → 抵扣开关按记忆自动预设 */
+    if(ru&&typeof ru.o!=='undefined'){selOffset=!!ru.o;document.getElementById('addOffBtn').setAttribute('aria-checked',selOffset?'true':'false');}
+    return;
+  }
   if(ru&&ru.c&&CAT[ru.c]&&ru.c!==selCat){selCat=ru.c;selSub='';buildCatGrid();}
 });
 /* v11.09 记账键盘：数字盘是默认主键盘（开弹窗就在）。点「备注」→ iOS 文字键盘上来，这时收起数字盘，
@@ -4879,7 +4918,8 @@ document.getElementById('save').onclick=async()=>{
      出国后手动记的账和银行来的账跑在两个时钟上，时间轴会乱、foodSub 也会挑错餐别。 */
   const nw=new Date(Date.now()+8*3600*1000);const tOfDay=`${String(nw.getUTCHours()).padStart(2,'0')}:${String(nw.getUTCMinutes()).padStart(2,'0')}:${String(nw.getUTCSeconds()).padStart(2,'0')}`;
   const btn=document.getElementById('save');btn.disabled=true;btn.textContent='保存中…';
-  const payload={ts:date+'T'+tOfDay+'+08:00',amount:amt,currency:selCur,merchant:note,card_last4:(selType==='expense'?(selPay==='cash'?null:(selPay==='paylah'?'PayLah':selPay)):null),source:'manual',type:selType,category:selCat,sub:(selCat===FOOD_KEY&&selType==='expense')?foodSub(date+'T'+tOfDay+'+08:00'):(selSub||null),raw:''};
+  const payload={ts:date+'T'+tOfDay+'+08:00',amount:amt,currency:selCur,merchant:note,card_last4:(selType==='expense'?(selPay==='cash'?null:(selPay==='paylah'?'PayLah':selPay)):null),source:'manual',type:selType,category:selCat,sub:(selCat===FOOD_KEY&&selType==='expense')?foodSub(date+'T'+tOfDay+'+08:00'):(selSub||null),offset:(selType==='income'&&selOffset)?1:0,raw:''};   /* v11.10 退款抵扣旗标 */
+  if(selType==='income'&&note){const k=merchantKey(note);if(k&&!isGeneric(k))RULES[k]=Object.assign(RULES[k]||{},{o:payload.offset});}   /* v11.10 本地记住这家抵扣默认（本次会话预填用；跨设备靠编辑那条写库） */
   /* v9.54 乐观加账：立刻显示、背景存 worker、失败撤回（0 延迟）*/
   const tmpId=Date.now();payload.id=tmpId;DATA.push(payload);MUT++;   /* v9.94 竞态守卫，见 load() */
     if(!sameMonth(payload.ts)){viewMonth=sgMonthDate(payload.ts);buildAll();closeSheet();if(dayOpen())buildDayPage(openDayKey);}
@@ -4902,7 +4942,7 @@ function monthRows(){return sortByTsDesc(DATA.filter(x=>sameMonth(x.ts)));}
 /* 导出汇总：金额一律折算成 SGD；oth 保留原币小计，方便对账 */
 /* ⚠️ v9.94：oth 以前写死 {USD:0,MYR:0} —— 报表和 Excel 的「原币小计」永远漏 CNY 和一切新币。
    改成现算，SGD 不进 oth（它不用折算）。 */
-function monthTotals(rows){let exp=0,inc=0;const oth={};rows.forEach(r=>{const v=sgdOf(r);if(isInc(r)){inc+=v;return;}exp+=v;const c=r.currency||'SGD';if(c!=='SGD')oth[c]=(oth[c]||0)+r.amount;});return {exp,inc,oth};}
+function monthTotals(rows){let exp=0,inc=0;const oth={};rows.forEach(r=>{const v=sgdOf(r);if(isInc(r)){if(r.offset){exp-=v;const c=r.currency||'SGD';if(c!=='SGD')oth[c]=(oth[c]||0)-r.amount;}else inc+=v;return;}exp+=v;const c=r.currency||'SGD';if(c!=='SGD')oth[c]=(oth[c]||0)+r.amount;});return {exp,inc,oth};}   /* v11.10 offset 退款：从支出减、不进收入，跟 hero 口径一致 */
 /* ============ v23.27 xlsx：按需加载 + 载不到就退 CSV ============
    为什么这样做（跟一般 App 一致的两条）：
      ① 第三方库**不进开机路径**。以前那支 <script src=unpkg> 是同步的，unpkg 慢一秒开机就慢一秒，
