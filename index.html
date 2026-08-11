@@ -7411,13 +7411,27 @@ function renderHealthList(C){
   const L=document.getElementById('healthList');if(L)L.innerHTML='<div class="hlist">'+C.map(x=>
     `<div class="hrow"><span class="hdot">${hIcon(x.s)}</span><span class="htx"><div class="hn">${esc(x.n)}</div><div class="hv${x.s==='ok'?'':' '+x.s}">${esc(x.v)}</div></span></div>`).join('')+'</div>';
 }
+/* v10.23 银行邮件解析自检：打 worker 的 /api/selftest（只读，纯解析不碰账），
+   把「你的银行邮件到底解析对不对」这层做成一键跑。回 {ok,pass,total,fails}，下面拼成一行体检结果。 */
+async function fetchSelftest(){
+  if(!LIVE)return null;
+  try{const r=await fetch(`${CONFIG.WORKER_URL}/api/selftest?token=${encodeURIComponent(CONFIG.TOKEN)}`,{cache:'no-store'});
+    if(!r.ok)return {_err:r.status};return await r.json();}catch(e){return {_err:'net'};}
+}
+function selftestRow(st){
+  if(!st)return {n:'银行邮件解析自检',s:'warn',v:'离线，连上 Worker 才能跑'};
+  if(st._err)return {n:'银行邮件解析自检',s:'err',v:st._err==='net'?'连不上 Worker':(st._err===404?'Worker 还是旧版（没有这支自检，请重新部署）':`打不开：${st._err}`)};
+  if(st.ok)return {n:'银行邮件解析自检',s:'ok',v:`${st.pass}/${st.total} 个真实银行邮件样本全部解析正确`};
+  return {n:'银行邮件解析自检',s:'err',v:`${st.pass}/${st.total} 对，${(st.fails||[]).length} 笔读错：　`+(st.fails||[]).join('　；　')};
+}
 async function runHealth(){
-  const sk=['连接 Worker','应用设置','版本','数据结构','设备时钟','后台排程','云端备份','数据保留','Google 授权','通知订阅','每周周报','汇率','加到主画面','离线支持','数据','背景快取'];
+  const sk=['连接 Worker','应用设置','版本','数据结构','设备时钟','后台排程','云端备份','数据保留','Google 授权','通知订阅','每周周报','汇率','加到主画面','离线支持','数据','背景快取','银行邮件解析自检'];
   const sum=document.getElementById('hSum');if(sum){sum.className='hsum';sum.textContent='检查中…';}
   const L=document.getElementById('healthList');if(L)L.innerHTML='<div class="hlist">'+sk.map(n=>
     `<div class="hrow"><span class="hdot">⏳</span><span class="htx"><div class="hn">${n}</div><div class="hv">检查中…</div></span></div>`).join('')+'</div>';
-  const [h,sub]=await Promise.all([fetchHealth(),localSub()]);   /* 背景并行，不阻塞 */
+  const [h,sub,st]=await Promise.all([fetchHealth(),localSub(),fetchSelftest()]);   /* 背景并行，不阻塞 */
   const C=healthChecks(h,sub);
+  C.push(selftestRow(st));   /* v10.23 把解析自检拼成体检的最后一行 */
   renderHealthList(C);
   /* v10.3：手动跑完顺手更新外面那颗徽章 + 刷新缓存 → 修好问题后红点立刻消，不用等 6 小时节流 */
   try{ var eN=C.filter(function(x){return x.s==='err';}).length, wN=C.filter(function(x){return x.s==='warn';}).length; setHealthBadge(eN,wN); await idbSet('healthCache',{t:Date.now(),err:eN,warn:wN}); }catch(e){}
