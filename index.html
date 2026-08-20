@@ -126,6 +126,11 @@ body.pagelock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .cal-c .cin{color:var(--emerald)}
 .cal-c .ce.hide,.cal-c .cin.hide{display:none}
 .cal-c.today{outline:2px solid var(--emerald);outline-offset:-2px}
+/* v11.12 选中某一天：格子明显高亮 —— 用数值颜色 --num 描一圈粗环 + 号码变色 + 微微抬起，
+   跟 today 的翠绿描边天生区分。以前点了日期只有下面弹速览、格子毫无变化 → 不知道选了哪天（使用者反馈）。 */
+.cal-c.sel{box-shadow:inset 0 0 0 2.5px var(--num,#f5e9c8);background:var(--card);transform:translateY(-1px)}
+.cal-c.sel .dn{color:var(--num,#f5e9c8);font-weight:800}
+body.phototheme .cal-c.sel{background:rgba(255,255,255,.13)}
 /* v7.3 日历「金额 / 事项」切换（放在标题行右上角，不去挤翻月那行）
    v7.4：钮太小 → 加大到 34px 高（好按）；绿底改成一块「会滑过去」的指示块（丝滑感来自这个，不是闪一下就换色） */
 .dsec[data-sec="cal"] .section-h{align-items:center}   /* 默认 baseline 会让药丸切换跟标题错位 */
@@ -3234,7 +3239,7 @@ function buildCalendar(){
       const e=perE[d]||0,inc=perI[d]||0;const v=perV[d];
       const any=(e>0||inc>0||!!v);
       const dayKey=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      h+=`<div class="cal-c${any?' has':''}${isCur&&d===t.getDate()?' today':''}" data-day="${dayKey}">`
+      h+=`<div class="cal-c${any?' has':''}${isCur&&d===t.getDate()?' today':''}${dayKey===peekKey?' sel':''}" data-day="${dayKey}">`
         +`<span class="dn">${d}${v?`<i class="evdot${v.past?' done':''}"></i>`:''}</span>`
         +`<span class="ce${e>0?'':' hide'}">${e>0?'-'+calAmt(e):''}</span>`
         +`<span class="cin${inc>0?'':' hide'}">${inc>0?'+'+calAmt(inc):''}</span>`
@@ -3349,7 +3354,7 @@ function buildCalTodo(y,m,first,dim,isCur,t){
     wk.forEach((d,i)=>{
       if(d===null){h+=`<div class="cal-c blank" style="grid-column:${i+1};grid-row:1/-1"></div>`;return;}
       const hasEv=segs.some(sg=>sg.c1<=i+1&&sg.c2>=i+1);
-      h+=`<div class="cal-c${hasEv?' has':''}${isCur&&d===t.getDate()?' today':''}" data-day="${key(d)}" style="grid-column:${i+1};grid-row:1/-1">`
+      h+=`<div class="cal-c${hasEv?' has':''}${isCur&&d===t.getDate()?' today':''}${key(d)===peekKey?' sel':''}" data-day="${key(d)}" style="grid-column:${i+1};grid-row:1/-1">`
         +`<span class="dn">${d}</span></div>`;
     });
     segs.filter(sg=>sg.lane<MAX_LANE).forEach(sg=>{
