@@ -6273,6 +6273,19 @@ document.getElementById('weeklySw').onclick=async()=>{
   }catch(e){WEEKLY=snap;syncWeeklySw();toast('没存上（连不上 Worker）','err');}
 };
 /* v9.11 立即测试：马上推一条，不用等周一、不用碰 D1 */
+/* v11.14 把「发送失败」翻成看得懂的原因 + 该怎么办。o={subs,ok,gone,codes,nokey}。
+   codes 是推送服务回的状态码分布：410=订阅过期(iOS 常悄悄换掉)、401/403=服务器 VAPID 密钥跟订阅对不上。 */
+function pushWhy(o){
+  if(!o)return '连不上 Worker';
+  if((o.ok||0)>0)return '';
+  if(o.nokey)return '服务器没配推送密钥（VAPID）';
+  if((o.subs||0)===0)return '这台设备还没订阅 —— 按上面「开启通知」';
+  const c=o.codes||{};
+  if((o.gone||0)>0||c['410']||c['404'])return `订阅已过期，已清掉 ${o.gone||c['410']||c['404']||''} 个 —— 关掉通知再重新「开启通知」订阅一次`;
+  if(c['401']||c['403'])return '服务器 VAPID 密钥跟订阅对不上（回 401/403）—— 先关掉通知再重开订阅一次；还不行就是 Cloudflare 的 VAPID Secret 被换过';
+  const cs=Object.keys(c).map(k=>`${k}×${c[k]}`).join(' ');
+  return `推送服务没接受（${cs||'未知'}）—— 关掉通知再重开一次`;
+}
 document.getElementById('weeklyTest').onclick=async()=>{
   if(!LIVE){toast('需要连上 Worker','err');return;}
   const btn=document.getElementById('weeklyTest');
@@ -6283,7 +6296,7 @@ document.getElementById('weeklyTest').onclick=async()=>{
     const j=await r.json();
     if(!r.ok||!j.ok)throw new Error('worker');
     if(j.sent>0)toast(`已推给 ${j.sent} 个装置 · 看手机通知`);
-    else toast('还没订阅通知 —— 先开上面的通知','err');
+    else toast('没推成：'+pushWhy(j),'err');
   }catch(e){toast('发送失败（连不上 Worker）','err');}
   btn.disabled=false;btn.textContent='立即发一条测试周报';
 };
@@ -6344,8 +6357,9 @@ document.getElementById('pushActs').addEventListener('click',async e=>{
     const r=await pushApi('/api/push/test',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({token:CONFIG.TOKEN})});
     b.disabled=false;b.textContent='发一个测试通知';
-    if(r&&r.ok)toast(`已推给 ${r.ok} 台装置${r.gone?`（清掉 ${r.gone} 台失效的）`:''}`);
-    else toast('发送失败','err');
+    if(r&&(r.ok||0)>0)toast(`已推给 ${r.ok} 台装置${r.gone?`（清掉 ${r.gone} 台失效的）`:''}`);
+    else toast('发送失败：'+pushWhy(r),'err');
+    await pushRender();   /* 清掉失效订阅后刷新「共 N 台装置」，别再显示旧数 */
     return;
   }
   if(act==='off'){
@@ -7363,7 +7377,7 @@ function healthChecks(h,sub){
     else if(wl.hasData===false) C.push({s:'ok',n:'上一次早报推送',v:`${wt}${kt}：上周没有支出，按设计没推（正常）`});
     else if(wl.nokey) C.push({s:'err',n:'上一次早报推送',v:`${wt}${kt}：服务器没配推送密钥（VAPID），发不出`});
     else if((wl.ok||0)>0) C.push({s:'ok',n:'上一次早报推送',v:`${wt}${kt}：成功推给 ${wl.ok} 个设备${wl.gone?` · 清掉 ${wl.gone} 个失效订阅`:''}`});
-    else C.push({s:'err',n:'上一次早报推送',v:`${wt}${kt}：0 个设备收到${wl.gone?` —— ${wl.gone} 个订阅已失效，去「通知」重新开一次`:' —— 没有可推的订阅，去「通知」开一下'}`});
+    else C.push({s:'err',n:'上一次早报推送',v:`${wt}${kt}：0 个设备收到 —— ${pushWhy(wl)}`});
   }
   if(h.ics_feeds>0)C.push(h.ics_errors>0?{s:'warn',n:'日历订阅',v:`${h.ics_feeds} 个 · ${h.ics_errors} 个同步失败 —— 去「日历订阅」看`}:{s:'ok',n:'日历订阅',v:`${h.ics_feeds} 个 · 正常`});
   if(h.inbox_new>0)C.push({s:'warn',n:'待认领邮件',v:`${h.inbox_new} 封没认出来 —— 去「收件箱」处理`});
