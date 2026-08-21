@@ -6334,6 +6334,18 @@ async function pushRender(){
       '<b>怎么修：</b>用<b>同一对</b>密钥重设这两个 Secret（网上「vapid key generator」生成一对，公钥填 VAPID_PUBLIC、私钥 JWK 填 VAPID_PRIVATE），重新部署，再回来<b>关掉通知 → 重新开启</b>订阅一次。</div>';
     hint.innerHTML='';return;
   }
+  /* v11.16 你以为设了 VAPID_SUB，但 worker 实际没读到 → 多半设错地方/名字/没部署，还在用会被 Apple 拒的占位。 */
+  if(st&&st.configured&&st.sub_set===false){
+    stat.innerHTML='<div class="gdt err">⚠️ Worker 没读到 VAPID_SUB</div>'+
+      '<div class="gdd">你以为设了，但**这个** Worker 实际没读到 —— 多半是<b>设在别的地方 / 名字打错 / 改完没按 Deploy</b>。它现在用的是会被 Apple 拒的占位邮箱（BadJwtToken）。<br><br>去 Cloudflare <b>这个 Worker</b> 的 <b>Settings → Variables</b>，变量名一字不差是 <b>VAPID_SUB</b>，值 <b>mailto:你的邮箱</b>，按 <b>Deploy</b>，再回来关通知重开订阅。</div>';
+    hint.innerHTML='';return;
+  }
+  /* v11.16 最常见：VAPID_SUB 只填了裸邮箱，少了 mailto: 前缀 → Apple 回 BadJwtToken。直接把该改成什么写出来。 */
+  if(st&&st.sub_set&&st.sub_ok===false){
+    stat.innerHTML='<div class="gdt err">⚠️ VAPID_SUB 格式不对</div>'+
+      `<div class="gdd">现在设的是「<b>${esc(st.sub||'')}</b>」，开头少了 <b>mailto:</b>（或 https://）—— Apple 会拒（BadJwtToken）。<br><br>改成 <b>mailto:${esc(st.sub||'你的邮箱')}</b>（前面补上 mailto:），按 Deploy，再回来关通知重开订阅。</div>`;
+    hint.innerHTML='';return;
+  }
   if(Notification.permission==='denied'){
     stat.innerHTML='<div class="gdt err">⚠️ 通知被拒绝了</div>'+
       '<div class="gdd">之前按过「不允许」。要去 iOS <b>设置 → 通知 → 花费</b> 里重新打开，这里改不了。</div>';return;
