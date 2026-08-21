@@ -6340,10 +6340,12 @@ async function pushRender(){
       '<div class="gdd">你以为设了，但**这个** Worker 实际没读到 —— 多半是<b>设在别的地方 / 名字打错 / 改完没按 Deploy</b>。它现在用的是会被 Apple 拒的占位邮箱（BadJwtToken）。<br><br>去 Cloudflare <b>这个 Worker</b> 的 <b>Settings → Variables</b>，变量名一字不差是 <b>VAPID_SUB</b>，值 <b>mailto:你的邮箱</b>，按 <b>Deploy</b>，再回来关通知重开订阅。</div>';
     hint.innerHTML='';return;
   }
-  /* v11.16 最常见：VAPID_SUB 只填了裸邮箱，少了 mailto: 前缀 → Apple 回 BadJwtToken。直接把该改成什么写出来。 */
+  /* v11.17 VAPID_SUB 开头不是 mailto:/https:// → Apple 回 BadJwtToken。常见两种：漏了前缀（裸邮箱）、或把 mailto 打错（malito 之类）。
+     ⚠️ 别再把 mailto: 直接贴在原值前面（原值可能已经带了个打错的前缀，会拼成 mailto:malito:…）——先剥掉开头任何「词:」再补正确的 mailto:。 */
   if(st&&st.sub_set&&st.sub_ok===false){
+    const rawv=st.sub||'', email=(rawv.replace(/^\s*[A-Za-z][\w.+-]*:/,'').trim())||'你的邮箱';
     stat.innerHTML='<div class="gdt err">⚠️ VAPID_SUB 格式不对</div>'+
-      `<div class="gdd">现在设的是「<b>${esc(st.sub||'')}</b>」，开头少了 <b>mailto:</b>（或 https://）—— Apple 会拒（BadJwtToken）。<br><br>改成 <b>mailto:${esc(st.sub||'你的邮箱')}</b>（前面补上 mailto:），按 Deploy，再回来关通知重开订阅。</div>`;
+      `<div class="gdd">现在设的是「<b>${esc(rawv)}</b>」—— 开头必须是 <b>mailto:</b>（拼写就是 m-a-i-l-t-o，别打成 malito）或 https://，Apple 才认，否则回 BadJwtToken。<br><br>改成 <b>mailto:${esc(email)}</b>，按 Deploy，再回来关通知重开订阅。</div>`;
     hint.innerHTML='';return;
   }
   if(Notification.permission==='denied'){
