@@ -7354,6 +7354,17 @@ function healthChecks(h,sub){
   /* v10.3：iOS 通知权限被拒时，就算服务器还留着订阅也发不出来 —— 这种静默失败原本查不到。纯前端读 Notification.permission，不打网络。 */
   try{ if('Notification' in window && Notification.permission==='denied') C.push({s:'warn',n:'通知权限',v:'被拒 —— 通知发不出来。去 iOS 设置 → 通知 → 找到这个 App 打开「允许通知」'}); }catch(e){}
   C.push({s:'ok',n:'每周周报',v:h.weekly_report?'已开 · 周一早 8 点推':'未开'});
+  /* v11.13 上一次早报推送成没成（使用者反馈：这周没收到，想在自检里看到）。
+     weekly_last 由 cron 真推 / 手动测试 都会写。ok=收到设备数，gone=失效被清掉的订阅数，nokey=服务器没配 VAPID。 */
+  if(h.weekly_report){
+    const wl=h.weekly_last, dA=(wl&&wl.at)?daysAgo(wl.at):null;
+    const wt=dA==null?'':(dA<=0?'今天':dA===1?'1 天前':`${dA} 天前`), kt=(wl&&wl.kind==='test')?'（手动测试）':'';
+    if(!wl) C.push({s:'warn',n:'上一次早报推送',v:'还没推过 —— 开了之后第一个周一早 8 点才推。想马上验证：设置里按「立即发一条测试周报」'});
+    else if(wl.hasData===false) C.push({s:'ok',n:'上一次早报推送',v:`${wt}${kt}：上周没有支出，按设计没推（正常）`});
+    else if(wl.nokey) C.push({s:'err',n:'上一次早报推送',v:`${wt}${kt}：服务器没配推送密钥（VAPID），发不出`});
+    else if((wl.ok||0)>0) C.push({s:'ok',n:'上一次早报推送',v:`${wt}${kt}：成功推给 ${wl.ok} 个设备${wl.gone?` · 清掉 ${wl.gone} 个失效订阅`:''}`});
+    else C.push({s:'err',n:'上一次早报推送',v:`${wt}${kt}：0 个设备收到${wl.gone?` —— ${wl.gone} 个订阅已失效，去「通知」重新开一次`:' —— 没有可推的订阅，去「通知」开一下'}`});
+  }
   if(h.ics_feeds>0)C.push(h.ics_errors>0?{s:'warn',n:'日历订阅',v:`${h.ics_feeds} 个 · ${h.ics_errors} 个同步失败 —— 去「日历订阅」看`}:{s:'ok',n:'日历订阅',v:`${h.ics_feeds} 个 · 正常`});
   if(h.inbox_new>0)C.push({s:'warn',n:'待认领邮件',v:`${h.inbox_new} 封没认出来 —— 去「收件箱」处理`});
   /* v9.96 汇率：整个 app 的金额都靠 sgdOf() 折算成 SGD，汇率过期或缺币会让总额悄悄算错 ——
@@ -7430,7 +7441,7 @@ function selftestRow(st){
   return {n:'银行邮件解析自检',s:'err',v:`${st.pass}/${st.total} 对，${(st.fails||[]).length} 笔读错：　`+(st.fails||[]).join('　；　')};
 }
 async function runHealth(){
-  const sk=['连接 Worker','应用设置','版本','数据结构','设备时钟','后台排程','云端备份','数据保留','Google 授权','通知订阅','每周周报','汇率','加到主画面','离线支持','数据','背景快取','银行邮件解析自检'];
+  const sk=['连接 Worker','应用设置','版本','数据结构','设备时钟','后台排程','云端备份','数据保留','Google 授权','通知订阅','每周周报','上一次早报推送','汇率','加到主画面','离线支持','数据','背景快取','银行邮件解析自检'];
   const sum=document.getElementById('hSum');if(sum){sum.className='hsum';sum.textContent='检查中…';}
   const L=document.getElementById('healthList');if(L)L.innerHTML='<div class="hlist">'+sk.map(n=>
     `<div class="hrow"><span class="hdot">⏳</span><span class="htx"><div class="hn">${n}</div><div class="hv">检查中…</div></span></div>`).join('')+'</div>';
