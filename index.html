@@ -6280,11 +6280,16 @@ function pushWhy(o){
   if((o.ok||0)>0)return '';
   if(o.nokey)return '服务器没配推送密钥（VAPID）';
   if((o.subs||0)===0)return '这台设备还没订阅 —— 按上面「开启通知」';
-  const c=o.codes||{};
+  const c=o.codes||{}, rz=o.reason?`（推送服务：${o.reason}）`:'';
   if((o.gone||0)>0||c['410']||c['404'])return `订阅已过期，已清掉 ${o.gone||c['410']||c['404']||''} 个 —— 关掉通知再重新「开启通知」订阅一次`;
-  if(c['401']||c['403'])return '服务器 VAPID 密钥跟订阅对不上（回 401/403）—— 先关掉通知再重开订阅一次；还不行就是 Cloudflare 的 VAPID Secret 被换过';
+  if(c['401']||c['403']){
+    /* v11.15 用 Apple 回的正文分两种：BadJwtToken=JWT 声明(多半是 sub 联系邮箱)不合规；InvalidToken/mismatch=密钥对不上 */
+    if(/badjwt|jwt|claim|\bsub\b|audience|expir/i.test(o.reason||''))
+      return `推送被拒：JWT 声明不合规${rz} —— 多半是 VAPID 的 sub（联系邮箱）。在 Cloudflare 给 Worker 设 VAPID_SUB=mailto:你的邮箱，再重开订阅`;
+    return `推送被拒：VAPID 密钥跟订阅对不上${rz} —— 先关掉通知再重开订阅；还不行就是 Cloudflare 的 VAPID_PUBLIC/PRIVATE 跟前端编进去那把不是同一对`;
+  }
   const cs=Object.keys(c).map(k=>`${k}×${c[k]}`).join(' ');
-  return `推送服务没接受（${cs||'未知'}）—— 关掉通知再重开一次`;
+  return `推送服务没接受（${cs||'未知'}）${rz} —— 关掉通知再重开一次`;
 }
 document.getElementById('weeklyTest').onclick=async()=>{
   if(!LIVE){toast('需要连上 Worker','err');return;}
