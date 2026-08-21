@@ -6279,6 +6279,7 @@ function pushWhy(o){
   if(!o)return '连不上 Worker';
   if((o.ok||0)>0)return '';
   if(o.nokey)return '服务器没配推送密钥（VAPID）';
+  if(o.keymatch===false)return '确定了：服务器两把 VAPID 密钥不是一对（VAPID_PUBLIC 跟 VAPID_PRIVATE 对不上）—— 去 Cloudflare 用同一对重设这两个 Secret，再重开订阅';
   if((o.subs||0)===0)return '这台设备还没订阅 —— 按上面「开启通知」';
   const c=o.codes||{}, rz=o.reason?`（推送服务：${o.reason}）`:'';
   if((o.gone||0)>0||c['410']||c['404'])return `订阅已过期，已清掉 ${o.gone||c['410']||c['404']||''} 个 —— 关掉通知再重新「开启通知」订阅一次`;
@@ -6325,6 +6326,13 @@ async function pushRender(){
   if(st&&!st.configured){
     stat.innerHTML='<div class="gdt">Worker 还没设金钥</div>';
     hint.innerHTML='要在 Cloudflare 设 <b>VAPID_PUBLIC</b> 和 <b>VAPID_PRIVATE</b> 两个 Secret。';return;
+  }
+  /* v11.15 两把 VAPID 密钥不是一对 → 推送必然 403，直接在这里红字点破（不用等按测试）。这是「以前能现在不能」最常见的真凶。 */
+  if(st&&st.keymatch===false){
+    stat.innerHTML='<div class="gdt err">⚠️ 两把 VAPID 密钥不是一对</div>'+
+      '<div class="gdd">Cloudflare 上的 <b>VAPID_PUBLIC</b> 跟 <b>VAPID_PRIVATE</b> 对不上（多半是之前换过密钥、只更了一个）—— 推送一定会被拒（403）。<br><br>'+
+      '<b>怎么修：</b>用<b>同一对</b>密钥重设这两个 Secret（网上「vapid key generator」生成一对，公钥填 VAPID_PUBLIC、私钥 JWK 填 VAPID_PRIVATE），重新部署，再回来<b>关掉通知 → 重新开启</b>订阅一次。</div>';
+    hint.innerHTML='';return;
   }
   if(Notification.permission==='denied'){
     stat.innerHTML='<div class="gdt err">⚠️ 通知被拒绝了</div>'+
