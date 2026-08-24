@@ -89,7 +89,9 @@ body.pagelock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .hero .amt .dec{font-size:27px;font-weight:600;opacity:.72;letter-spacing:-.8px}
 .hero .other{font-size:12.5px;opacity:.82;font-weight:500;margin-top:1px;font-variant-numeric:tabular-nums;min-height:16px}
 .hero .other .sep{opacity:.5;margin:0 6px}
-.hero .row2{display:flex;gap:26px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.18)}
+.hero .row2{display:flex;gap:0;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.18)}
+.hero .row2 .mini{flex:1;min-width:0}
+.hero .row2 .mini+.mini{border-left:1px solid rgba(255,255,255,.16);padding-left:16px}
 .hero .mini .k{font-size:11px;opacity:.8;margin-bottom:2px}
 /* v4.9：hero 下面这些数值可以自选颜色（--num）。
    一律带暗光晕，所以不管背景照片多亮，字都读得清、照片也照样看得到。 */
@@ -97,6 +99,20 @@ body.pagelock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
   color:var(--num,#f5e9c8);text-shadow:0 1px 3px rgba(0,0,0,.8)}
 .hero .fxline .cc,.hero .fxline .vv{color:var(--num,#f5e9c8);opacity:.95;text-shadow:0 1px 3px rgba(0,0,0,.8)}
 .hero .mini .v small{font-weight:500;opacity:.85;font-size:11px}
+/* v11.30 hero 里的「比上月」小胶囊 + 内嵌累计进度条 */
+.hero .herochip{display:inline-flex;align-items:center;gap:0;margin:2px 0 2px;padding:4px 11px;border-radius:999px;
+  background:rgba(255,255,255,.16);font-size:12px;font-weight:600;line-height:1.3;color:#fff;max-width:100%}
+.hero .herochip .pc{font-weight:800;font-variant-numeric:tabular-nums;margin-right:5px}
+.hero .herochip .pc.up{color:#FFD9B0}.hero .herochip .pc.down{color:#BEF0D8}
+.hero .herochip .hcx{opacity:.82;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hero .heropace{margin:14px 0 2px}
+.hero .heropace .pacechart{position:relative;height:64px;display:flex;align-items:flex-end;gap:2px}
+.hero .heropace .paceb{flex:1 1 0;min-width:0;min-height:1px;border-radius:2px 2px 0 0;background:#fff;opacity:.34}
+.hero .heropace .paceb.on{opacity:.95}
+.hero .heropace .paceb.fu{height:100%;opacity:.10}
+.hero .heropace .pacebud{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,255,255,.55);pointer-events:none}
+.hero .heropace .pacebudl{position:absolute;right:0;top:-13px;font-size:10px;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hero .heropace .pacefoot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:10.5px;color:rgba(255,255,255,.78);font-variant-numeric:tabular-nums}
 
 .calcard{background:var(--card);border-radius:20px;padding:16px 16px 18px;margin-top:16px;box-shadow:var(--shadow)}
 .calcard .ch{font-weight:700;font-size:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
@@ -1394,6 +1410,14 @@ body.theme-journal .hero .row2{border-top:1px solid #E4DCCF!important;}
 body.theme-journal .hero .fxlines,body.theme-journal .hero .fxnote,body.theme-journal .hero .fxlines *{color:#6A6157!important;}
 body.theme-journal .hero .mini .k{color:#A79D8E!important;}
 body.theme-journal .hero .mini .v{color:#2A2521!important;}
+body.theme-journal .hero .row2 .mini+.mini{border-left-color:#E4DCCF!important;}
+body.theme-journal .hero .herochip{background:#E4DCCF!important;color:#2A2521!important;}
+body.theme-journal .hero .herochip .pc.up{color:#B5541F!important;}body.theme-journal .hero .herochip .pc.down{color:#3E7A55!important;}
+body.theme-journal .hero .heropace .paceb{background:#8A7F6E!important;}
+body.theme-journal .hero .heropace .paceb.on{background:#2A2521!important;opacity:1!important;}
+body.theme-journal .hero .heropace .paceb.fu{background:#CFC6B6!important;opacity:.5!important;}
+body.theme-journal .hero .heropace .pacebud{border-top-color:#B7AE9E!important;}
+body.theme-journal .hero .heropace .pacebudl,body.theme-journal .hero .heropace .pacefoot{color:#6A6157!important;}
 body.theme-journal .section-h .h{font-weight:600!important;letter-spacing:.02em!important;color:#2A2521!important;}
 /* 账本线条：交易行 */
 body.theme-journal .tx{border-bottom:1px solid #E4DCCF!important;background:transparent!important;}
@@ -1749,10 +1773,16 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
 </style>
   <div class="tab on" id="tab1">
     <div class="dsec" data-sec="hero"><div class="hero">
-      <div class="cap" id="heroCap">本月 · 支出（全部折算 SGD）</div>
+      <div class="cap" id="heroCap">本月支出 · SGD</div>
       <div class="amt"><span class="s">S$</span><span id="tExp"><span class="int">0</span><span class="dec">.00</span></span></div>
+      <div class="herochip" id="heroChip" style="display:none"></div>
       <div class="fxlines" id="fxLines"></div>
       <div class="fxnote" id="fxNote">&nbsp;</div>
+      <!-- v11.30 累计进度直接长在 hero 里（原「累计 vs 上限」独立卡并进来）：一张卡看完大数字 + 花的节奏 -->
+      <div class="heropace" id="heroPace">
+        <div class="pacechart" id="paceWrap"></div>
+        <div class="pacefoot" id="paceFoot"></div>
+      </div>
       <div class="row2">
         <div class="mini"><div class="k">收入</div><div class="v"><small>S$</small><span id="tInc">0.00</span></div></div>
         <div class="mini"><div class="k">结余</div><div class="v" id="tBal">—</div></div>
@@ -1776,16 +1806,6 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
       <div id="cal"></div>
       <!-- v9.87 点日期 → 下面直接弹出当天 summary（不进全屏页）。像 iPhone 日历那样。 -->
       <div id="dayPeek" class="daypeek" style="display:none"></div>
-    </div></div>
-    <div class="dsec" data-sec="todo">
-    <div class="section-h"><span class="h">等你处理</span><span class="pacelab" id="todoLab"></span></div>
-    <div class="todocard" id="todoWrap"></div></div>
-    <div class="dsec" data-sec="pace">
-    <div class="section-h"><span class="h">累计 vs 上限</span><span class="pacelab" id="paceLab"></span></div>
-    <div class="pacecard">
-      <div class="paceline" id="paceMsg">&nbsp;</div>
-      <div class="pacechart" id="paceWrap"></div>
-      <div class="pacefoot" id="paceFoot"></div>
     </div></div>
   </div>
 
@@ -1813,6 +1833,9 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
            · 「Google Calendar」是同步，不是备份，却被丢在「备份」
            · 「通知」「总览排序」既不是分类也不是定期账单
          所以光换顺序没用，得连东西放哪一起理。 -->
+    <!-- v11.30 「等你处理」从总览挪到设置顶部：总览只留大数字，要动手的事集中在这里 -->
+    <div class="section-h"><span class="h">等你处理</span><span class="pacelab" id="todoLab"></span></div>
+    <div class="todocard" id="todoWrap"></div>
     <div class="setcard">
       <button class="setrow" id="reconnect"><span class="si">🔄</span><div class="st"><div class="sn">重新连接 · 刷新数据</div><div class="sd" id="reconnectSd">断网/弱信号后，网络回来了点这里立刻重拉最新</div></div></button>
     </div>
@@ -3283,6 +3306,42 @@ function updateHeader(){
   be.innerHTML=(bal<0?'-':'')+'<small>S$</small>'+fmt(Math.abs(bal));
   be.style.color=bal<0?'#FF9FA5':'';   /* 负数强制红，盖过 --num */
   document.getElementById('tCount').textContent=rows.length;
+  buildHeroChip(rows,exp);
+}
+/* v11.30 hero 顶部「比上月同期 +X%，多出来的在餐饮」小胶囊。
+   同期口径跟 buildInsights 一样（cutDay 把两边框成同一段），月初不会假暴跌。
+   「多出来的在X」= 本月同期比上月同期涨得最多的那个分类，一眼知道钱多花哪了。 */
+function buildHeroChip(rows,exp){
+  const chip=document.getElementById('heroChip');if(!chip)return;
+  const hide=()=>{chip.style.display='none';chip.innerHTML='';};
+  if(!rows.length){hide();return;}
+  const prev=new Date(viewMonth.getFullYear(),viewMonth.getMonth()-1,1);
+  const isCur=mkOf(viewMonth)===mkOf(sgMonthDate(Date.now()));
+  const prevDim=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),0).getDate();
+  const todaySg=parseInt(todayKey().slice(8,10),10)||prevDim;
+  const cutDay=isCur?Math.min(todaySg,prevDim):prevDim;
+  const samePeriod=isCur&&todaySg<=prevDim;
+  const prevRows=monthsIn(prev).filter(r=>parseInt(isoDay(r.ts).slice(8,10),10)<=cutDay);
+  const expNow=rows.filter(r=>!isInc(r)).reduce((s,r)=>s+sgdOf(r),0);
+  const lastExp=prevRows.filter(r=>!isInc(r)).reduce((s,r)=>s+sgdOf(r),0);
+  if(lastExp<=0){hide();return;}
+  const d=expNow-lastExp,pc=Math.round(d/lastExp*100);
+  if(pc===0){hide();return;}
+  const up=d>0;
+  const lab=samePeriod?(prev.getMonth()+1)+'月同期':(prev.getMonth()+1)+'月';
+  /* 涨得最多 / 省得最多的那个分类 */
+  const nowBy={},preBy={};
+  rows.filter(r=>!isInc(r)).forEach(r=>{const k=catInfo(r).n;nowBy[k]=(nowBy[k]||0)+sgdOf(r);});
+  prevRows.filter(r=>!isInc(r)).forEach(r=>{const k=catInfo(r).n;preBy[k]=(preBy[k]||0)+sgdOf(r);});
+  let topK='',topD=up?0:1e9;
+  new Set([...Object.keys(nowBy),...Object.keys(preBy)]).forEach(k=>{
+    const dd=(nowBy[k]||0)-(preBy[k]||0);
+    if(up){if(dd>topD){topD=dd;topK=k;}}else{if(dd<topD){topD=dd;topK=k;}}
+  });
+  const tail=topK?('· '+(up?'多出来的在 ':'省下来在 ')+topK):'';
+  chip.innerHTML='<span class="pc '+(up?'up':'down')+'">'+(up?'+':'−')+Math.abs(pc)+'%</span>'+
+    '<span class="hcx">vs '+esc(lab)+' '+esc(tail)+'</span>';
+  chip.style.display='';
 }
 /* 日历格子里的金额压缩显示：1234 → 1.2k，123.4 → 123，1.5 → 1.5
    （v3.0 重写 updateHeader 时被我误删了，导致日历一画就炸 → 表现成「连不上 Worker」。） */
