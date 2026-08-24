@@ -313,6 +313,8 @@ body.phototheme .cal-c.sel{background:rgba(255,255,255,.13)}
 .dtbarleg{display:flex;flex-wrap:wrap;gap:9px 14px;margin:0 2px 16px;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .dtbarleg .lg{display:inline-flex;align-items:center;gap:5px}
 .dtbarleg .lgd{width:8px;height:8px;border-radius:2px;display:inline-block;flex-shrink:0}
+/* v11.31 按商家 / 按卡 也做成「深色卡 + 侧边颜色点缀」，跟按分类一致（原来光秃秃的行浮在照片上很难读） */
+#merchList,.bycardlist{background:var(--card);border-radius:18px;padding:4px 14px;box-shadow:var(--shadow)}
 .merchrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
 .merchrow:last-child{border-bottom:none}
 .merchrow .mi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px;flex-shrink:0}
@@ -320,7 +322,8 @@ body.phototheme .cal-c.sel{background:rgba(255,255,255,.13)}
 .merchrow .mmn{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .merchrow .mms{font-size:11px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
 .merchrow .mmv{text-align:right;flex-shrink:0;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;color:var(--ink)}
-.bycardlist{padding:2px 0}
+.bycardlist{padding:4px 14px}
+.cardrow .cdot{width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;font-size:15px}
 @keyframes dvfade{from{opacity:0}to{opacity:1}}
 .glance .gh{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px}
 .glance .gl{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 0;font-size:14px;border-top:1px solid var(--line)}
@@ -864,9 +867,15 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .statusdot{width:9px;height:9px;border-radius:50%;background:#12b981;display:inline-block;flex-shrink:0;box-shadow:0 0 0 3px rgba(18,185,129,.18)}
 .statusdot.warn{background:#E7A33E;box-shadow:0 0 0 3px rgba(231,163,62,.18)}
 .statusdot.bad{background:#F0665F;box-shadow:0 0 0 3px rgba(240,102,95,.18)}
-.setgrp-body{display:none;border-top:1px solid var(--line);padding:2px 15px 6px}
+/* v11.31 点开后的行做成「抽屉里的清单」：一层浅色凹进背景 + 小图标 + 细分隔，明显跟外层大卡不同（原来一样大很乱） */
+.setgrp-body{display:none;border-top:1px solid var(--line);padding:4px 14px 8px;background:rgba(128,132,145,.07)}
 .setgrp.open .setgrp-body{display:block}
-.setgrp-body .setrow{padding:14px 0}
+.setgrp-body .setrow{padding:12px 2px;border-bottom:1px solid var(--line)}
+.setgrp-body .setrow:last-child{border-bottom:none}
+.setgrp-body .setrow .si{width:32px;height:32px;font-size:16px;border-radius:9px;background:var(--card)}
+.setgrp-body .setrow .sn{font-size:14px}
+.setgrp-body .setrow .sd{font-size:11.5px}
+.setgrp-body .numlbl{margin-top:12px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 :focus-visible{outline:2px solid var(--emerald);outline-offset:2px}
 
@@ -906,6 +915,7 @@ body.phototheme{--bg:#06070b;--ink:#f5e9c8;--ink-2:#ecdcb0;--muted:#cdbf95;--lin
 body.phototheme .calcard,body.phototheme .donutcard,body.phototheme .cats,body.phototheme .daycard,
 body.phototheme .setcard,body.phototheme .msel,body.phototheme .mpick,body.phototheme .barcard,
 body.phototheme .dp-donut,body.phototheme .searchbar,body.phototheme .crow,
+body.phototheme #merchList,body.phototheme .bycardlist,body.phototheme .dtsum,body.phototheme .setgrp,
 body.phototheme .cseg,body.phototheme .ibrow,body.phototheme .hero,body.phototheme .dp-sum{
   background:rgba(8,10,16,var(--cardop,.30));border:1px solid rgba(255,255,255,.14);box-shadow:none;
   backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -1412,15 +1422,25 @@ body.phototheme .ibclear:active{background:rgba(255,138,132,.18)}
 <style id="journal-theme">
 /* ===== 手账主题（浅色象牙纸 · 独立，仅 body.theme-journal 生效，不碰暗色/照片主题）===== */
 body.theme-journal{
-  --bg:#F4F0E9;--ink:#2A2521;--ink-2:#6A6157;--muted:#A79D8E;
-  --line:#E4DCCF;--faint:#EFE9DF;--card:#FBF9F4;
+  --bg:#F1E9DB;--ink:#2A2521;--ink-2:#6A6157;--muted:#A79D8E;
+  --line:#E6DCC9;--faint:#EFE7D8;--card:#FCF8F1;
   --brand:#256B5E;--emerald:#256B5E;--emerald-dark:#1c5349;--emerald-soft:#E4EEE9;--red:#B8552F;
-  --shadow:0 1px 2px rgba(80,66,45,.05),0 8px 24px rgba(80,66,45,.06)!important;
+  --shadow:0 1px 2px rgba(120,90,50,.06),0 10px 26px rgba(120,90,50,.09)!important;
   font-family:"Hanken Grotesk",-apple-system,"PingFang SC",system-ui,sans-serif;
-  color:#2A2521;background:#F4F0E9!important;
+  color:#2A2521;background:linear-gradient(#F4ECDD,#EFE6D5)!important;   /* 整个 body 的暖底：滚多远都不露黑 */
 }
-/* 背景层：纯象牙纸，去照片/渐变 */
-body.theme-journal::before{background-image:none!important;background:#F4F0E9!important;}
+/* v11.31 手账背景：不再是一片死白象牙。固定层（跟着屏幕）铺一层暖色氛围 ——
+   左上洒进暖阳、右上一抹淡薄荷、底部一层暖褐，再加极淡的斜向纸纹，纸感和层次都出来了（用户：白白很单调）。 */
+body.theme-journal::before,body.theme-journal.pageopen::after{
+  background-image:
+    repeating-linear-gradient(48deg, rgba(150,120,75,.022) 0 1.5px, transparent 1.5px 5px),
+    linear-gradient(0deg, rgba(198,150,96,.10), rgba(198,150,96,0) 34%),
+    radial-gradient(135% 95% at 12% -12%, rgba(255,235,205,.85), rgba(255,235,205,0) 46%),
+    radial-gradient(120% 80% at 102% 2%, rgba(198,224,214,.55), rgba(198,224,214,0) 42%),
+    linear-gradient(#F4ECDD,#EFE6D5) !important;
+  background-attachment:fixed!important;background-repeat:repeat!important;background-size:auto!important;}
+/* 卡片：从死白改成极淡暖白竖向渐变 + 顶部一道高光，摸起来像纸不像塑料 */
+body.theme-journal .calcard,body.theme-journal .donutcard,body.theme-journal .cats,body.theme-journal .daycard,body.theme-journal .setcard,body.theme-journal .barcard,body.theme-journal .combocard,body.theme-journal #merchList,body.theme-journal .bycardlist,body.theme-journal .dtsum,body.theme-journal .setgrp{background:linear-gradient(#FEFBF5,#FAF5EB)!important;}
 /* 关键：去掉所有文字暗光晕 —— 深色主题为了照片上看清加的 text-shadow，在象牙纸上会让字发虚发脏（模糊感） */
 body.theme-journal *{text-shadow:none!important;}
 /* 收件箱「记了」淡薄荷绿太浅 → 加深成松绿 */
@@ -1429,7 +1449,7 @@ body.theme-journal .ibsum{color:#256B5E!important;}
 body.theme-journal #gxRow,body.theme-journal #numRow,body.theme-journal #maskRow,body.theme-journal #opRow,body.theme-journal #bgCard{display:none!important;}
 body.theme-journal.pageopen::after{background-image:none!important;background:#F4F0E9!important;}
 /* 卡片：纸白面 + 柔线 */
-body.theme-journal .calcard,body.theme-journal .donutcard,body.theme-journal .cats,body.theme-journal .daycard,body.theme-journal .setcard,body.theme-journal .msel,body.theme-journal .mpick,body.theme-journal .barcard,body.theme-journal .combocard,body.theme-journal .vsbox{background:#FBF9F4!important;border:1px solid #E4DCCF!important;box-shadow:var(--shadow)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+body.theme-journal .calcard,body.theme-journal .donutcard,body.theme-journal .cats,body.theme-journal .daycard,body.theme-journal .setcard,body.theme-journal .msel,body.theme-journal .mpick,body.theme-journal .barcard,body.theme-journal .combocard,body.theme-journal .vsbox,body.theme-journal #merchList,body.theme-journal .bycardlist,body.theme-journal .dtsum,body.theme-journal .setgrp{background:#FBF9F4!important;border:1px solid #E4DCCF!important;box-shadow:var(--shadow)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 /* 弹窗 / 记账面板 / 子页面：纸白，别留黑盒 */
 body.theme-journal .emod,body.theme-journal .cmod,body.theme-journal .okmod,body.theme-journal .add{background:#FBF9F4!important;border:1px solid #E4DCCF!important;color:#2A2521!important;}
 body.theme-journal .cpage,body.theme-journal .daypage{background:#F4F0E9!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
@@ -1537,6 +1557,9 @@ body.theme-journal .hero .row2, body.phototheme .hero .row2{border-top:2px solid
 /* 每笔账 / 分类明细行 左边：分类色线 */
 .tx{border-left:3px solid var(--catc,var(--line,#888))!important;padding-left:11px!important;border-radius:0 8px 8px 0;}
 .catrow{border-left:3px solid var(--catc,var(--line,#888))!important;padding-left:11px!important;border-radius:0 8px 8px 0;}
+/* v11.31 按商家 / 按卡 行也带侧边色线 */
+.merchrow{border-left:3px solid var(--mc,var(--line,#888))!important;padding-left:11px!important;border-radius:0 8px 8px 0;}
+.cardrow{border-left:3px solid var(--mc,var(--line,#888))!important;padding-left:11px!important;border-radius:0 8px 8px 0;}
 /* 总览各卡外框：鲜艳实色 */
 /* donutcard 彩虹渐变框 + 圆角 */
 /* ⚠️⚠️ v23.26 ② 明细顶卡「怎么调都不够透明」的**第二个**真凶。
@@ -1784,16 +1807,23 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
 /* v11.21 「等你处理」：首页把「现在有什么要我动手的」集中成一张卡。
    ⚠️ 颜色全走主题变量；每一行点下去都是**触发原本那个页面自己的入口按钮**，
       不重写第二份打开逻辑（跟 tsBackGo 用 .dp-back 同一个思路）。 */
-.todocard{display:flex;flex-direction:column;gap:8px}
-.todorow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px 14px;color:var(--ink);font-family:inherit;-webkit-tap-highlight-color:transparent}
-.todorow:active{transform:scale(.985)}
+.todocard{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.todorow{display:flex;align-items:center;gap:6px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:15px;color:var(--ink);font-family:inherit;-webkit-tap-highlight-color:transparent;overflow:hidden}
 .todorow.warn{border-color:rgba(240,102,95,.45);background:rgba(219,90,84,.12)}
+/* 主区（点它 = 去处理）+ 右边可选的「本月知道了」小叉 */
+.todorow .tomain{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left;background:none;border:0;padding:12px 4px 12px 14px;color:inherit;font-family:inherit;cursor:pointer}
+.todorow .tomain:active{transform:scale(.99)}
 .todorow .ti{font-size:19px;flex:0 0 auto;line-height:1}
 .todorow .tt{flex:1;min-width:0}
 .todorow .tn{font-size:13.5px;font-weight:700;line-height:1.35}
 .todorow .td{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4;font-variant-numeric:tabular-nums}
 .todorow .tgo{font-size:12px;font-weight:700;color:var(--num);flex:0 0 auto}
 .todorow.warn .tgo{color:#F0665F}
+.todorow .toclose{flex:0 0 auto;align-self:stretch;width:46px;border:0;border-left:1px solid var(--line);background:none;color:var(--muted);font-size:15px;cursor:pointer;font-family:inherit;line-height:1.1}
+.todorow .toclose .tcx{display:block;font-size:16px}
+.todorow .toclose .tcl{display:block;font-size:8.5px;margin-top:1px;letter-spacing:.3px}
+.todorow.warn .toclose{border-left-color:rgba(240,102,95,.3)}
+.todorow .toclose:active{background:rgba(128,128,140,.14)}
 .todonone{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px;font-size:12.5px;color:var(--muted);text-align:center}
 </style>
 <style id="b-look">
@@ -3296,9 +3326,10 @@ function buildByCard(){
   const ents=Object.entries(g).sort((a,b)=>b[1].v-a[1].v);
   if(ents.length<=1){el.innerHTML=`<div class="gdhint" style="text-align:center;padding:20px 0">本月都用同一种方式付 · ${esc(ents[0]?ents[0][0]:'')}</div>`;return;}
   const tot=ents.reduce((s,[,o])=>s+o.v,0),maxV=ents[0][1].v||1;
+  const PAL=['#3D82F6','#12B5A6','#F5972B','#B15CE0','#EC5FA0','#0BA678','#E7A33E','#6EA8FF'];   /* 每张卡一个颜色点缀 */
   let h='<div class="bycardlist">';
-  h+=ents.map(([k,o])=>{const pct=Math.round(o.v/(tot||1)*100);
-    return `<div class="cardrow"><span class="cn">${esc(k)}</span><span class="cbarw"><span class="cbar" style="width:${Math.round(o.v/maxV*100)}%"></span></span><span class="cv2">S$${fmt(o.v)} · ${pct}%</span></div>`;}).join('');
+  h+=ents.map(([k,o],i)=>{const pct=Math.round(o.v/(tot||1)*100);const col=PAL[i%PAL.length];
+    return `<div class="cardrow" style="--mc:${col}"><span class="cn">${esc(k)}</span><span class="cbarw"><span class="cbar" style="width:${Math.round(o.v/maxV*100)}%;background:linear-gradient(90deg,${col},${col}99)"></span></span><span class="cv2">S$${fmt(o.v)} · ${pct}%</span></div>`;}).join('');
   el.innerHTML=h+'</div>';
 }
 
@@ -3493,9 +3524,10 @@ function buildTodo(){
       d:subs.slice(0,2).map(x=>x.name+(x.amount?' S$'+fmt(x.amount):'')).join(' · ')||'只看不记，确认后自己决定',
       go:'确认',fn:()=>{const b=document.getElementById('openSubs');if(b)b.click();}});
   }catch(e){}
-  /* ③ 快超 / 已超的预算 */
+  /* ③ 快超 / 已超的预算（v11.31 每个分类可「本月知道了」忽略一整月，不用改预算就能清掉） */
   try{
-    const keys=Object.keys(BUD).filter(k=>+BUD[k]>0);
+    const mk=mkOf(viewMonth),ign=IGN_BUD[mk]||{};
+    const keys=Object.keys(BUD).filter(k=>+BUD[k]>0&&!ign[k]);
     if(keys.length){
       const {by}=catAgg(DATA.filter(x=>sameMonth(x.ts)));
       const hit=keys.map(k=>{const lim=+BUD[k],v=(by[k]&&by[k].v)||0;return {k,lim,v,r:v/lim};})
@@ -3505,7 +3537,8 @@ function buildTodo(){
         const over=t.v>t.lim;
         it.push({w:over?1:0,i:'🎯',n:over?(nm+' 已经超支'):(nm+' 只剩 S$'+fmt(t.lim-t.v)),
           d:'上限 S$'+fmt(t.lim)+' · 已花 S$'+fmt(t.v)+'（'+Math.round(t.r*100)+'%）'+(hit.length>1?' · 另外还有 '+(hit.length-1)+' 个':''),
-          go:'调整',fn:()=>{const b=document.getElementById('openBud');if(b)b.click();}});
+          go:'调整',fn:()=>{const b=document.getElementById('openBud');if(b)b.click();},
+          ignore:()=>ignoreBudMonth(mk,t.k)});
       }
     }
   }catch(e){}
@@ -3528,12 +3561,25 @@ function buildTodo(){
   if(lab)lab.textContent=it.length?(it.length+' 件'):'';
   if(!it.length){wrap.innerHTML='<div class="todonone">都处理完了 · 邮件、预算、订阅都没有要你动手的</div>';return;}
   it.sort((a,b)=>(b.w||0)-(a.w||0));
-  wrap.innerHTML=it.map((x,n)=>'<button class="todorow'+(x.w?' warn':'')+'" data-todo="'+n+'">'+
-    '<span class="ti">'+x.i+'</span><span class="tt"><span class="tn">'+esc(x.n)+'</span>'+
-    '<div class="td">'+esc(x.d)+'</div></span><span class="tgo">'+x.go+' ›</span></button>').join('');
+  wrap.innerHTML=it.map((x,n)=>'<div class="todorow'+(x.w?' warn':'')+'">'+
+    '<button class="tomain" data-todo="'+n+'"><span class="ti">'+x.i+'</span><span class="tt"><span class="tn">'+esc(x.n)+'</span>'+
+    '<div class="td">'+esc(x.d)+'</div></span><span class="tgo">'+x.go+' ›</span></button>'+
+    (x.ignore?'<button class="toclose" data-todoclose="'+n+'" aria-label="本月知道了"><span class="tcx">✕</span><span class="tcl">本月</span></button>':'')+
+    '</div>').join('');
   wrap._acts=it.map(x=>x.fn);
+  wrap._igns=it.map(x=>x.ignore||null);
+}
+/* v11.31 「本月知道了」：把某分类记进当月忽略名单（存 localStorage，纯本机），预算不动，todo 立刻消失 */
+function ignoreBudMonth(mk,k){
+  if(!IGN_BUD[mk])IGN_BUD[mk]={};
+  IGN_BUD[mk][k]=1;
+  try{localStorage.setItem('hz_ignbud',JSON.stringify(IGN_BUD));}catch(_){}
+  buildTodo();buildSetChips();
+  if(typeof toast==='function')toast('本月先不提醒这条 · 预算没动');
 }
 document.addEventListener('click',e=>{
+  const c=e.target.closest('#todoWrap [data-todoclose]');
+  if(c){const w=document.getElementById('todoWrap');const fn=w&&w._igns&&w._igns[+c.dataset.todoclose];if(fn)fn();return;}
   const b=e.target.closest('#todoWrap [data-todo]');if(!b)return;
   const w=document.getElementById('todoWrap');
   const fn=w&&w._acts&&w._acts[+b.dataset.todo];if(fn)fn();
@@ -6036,6 +6082,8 @@ async function loadFx(){
    只留最近 3 个月，更早的 Worker 会自动清掉 —— 邮件原文最占地方。 ============ */
 let INBOX=[], IB_KIND='parsed', IB_MONTH='', IB_MONTHS=[], IB_COUNTS={parsed:0,unparsed:0}, IB_KEEP=3;
 let IB_BADGE=0;   /* v11.21 「读不到且没处理」的总数（全部月份），存下来给首页「等你处理」卡用 */
+/* v11.31 预算「本月知道了」忽略名单 {月key:{分类key:1}}，纯本机存 localStorage —— 只是别再提醒，绝不改预算/账 */
+let IGN_BUD={};try{IGN_BUD=JSON.parse(localStorage.getItem('hz_ignbud')||'{}')||{};}catch(_){IGN_BUD={};}
 /* v10.6：按月缓存（月份 → {items, counts, at}）。换月用箭头，命中缓存 = 0 网络、瞬间切；
    落在某个月就 background 预取上/下月，所以按箭头几乎都命中。任何会改数据的动作(删账/粘贴)清空它。 */
 let IB_MCACHE={};
@@ -6631,7 +6679,7 @@ function buildByMerchant(){
   el.innerHTML=ents.map(([mn,o])=>{
     const topCat=Object.entries(o.cats).sort((a,b)=>b[1]-a[1])[0][0];const c=catDef(topCat,'expense');
     const avg=o.v/o.c,pct=Math.round(o.v/(tot||1)*100),freq=o.c>=4?' · 本月常去':'';
-    return `<div class="merchrow"><div class="mi" style="background:${soft(c.c)}">${c.i}</div>`+
+    return `<div class="merchrow" style="--mc:${c.c}"><div class="mi" style="background:${soft(c.c)}">${c.i}</div>`+
       `<div class="mm"><div class="mmn">${esc(mn)}</div><div class="mms">${o.c}笔 · 均 S$${fmt(avg)} · 占 ${pct}%${freq}</div></div>`+
       `<div class="mmv">S$${fmt(o.v)}</div></div>`;}).join('');
 }
