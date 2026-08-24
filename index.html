@@ -1254,6 +1254,16 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
 .subbreak{padding:2px 0 8px 46px}
 .subbreak .sbr{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:3px 0}
 .subbreak .sbr b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+/* v11.30 明细：分类行「比上月」小胶囊 + 展开里的商家频次 */
+.catdelta{display:inline-block;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;padding:1px 6px;border-radius:99px;line-height:1.5;vertical-align:middle;margin-left:6px}
+.catdelta.up{background:rgba(231,163,62,.18);color:#E7A33E}
+.catdelta.down{background:rgba(11,166,120,.16);color:#12b981}
+.catdelta.flat{background:var(--faint);color:var(--muted)}
+.subbreak .mbr{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:4px 0 0}
+.subbreak .mbr .mn{flex:1;min-width:0;font-size:12.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.subbreak .mbr .mx{color:var(--muted);font-weight:600;font-size:11px;margin-left:4px}
+.subbreak .mbr .mv{font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink);flex-shrink:0}
+.subbreak .mnote{font-size:10.5px;color:var(--muted);padding:1px 0 2px}
 
 /* ===== v3.0 收件箱 / 定期账单 行 ===== */
 /* v6.1：只会有 3 个月 → 排 3 个按钮就好，不用下拉，也不用折叠。
@@ -3683,19 +3693,49 @@ function donutTop(by,n){
 }
 /* 环形中心金额自动缩放：按字数算字号（不依赖元素可见），任何主题任何金额都不会被环圈压到 */
 function fitDonutCenter(){ const v=document.getElementById('donutTotal'); if(!v)return; const len=(v.textContent||'').length; const fs=Math.max(13,Math.min(24,Math.floor(118/(len*0.56)))); v.style.fontSize=fs+'px'; }
+/* v11.30 明细分类：每行带「比上月同期 +X%」，展开看该分类的商家频次（×N · 常去 · 均价）。
+   ① 比上月：口径跟 hero 胶囊 / buildInsights 一样，cutDay 把两边框成同一段，月初不假暴跌。
+   ② 商家频次：本月这个分类里每个商家花了几笔、共多少、均价；去 4 次以上标「本月常去」。 */
+function catPrevSamePeriod(){
+  const prev=new Date(viewMonth.getFullYear(),viewMonth.getMonth()-1,1);
+  const isCur=mkOf(viewMonth)===mkOf(sgMonthDate(Date.now()));
+  const prevDim=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),0).getDate();
+  const todaySg=parseInt(todayKey().slice(8,10),10)||prevDim;
+  const cutDay=isCur?Math.min(todaySg,prevDim):prevDim;
+  const samePeriod=isCur&&todaySg<=prevDim;
+  const by={};
+  monthsIn(prev).forEach(r=>{if(isOffset(r))return;if(parseInt(isoDay(r.ts).slice(8,10),10)>cutDay)return;by[catKey(r)]=(by[catKey(r)]||0)+sgdOf(r);});
+  return {by,samePeriod};
+}
+function catDeltaChip(now,prev){
+  if(!(prev>0))return '';
+  const pc=Math.round((now-prev)/prev*100);
+  if(pc===0)return ` <span class="catdelta flat">持平</span>`;
+  return ` <span class="catdelta ${pc>0?'up':'down'}">${pc>0?'+':'−'}${Math.abs(pc)}%</span>`;
+}
 function buildCats(){
   const rows=DATA.filter(x=>sameMonth(x.ts)&&(!isInc(x)||isOffset(x)));   /* v11.11 含抵扣退款（负数），分类跟着减 */
-  const {by,cnt,subs}=catAgg(rows);const ce=document.getElementById('cats');
+  const {by,cnt}=catAgg(rows);const ce=document.getElementById('cats');
   const entries=Object.entries(by).filter(([,o])=>o.v>0.005).sort((a,b)=>b[1].v-a[1].v);   /* 被退款减到 0 的分类不列 */
   const tot=entries.reduce((s,[,o])=>s+o.v,0);
   if(!entries.length){ce.innerHTML='<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">本月还没有支出</div>';return;}
   const maxV=entries[0][1].v;
+  const prev=catPrevSamePeriod();
+  /* 每个分类里的商家频次（跳过抵扣退款） */
+  const merch={};
+  rows.forEach(r=>{if(isOffset(r))return;const k=catKey(r);const mn=(r.merchant||'').trim()||'（未标商家）';
+    const mm=merch[k]||(merch[k]={});(mm[mn]||(mm[mn]={v:0,c:0}));mm[mn].v+=sgdOf(r);mm[mn].c++;});
   ce.innerHTML=entries.map(([k,o])=>{const c=catDef(k,'expense');const pct=Math.round(o.v/(tot||1)*100);
-    /* 子分类明细：默认收着，点分类行才展开 */
-    const sb=Object.entries(subs[k]||{}).sort((a,b)=>b[1]-a[1]);
-    const detail=(sb.length>1||(sb.length===1&&sb[0][0]!=='（不分）'))
-      ? `<div class="subbreak hide" data-sb="${k}">`+sb.map(([n,v])=>`<div class="sbr"><span>${esc(n)}</span><b>${fmt(v)}</b></div>`).join('')+`</div>` : '';
-    return `<div class="catrow" data-cat="${k}" style="--catc:${c.c}"><div class="ci" style="background:${soft(c.c)}">${c.i}</div><div class="cn"><div class="nm">${c.n}${budTag(k,o.v)}</div><div class="track"><div class="fl" style="width:${Math.max(o.v/maxV*100,4)}%;background:${c.c}"></div></div></div><div class="cv"><div class="cm${budOver(k,o.v)}">${fmt(o.v)}</div><div class="cp">${pct}% · ${cnt[k]}笔</div></div></div>${detail}`;}).join('');
+    const delta=catDeltaChip(o.v,prev.by[k]||0);
+    /* 商家频次明细：默认收着，点分类行才展开 */
+    const ms=Object.entries(merch[k]||{}).sort((a,b)=>b[1].v-a[1].v).slice(0,8);
+    const detail=ms.length
+      ? `<div class="subbreak hide" data-sb="${k}">`+ms.map(([mn,m])=>{
+          const freq=m.c>=4,avg=m.v/m.c;
+          return `<div class="mbr"><span class="mn">${esc(mn)}${m.c>1?` <span class="mx">×${m.c}</span>`:''}</span><span class="mv">S$${fmt(m.v)}</span></div>`
+            +(freq?`<div class="mnote">本月常去 · 平均 S$${fmt(avg)}</div>`:'');
+        }).join('')+`</div>` : '';
+    return `<div class="catrow" data-cat="${k}" style="--catc:${c.c}"><div class="ci" style="background:${soft(c.c)}">${c.i}</div><div class="cn"><div class="nm">${c.n}${delta}${budTag(k,o.v)}</div><div class="track"><div class="fl" style="width:${Math.max(o.v/maxV*100,4)}%;background:${c.c}"></div></div></div><div class="cv"><div class="cm${budOver(k,o.v)}">${fmt(o.v)}</div><div class="cp">${pct}% · ${cnt[k]}笔</div></div></div>${detail}`;}).join('');
 }
 /* v9.80 预算徽章（解法1）：主进度条不动（保留分类比大小），预算做成名字右边的彩色徽章。
    小预算也看得清（是文字不是长度）。三档色：正常绿·快到橙·超支红。没设上限 → 不显示。
