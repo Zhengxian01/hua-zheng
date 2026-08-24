@@ -867,15 +867,23 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .statusdot{width:9px;height:9px;border-radius:50%;background:#12b981;display:inline-block;flex-shrink:0;box-shadow:0 0 0 3px rgba(18,185,129,.18)}
 .statusdot.warn{background:#E7A33E;box-shadow:0 0 0 3px rgba(231,163,62,.18)}
 .statusdot.bad{background:#F0665F;box-shadow:0 0 0 3px rgba(240,102,95,.18)}
-/* v11.31 点开后的行做成「抽屉里的清单」：一层浅色凹进背景 + 小图标 + 细分隔，明显跟外层大卡不同（原来一样大很乱） */
-.setgrp-body{display:none;border-top:1px solid var(--line);padding:4px 14px 8px;background:rgba(128,132,145,.07)}
+/* v11.32 点开后的抽屉：每组一个专属颜色（淡色底 + 左侧色条 + 小图标染同色），一眼分得清是哪个组、也跟外层大卡不同 */
+.setgrp{--gc:128,132,145}
+.setgrp[data-g="sys"]{--gc:18,181,166}
+.setgrp[data-g="auto"]{--gc:177,92,224}
+.setgrp[data-g="money"]{--gc:245,151,43}
+.setgrp[data-g="backup"]{--gc:61,130,246}
+.setgrp[data-g="look"]{--gc:236,95,160}
+.setgrp-body{display:none;border-top:1px solid var(--line);border-left:3px solid rgba(var(--gc),.6);padding:4px 14px 8px;background:rgba(var(--gc),.09)}
 .setgrp.open .setgrp-body{display:block}
-.setgrp-body .setrow{padding:12px 2px;border-bottom:1px solid var(--line)}
+.setgrp-body .setrow{padding:12px 2px;border-bottom:1px solid rgba(var(--gc),.16)}
 .setgrp-body .setrow:last-child{border-bottom:none}
-.setgrp-body .setrow .si{width:32px;height:32px;font-size:16px;border-radius:9px;background:var(--card)}
+.setgrp-body .setrow .si{width:32px;height:32px;font-size:16px;border-radius:9px;background:rgba(var(--gc),.18)}
 .setgrp-body .setrow .sn{font-size:14px}
 .setgrp-body .setrow .sd{font-size:11.5px}
 .setgrp-body .numlbl{margin-top:12px}
+/* 卡头收起时的大图标也染上组色，收起/展开都认得出这一组 */
+.setgrp-h .sgi{background:rgba(var(--gc),.16)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 :focus-visible{outline:2px solid var(--emerald);outline-offset:2px}
 
@@ -1905,8 +1913,14 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
     <div class="dtsum" id="dtSum"></div>
     <div class="calseg dtseg" id="dtSeg" data-m="days"><i class="calseg-ind"></i><button data-dt="cats">按分类</button><button data-dt="days">按天</button><button data-dt="merch">按商家</button><button data-dt="card">按卡</button></div>
     <div class="dtpane" id="dtCats" style="display:none">
-      <div class="dtbar" id="dtBar"></div>
-      <div class="dtbarleg" id="dtBarLeg"></div>
+      <!-- v11.32 环形图请回来（用户：按分类之前的 chart 不见了）：环 + 图例，下面接分类行 -->
+      <div class="donutcard" id="donutWrap">
+        <div class="dvpane" id="dvDonut">
+          <div class="donut"><svg id="donutSvg" viewBox="0 0 42 42"></svg>
+            <div class="ctr"><span class="l">本月支出</span><span class="v" id="donutTotal"><span class="s">S$</span>0</span></div></div>
+          <div class="donutlegend" id="donutLegend"></div>
+        </div>
+      </div>
       <div class="cats" id="cats"></div>
     </div>
     <div class="dtpane" id="dtDays">
