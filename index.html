@@ -1712,6 +1712,41 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
 .todorow.warn .tgo{color:#F0665F}
 .todonone{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px;font-size:12.5px;color:var(--muted);text-align:center}
 </style>
+<style id="b-look">
+/* v11.22 「1b 版式」：只改字号、字重、字距、分隔线。
+   ⚠️ 一个颜色都不写死：大数字继续吃 --gx 彩虹渐变，数值继续吃 --num，
+      卡片底继续是 rgba(8,10,16,var(--cardop)) → 玻璃、遮罩、数值颜色全都还是你设置里那套。
+   ⚠️ 挂在 body.blook 上，设置→外观 可以随时关掉回原本的样子。 */
+/* hero：标题变小压扁拉字距，数字放大收紧，收入/结余/笔数之间加竖细线（1b 那张的骨架） */
+body.blook .hero .cap{font-size:11px;font-weight:700;letter-spacing:1.5px;opacity:.55}
+body.blook .hero .amt{margin:11px 0 3px;gap:4px}
+body.blook .hero .amt .s{font-size:20px;font-weight:500;opacity:.55}
+body.blook .hero .amt .int{font-size:56px;font-weight:600;letter-spacing:-2.8px}
+body.blook .hero .amt .dec{font-size:27px;font-weight:500;letter-spacing:-1px;opacity:.66}
+body.blook .hero .row2{gap:0;margin-top:17px;padding-top:14px}
+body.blook .hero .row2 .mini{flex:1 1 0;min-width:0;padding-left:15px;
+  border-left:1px solid rgba(255,255,255,.16)}
+body.blook .hero .row2 .mini:first-child{padding-left:0;border-left:none}
+body.blook .hero .mini .k{font-size:10.5px;font-weight:700;letter-spacing:1px;opacity:.5;margin-bottom:4px}
+body.blook .hero .mini .v{font-size:17px;font-weight:600}
+body.blook .hero .mini .v small{font-size:11px;opacity:.6;margin-right:1px}
+/* 明细的「分类」：卡片和玻璃底一律不动，只把字排成 1b 那样（名字压小拉字距、金额放大） */
+body.blook .cats .catrow{padding:13px 0}
+body.blook .catrow .cn .nm{font-size:13.5px;font-weight:600;letter-spacing:.2px}
+body.blook .catrow .cv .cm{font-size:15.5px;font-weight:600;letter-spacing:-.3px}
+body.blook .catrow .cv .cp{font-size:10.5px;letter-spacing:.3px;opacity:.75}
+body.blook .catrow .track{height:4px;border-radius:99px;margin-top:7px}
+body.blook .catrow .track .fl{border-radius:99px}
+/* 每笔账：金额跟着「数值颜色」走（1b 就是全部一个颜色，只有收入另算） */
+body.blook .tx .amt{font-size:15.5px;font-weight:600;letter-spacing:-.3px}
+body.blook.numamt .tx .amt.exp{color:var(--num,#f5e9c8)}
+body.blook .tx .m{letter-spacing:.2px}
+/* 手账主题是浅纸底，1b 那套深底字距不适用 → 版式层整体让位（原本的手账 override 继续管） */
+body.theme-journal.blook .hero .amt .int{font-size:52px!important;letter-spacing:-.01em!important}
+body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
+/* 外观页那两颗小开关（沿用 numsw 的长相） */
+.blrow{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 4px}
+</style>
   <div class="tab on" id="tab1">
     <div class="dsec" data-sec="hero"><div class="hero">
       <div class="cap" id="heroCap">本月 · 支出（全部折算 SGD）</div>
@@ -1823,6 +1858,8 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
     <div class="setcard">
       <div class="thgrid" id="thGrid"></div>
       <div class="gxrow" id="gxRow"></div>
+      <div class="numlbl">版式</div>
+      <div class="blrow" id="blRow"></div>
       <div class="numlbl">数值颜色（收入 / 结余 / 笔数）</div>
       <div class="numrow" id="numRow"></div>
       <div class="slrow" id="maskRow" style="display:none">
@@ -5365,6 +5402,8 @@ function sanitizeTP(){
     if(p.op==null)p.op=30;
     if(!NUM_PRESETS[p.num])p.num='cream';
     if(p.mask==null)p.mask=42;
+    if(p.blook==null)p.blook=1;      /* v11.22 1b 版式，默认开 */
+    if(p.numamt==null)p.numamt=1;    /* v11.22 明细金额用数值颜色，默认开 */
   });
 }
 function applyTheme(){
@@ -5377,6 +5416,9 @@ function applyTheme(){
   b.style.setProperty('--num',NUM_PRESETS[pr.num]||NUM_PRESETS.cream);
   b.style.setProperty('--mask',(pr.mask/100).toFixed(2));
   b.style.setProperty('--cardop',(pr.op/100).toFixed(2));
+  /* v11.22 1b 版式 / 金额配色：只是两个 class，颜色变量一个都没动 */
+  b.classList.toggle('blook',pr.blook!==0);
+  b.classList.toggle('numamt',pr.numamt!==0);
   if(THEME==='photo'&&BGVER){
     /* v10.11 本地字节优先（跟 primeBg 一致，只同步读 localStorage，不联网）：有这张图的本地字节就用 data-URI，没有才指向 /api/bg */
     var _bi=null;try{_bi=JSON.parse(localStorage.getItem('bgimg')||'null');}catch(e){}
@@ -5457,6 +5499,10 @@ function renderThemeUI(){
     `<button class="gxsw${g.k===(pr.gx||'none')?' on':''}" data-gx="${g.k}">`+
     `<div class="bar" style="background:${g.k==='none'?'#f5e9c8':GX_PRESETS[g.k]}"></div>${g.n}</button>`).join('');
   document.getElementById('gxRow').style.display='flex';
+  const blR=document.getElementById('blRow');
+  if(blR)blR.innerHTML=
+    '<button class="numsw'+(pr.blook!==0?' on':'')+'" data-bl="blook">'+(pr.blook!==0?'✓ ':'')+'1b 版式（大数字 · 细分隔线）</button>'+
+    '<button class="numsw'+(pr.numamt!==0?' on':'')+'" data-bl="numamt">'+(pr.numamt!==0?'✓ ':'')+'明细金额用数值颜色</button>';
   document.getElementById('numRow').innerHTML=NUM_META.map(n=>
     `<button class="numsw${n.k===(pr.num||'cream')?' on':''}" data-num="${n.k}">`+
     `<span class="dot" style="background:${NUM_PRESETS[n.k]}"></span>${n.n}</button>`).join('');
@@ -6330,6 +6376,14 @@ document.getElementById('openRec').onclick=()=>{recRender();recPage.classList.ad
 document.getElementById('recBack').onclick=()=>{recPage.classList.remove('show');syncPageOpen();};
 document.getElementById('recList').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(b)openRecEdit(b.dataset.r);});
 document.getElementById('recAdd').onclick=()=>openRecEdit(null);
+
+/* v11.22 版式两个开关：改完立刻 applyTheme + 存 */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('#blRow [data-bl]');if(!b)return;
+  const k=b.dataset.bl,pr=tpCur();
+  pr[k]=(pr[k]!==0)?0:1;
+  applyTheme();renderThemeUI();saveTheme();
+});
 
 /* ============ v6.9 总览排序 ============
    顺序存在 theme_prefs 里（跟 fold 同一个 blob）→ worker 不用改。
