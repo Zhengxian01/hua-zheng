@@ -1799,6 +1799,15 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
         <div class="mini"><div class="k">笔数</div><div class="v" id="tCount">0</div></div>
       </div>
     </div></div>
+    <!-- v11.30 日历紧跟 hero（用户要的顺序）；支出趋势排它后面 -->
+    <div class="dsec" data-sec="cal">
+    <div class="section-h"><span class="h">日历</span><div class="calseg" id="calSeg" data-m="money"><i class="calseg-ind"></i><button data-cm="money">金额</button><button data-cm="todo">事项</button></div></div>
+    <div class="calcard">
+      <div class="calnav" id="calNav"></div>
+      <div id="cal"></div>
+      <!-- v9.87 点日期 → 下面直接弹出当天 summary（不进全屏页）。像 iPhone 日历那样。 -->
+      <div id="dayPeek" class="daypeek" style="display:none"></div>
+    </div></div>
     <div class="dsec" data-sec="spend">
     <div class="section-h clk" data-fold="spend"><span class="h">支出趋势</span><span class="cv">▾</span></div>
     <div class="foldable" id="spendWrap" data-f="spend">
@@ -1808,14 +1817,6 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
         <div class="trendhd">半年趋势 · 月总支出 SGD</div>
         <div id="trendWrap"></div>
       </div>
-    </div></div>
-    <div class="dsec" data-sec="cal">
-    <div class="section-h"><span class="h">日历</span><div class="calseg" id="calSeg" data-m="money"><i class="calseg-ind"></i><button data-cm="money">金额</button><button data-cm="todo">事项</button></div></div>
-    <div class="calcard">
-      <div class="calnav" id="calNav"></div>
-      <div id="cal"></div>
-      <!-- v9.87 点日期 → 下面直接弹出当天 summary（不进全屏页）。像 iPhone 日历那样。 -->
-      <div id="dayPeek" class="daypeek" style="display:none"></div>
     </div></div>
   </div>
 
@@ -6487,9 +6488,11 @@ document.addEventListener('click',e=>{
 /* ============ v6.9 总览排序 ============
    顺序存在 theme_prefs 里（跟 fold 同一个 blob）→ worker 不用改。
    DSEC_DEF 是唯一真相：以后总览加新卡，往这里加一条就会自动出现在排序页。 */
+/* v11.30 默认顺序：hero → 日历 → 支出趋势（用户要日历紧跟大数字卡）。
+   用户在「总览排序」里拖过的话，走他存的顺序；没拖过就按这个。 */
 const DSEC_DEF={hero:{i:'💰',n:'本月支出',d:'大字总额 + 收入/结余/笔数'},
-                spend:{i:'📊',n:'支出趋势',d:'每月支出 + 半年趋势'},
-                cal:{i:'📅',n:'日历',d:'花费 + 事项 · 点日期看当天'}};
+                cal:{i:'📅',n:'日历',d:'花费 + 事项 · 点日期看当天'},
+                spend:{i:'📊',n:'支出趋势',d:'每月支出 + 半年趋势'}};
 let DASH=Object.keys(DSEC_DEF);
 let CALMODE='money';                                   /* v7.3 日历模式：money | todo */
 /* v9.14 三视图卡：donut(环形) | glance(速览) | card(按卡)，右上角切换，存 prefs */
