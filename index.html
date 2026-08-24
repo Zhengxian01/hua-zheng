@@ -291,6 +291,33 @@ body.phototheme .cal-c.sel{background:rgba(255,255,255,.13)}
 .dvseg[data-m="card"] .calseg-ind{transform:translateX(200%)}
 .dvseg button{padding:0 11px;min-width:44px}
 .dvpane{animation:dvfade .2s ease}
+/* v11.30 明细四段控 + 汇总卡 + 堆叠条 + 按商家 */
+.dtseg{width:100%;margin:0 0 14px}
+.dtseg .calseg-ind{width:calc(25% - 1.5px)}
+.dtseg[data-m="days"] .calseg-ind{transform:translateX(100%)}
+.dtseg[data-m="merch"] .calseg-ind{transform:translateX(200%)}
+.dtseg[data-m="card"] .calseg-ind{transform:translateX(300%)}
+.dtseg button{flex:1;min-width:0;padding:0 4px;font-size:13px}
+.dtpane{animation:dvfade .2s ease}
+.dtsum{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 18px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.dtsum .dtmo{font-size:12.5px;color:var(--muted);font-weight:600}
+.dtsum .dtbig{font-weight:800;font-size:30px;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--ink);margin-top:2px;line-height:1.1}
+.dtsum .dtbig .s{font-size:.5em;color:var(--muted);font-weight:600;margin-right:3px}
+.dtsum .dt2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12px}
+.dtsum .dtchip{background:var(--faint);color:var(--muted);border-radius:99px;padding:3px 10px;font-variant-numeric:tabular-nums;font-weight:600}
+.dtsum .dtchip.up{color:#E7A33E}.dtsum .dtchip.down{color:#12b981}
+.dtbar{display:flex;height:14px;border-radius:99px;overflow:hidden;margin-bottom:12px;background:var(--faint)}
+.dtbar i{display:block;height:100%}
+.dtbarleg{display:flex;flex-wrap:wrap;gap:9px 14px;margin:0 2px 16px;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.dtbarleg .lg{display:inline-flex;align-items:center;gap:5px}
+.dtbarleg .lgd{width:8px;height:8px;border-radius:2px;display:inline-block;flex-shrink:0}
+.merchrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.merchrow:last-child{border-bottom:none}
+.merchrow .mi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px;flex-shrink:0}
+.merchrow .mm{flex:1;min-width:0}
+.merchrow .mmn{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.merchrow .mms{font-size:11px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.merchrow .mmv{text-align:right;flex-shrink:0;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;color:var(--ink)}
 .bycardlist{padding:2px 0}
 @keyframes dvfade{from{opacity:0}to{opacity:1}}
 .glance .gh{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px}
@@ -1821,20 +1848,23 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
   </div>
 
   <div class="tab" id="tab2">
-    <div class="donutcard foldable" id="donutWrap" data-f="donut">
-      <div class="dvhead"><span class="dvtitle" id="dvTitle">本月支出</span><div class="calseg dvseg" id="dvSeg" data-m="donut"><i class="calseg-ind"></i><button data-dv="donut">环形</button><button data-dv="glance">速览</button><button data-dv="card">按卡</button></div></div>
-      <div class="dvpane" id="dvDonut">
-        <div class="donut"><svg id="donutSvg" viewBox="0 0 42 42"></svg>
-          <div class="ctr"><span class="l">本月支出</span><span class="v" id="donutTotal"><span class="s">S$</span>0</span></div></div>
-        <div class="donutlegend" id="donutLegend"></div>
-      </div>
-      <div class="dvpane" id="dvGlance" style="display:none"></div>
-      <div class="dvpane" id="dvCard" style="display:none"></div>
+    <!-- v11.30 明细照 mockup 重排：顶部汇总卡 + 四段（按分类/按天/按商家/按卡） -->
+    <div class="dtsum" id="dtSum"></div>
+    <div class="calseg dtseg" id="dtSeg" data-m="cats"><i class="calseg-ind"></i><button data-dt="cats">按分类</button><button data-dt="days">按天</button><button data-dt="merch">按商家</button><button data-dt="card">按卡</button></div>
+    <div class="dtpane" id="dtCats">
+      <div class="dtbar" id="dtBar"></div>
+      <div class="dtbarleg" id="dtBarLeg"></div>
+      <div class="cats" id="cats"></div>
     </div>
-    <div class="section-h clk" data-fold="cats"><span class="h">分类</span><span class="cv">▾</span></div>
-    <div class="cats foldable" id="cats" data-f="cats"></div>
-    <div class="section-h"><span class="h">全部明细</span></div>
-    <div id="feed"></div>
+    <div class="dtpane" id="dtDays" style="display:none">
+      <div id="feed"></div>
+    </div>
+    <div class="dtpane" id="dtMerch" style="display:none">
+      <div id="merchList"></div>
+    </div>
+    <div class="dtpane" id="dtCard" style="display:none">
+      <div id="dvCard"></div>
+    </div>
   </div>
 
   <div class="tab" id="tab3">
@@ -3659,10 +3689,12 @@ function catAgg(rows){
   return {by,cnt,subs};
 }
 function buildDonut(){
+  /* v11.30 环形已并进明细四段（mockup 用堆叠条替代），DOM 里没有 donutWrap 就直接不做 —— 保留函数只为老调用点不报错 */
+  const wrap=document.getElementById('donutWrap');if(!wrap)return;
   /* v11.11 环形喂进「支出 + 抵扣退款」：退款按它选的支出分类记成负数 → 那个分类跟着减，
      各扇形之和 = 中心净额 = hero 大数字，全对上。某分类被退款减成负数（很少见）就跳过不画。 */
   const rows=DATA.filter(x=>sameMonth(x.ts)&&(!isInc(x)||isOffset(x)));
-  const wrap=document.getElementById('donutWrap');const agg=catAgg(rows);
+  const agg=catAgg(rows);
   const by={};Object.entries(agg.by).forEach(([k,o])=>{if(o.v>0)by[k]=o;});   // 环形只画正的分类
   const tot=Object.values(agg.by).reduce((s,o)=>s+o.v,0);                     // 净支出（含负分类）
   if(!Object.keys(by).length||tot<=0){wrap.style.display='none';return;}wrap.style.display='block';
@@ -3715,8 +3747,11 @@ function catDeltaChip(now,prev){
   return ` <span class="catdelta ${pc>0?'up':'down'}">${pc>0?'+':'−'}${Math.abs(pc)}%</span>`;
 }
 function buildCats(){
+  /* v11.30 buildCats 是每条刷新链路都会调到的公约数 → 顺手把明细另外三块（汇总卡/堆叠条/按商家）+ 按卡一起刷新，
+     这样加账/删账/换月都不用逐个改调用点。各自都能处理空月份。 */
+  buildDetailSummary();buildDetailBar();buildByMerchant();buildByCard();applyDTView();
   const rows=DATA.filter(x=>sameMonth(x.ts)&&(!isInc(x)||isOffset(x)));   /* v11.11 含抵扣退款（负数），分类跟着减 */
-  const {by,cnt}=catAgg(rows);const ce=document.getElementById('cats');
+  const {by,cnt}=catAgg(rows);const ce=document.getElementById('cats');if(!ce)return;
   const entries=Object.entries(by).filter(([,o])=>o.v>0.005).sort((a,b)=>b[1].v-a[1].v);   /* 被退款减到 0 的分类不列 */
   const tot=entries.reduce((s,[,o])=>s+o.v,0);
   if(!entries.length){ce.innerHTML='<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">本月还没有支出</div>';return;}
@@ -6496,21 +6531,82 @@ const DSEC_DEF={hero:{i:'💰',n:'本月支出',d:'大字总额 + 收入/结余/
 let DASH=Object.keys(DSEC_DEF);
 let CALMODE='money';                                   /* v7.3 日历模式：money | todo */
 /* v9.14 三视图卡：donut(环形) | glance(速览) | card(按卡)，右上角切换，存 prefs */
+/* v11.30 DVIEW（环形/速览/按卡）已被明细四段取代；保留变量+函数只为老调用点（saveTheme/applyDView）不报错 */
 let DVIEW='donut';
 const DV_TITLE={donut:'本月支出',glance:'本月速览',card:'按卡 / 账户'};
 function applyDView(){
-  const seg=document.getElementById('dvSeg');if(!seg)return;
-  /* 按卡只有一种支付方式时也能看（会显示提示），不禁用，保持三段稳定 */
+  const seg=document.getElementById('dvSeg');if(!seg)return;   /* 元素已移除 → 直接不做 */
   seg.dataset.m=DVIEW;
   [...seg.querySelectorAll('[data-dv]')].forEach(b=>b.classList.toggle('on',b.dataset.dv===DVIEW));
   const t=document.getElementById('dvTitle');if(t)t.textContent=DV_TITLE[DVIEW]||'本月支出';
   const show=(id,on)=>{const e=document.getElementById(id);if(e)e.style.display=on?'':'none';};
   show('dvDonut',DVIEW==='donut');show('dvGlance',DVIEW==='glance');show('dvCard',DVIEW==='card');
 }
-document.getElementById('dvSeg').addEventListener('click',e=>{
+{const _dvSeg=document.getElementById('dvSeg');if(_dvSeg)_dvSeg.addEventListener('click',e=>{
   const b=e.target.closest('[data-dv]');if(!b||b.dataset.dv===DVIEW)return;
   DVIEW=b.dataset.dv;applyDView();saveTheme();
-});
+});}
+
+/* ══════════ v11.30 明细四段：按分类 / 按天 / 按商家 / 按卡 ══════════ */
+let DTVIEW='cats';
+function applyDTView(){
+  const seg=document.getElementById('dtSeg');if(!seg)return;
+  seg.dataset.m=DTVIEW;
+  [...seg.querySelectorAll('[data-dt]')].forEach(b=>b.classList.toggle('on',b.dataset.dt===DTVIEW));
+  const show=(id,on)=>{const e=document.getElementById(id);if(e)e.style.display=on?'':'none';};
+  show('dtCats',DTVIEW==='cats');show('dtDays',DTVIEW==='days');show('dtMerch',DTVIEW==='merch');show('dtCard',DTVIEW==='card');
+}
+{const _dtSeg=document.getElementById('dtSeg');if(_dtSeg)_dtSeg.addEventListener('click',e=>{
+  const b=e.target.closest('[data-dt]');if(!b||b.dataset.dt===DTVIEW)return;
+  DTVIEW=b.dataset.dt;applyDTView();
+});}
+/* 明细顶部汇总卡：本月支出总额 + 比上月同期 + 笔数 + 均笔 */
+function buildDetailSummary(){
+  const el=document.getElementById('dtSum');if(!el)return;
+  const mo=(viewMonth.getMonth()+1)+'月';
+  const rows=DATA.filter(x=>sameMonth(x.ts)&&!isInc(x));
+  const exp=rows.reduce((s,r)=>s+sgdOf(r),0);
+  if(!rows.length){el.innerHTML=`<div class="dtmo">${mo} · 支出</div><div class="dtbig"><span class="s">S$</span>0</div>`;return;}
+  const {by:pby,samePeriod}=catPrevSamePeriod();
+  const lastExp=Object.values(pby).reduce((s,v)=>s+v,0);
+  let dchip='';
+  if(lastExp>0){const pc=Math.round((exp-lastExp)/lastExp*100);const lab=samePeriod?'比上月同期':'比上月';
+    dchip=pc===0?`<span class="dtchip">${lab} 持平</span>`:`<span class="dtchip ${pc>0?'up':'down'}">${lab} ${pc>0?'+':'−'}${Math.abs(pc)}%</span>`;}
+  const avg=exp/rows.length;
+  el.innerHTML=`<div class="dtmo">${mo} · 支出</div><div class="dtbig"><span class="s">S$</span>${fmt(exp)}</div>`+
+    `<div class="dt2">${dchip}<span class="dtchip">${rows.length} 笔</span><span class="dtchip">均 S$${fmt(avg)}</span></div>`;
+}
+/* 一条横向堆叠条：本月各分类占比（Top5 + 其他），跟下面分类行同色 */
+function buildDetailBar(){
+  const el=document.getElementById('dtBar');if(!el)return;const leg=document.getElementById('dtBarLeg');
+  const rows=DATA.filter(x=>sameMonth(x.ts)&&(!isInc(x)||isOffset(x)));
+  const {by}=catAgg(rows);
+  const pos={};Object.entries(by).forEach(([k,o])=>{if(o.v>0)pos[k]=o;});
+  const top=donutTop(pos,5);
+  const te=Object.entries(top).sort((a,b)=>b[1].v-a[1].v);
+  const tt=te.reduce((s,[,o])=>s+o.v,0);
+  if(!tt){el.style.display='none';if(leg)leg.innerHTML='';return;}
+  el.style.display='flex';
+  el.innerHTML=te.map(([,o])=>`<i style="width:${(o.v/tt*100).toFixed(2)}%;background:${o.c}"></i>`).join('');
+  if(leg)leg.innerHTML=te.map(([k,o])=>{const nm=k==='__other__'?'其他':catDef(k,'expense').n;
+    return `<span class="lg"><span class="lgd" style="background:${o.c}"></span>${esc(nm)} ${Math.round(o.v/tt*100)}%</span>`;}).join('');
+}
+/* 按商家：本月支出按商家汇总，带笔数/均价/占比，去 4 次以上标「本月常去」；图标借它最常归的分类 */
+function buildByMerchant(){
+  const el=document.getElementById('merchList');if(!el)return;
+  const rows=DATA.filter(x=>sameMonth(x.ts)&&!isInc(x));
+  if(!rows.length){el.innerHTML='<div class="gdhint" style="text-align:center;padding:22px 0;color:var(--muted);font-size:13px">本月还没有支出</div>';return;}
+  const g={};let tot=0;
+  rows.forEach(r=>{const mn=(r.merchant||'').trim()||'（未标商家）';const o=g[mn]||(g[mn]={v:0,c:0,cats:{}});
+    o.v+=sgdOf(r);o.c++;tot+=sgdOf(r);const ck=catKey(r);o.cats[ck]=(o.cats[ck]||0)+1;});
+  const ents=Object.entries(g).sort((a,b)=>b[1].v-a[1].v);
+  el.innerHTML=ents.map(([mn,o])=>{
+    const topCat=Object.entries(o.cats).sort((a,b)=>b[1]-a[1])[0][0];const c=catDef(topCat,'expense');
+    const avg=o.v/o.c,pct=Math.round(o.v/(tot||1)*100),freq=o.c>=4?' · 本月常去':'';
+    return `<div class="merchrow"><div class="mi" style="background:${soft(c.c)}">${c.i}</div>`+
+      `<div class="mm"><div class="mmn">${esc(mn)}</div><div class="mms">${o.c}笔 · 均 S$${fmt(avg)} · 占 ${pct}%${freq}</div></div>`+
+      `<div class="mmv">S$${fmt(o.v)}</div></div>`;}).join('');
+}
 function dashOrder(){                                  /* 只认真实存在的 key，且不弄丢任何一张卡 */
   const seen=[];DASH.forEach(k=>{if(DSEC_DEF[k]&&!seen.includes(k))seen.push(k);});
   Object.keys(DSEC_DEF).forEach(k=>{if(!seen.includes(k))seen.push(k);});
