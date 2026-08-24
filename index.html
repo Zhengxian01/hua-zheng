@@ -1678,6 +1678,40 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
   </header>
   <div class="banner" id="banner"><span>📋 演示数据 · 填好 WORKER_URL 后显示真实记录</span></div>
 
+<style id="pace-card">
+/* v11.20 新卡「累计 vs 上限」：1b 的累计柱 + 1c 的配速那句话。
+   ⚠️ 颜色一律走主题变量（--num 数值颜色 / --card 玻璃 / --line 细边 / --muted），
+      不写死任何色值 → 设置里的「数值颜色 / 遮罩 / 玻璃」照旧全权控制这张卡。 */
+.pacecard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px 12px}
+.paceline{font-size:12.5px;line-height:1.65;color:var(--ink)}
+.paceline b{color:var(--num);font-variant-numeric:tabular-nums}
+.paceline .bad{color:#F0665F}
+.paceline .good{color:#12b981}
+.pacechart{position:relative;height:88px;display:flex;align-items:flex-end;gap:2px;margin-top:12px}
+.paceb{flex:1 1 0;min-width:0;min-height:1px;border-radius:2px 2px 0 0;background:var(--num);opacity:.26}
+.paceb.on{opacity:1}
+.paceb.fu{height:100%;opacity:.06}
+.pacebud{position:absolute;left:0;right:0;border-top:1px dashed var(--line);pointer-events:none}
+.pacebudl{position:absolute;right:0;top:-13px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pacefoot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pacelab{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+</style>
+<style id="todo-card">
+/* v11.21 「等你处理」：首页把「现在有什么要我动手的」集中成一张卡。
+   ⚠️ 颜色全走主题变量；每一行点下去都是**触发原本那个页面自己的入口按钮**，
+      不重写第二份打开逻辑（跟 tsBackGo 用 .dp-back 同一个思路）。 */
+.todocard{display:flex;flex-direction:column;gap:8px}
+.todorow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px 14px;color:var(--ink);font-family:inherit;-webkit-tap-highlight-color:transparent}
+.todorow:active{transform:scale(.985)}
+.todorow.warn{border-color:rgba(240,102,95,.45);background:rgba(219,90,84,.12)}
+.todorow .ti{font-size:19px;flex:0 0 auto;line-height:1}
+.todorow .tt{flex:1;min-width:0}
+.todorow .tn{font-size:13.5px;font-weight:700;line-height:1.35}
+.todorow .td{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4;font-variant-numeric:tabular-nums}
+.todorow .tgo{font-size:12px;font-weight:700;color:var(--num);flex:0 0 auto}
+.todorow.warn .tgo{color:#F0665F}
+.todonone{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px;font-size:12.5px;color:var(--muted);text-align:center}
+</style>
   <div class="tab on" id="tab1">
     <div class="dsec" data-sec="hero"><div class="hero">
       <div class="cap" id="heroCap">本月 · 支出（全部折算 SGD）</div>
@@ -1707,6 +1741,16 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
       <div id="cal"></div>
       <!-- v9.87 点日期 → 下面直接弹出当天 summary（不进全屏页）。像 iPhone 日历那样。 -->
       <div id="dayPeek" class="daypeek" style="display:none"></div>
+    </div></div>
+    <div class="dsec" data-sec="todo">
+    <div class="section-h"><span class="h">等你处理</span><span class="pacelab" id="todoLab"></span></div>
+    <div class="todocard" id="todoWrap"></div></div>
+    <div class="dsec" data-sec="pace">
+    <div class="section-h"><span class="h">累计 vs 上限</span><span class="pacelab" id="paceLab"></span></div>
+    <div class="pacecard">
+      <div class="paceline" id="paceMsg">&nbsp;</div>
+      <div class="pacechart" id="paceWrap"></div>
+      <div class="pacefoot" id="paceFoot"></div>
     </div></div>
   </div>
 
@@ -3129,7 +3173,7 @@ function buildByCard(){
   el.innerHTML=h+'</div>';
 }
 
-function buildAll(){updateHeader();buildMonthBars();buildTrend();buildCalendar();buildDonut();buildCats();buildInsights();buildByCard();applyDView();buildFeed();applyFold();if(peekKey)buildDayPeek(peekKey,true);/* v9.87 当天速览跟着刷新（skipCal 防死循环）*/}
+function buildAll(){updateHeader();buildPace();buildTodo();buildMonthBars();buildTrend();buildCalendar();buildDonut();buildCats();buildInsights();buildByCard();applyDView();buildFeed();applyFold();if(peekKey)buildDayPeek(peekKey,true);/* v9.87 当天速览跟着刷新（skipCal 防死循环）*/}
 
 function updateHeader(){
   const rows=DATA.filter(x=>sameMonth(x.ts));
@@ -3210,6 +3254,125 @@ function calAmt(n){
   if(n>=99.5)return String(Math.round(n));
   return n%1?n.toFixed(1):String(n);
 }
+function buildPace(){
+  const wrap=document.getElementById('paceWrap');if(!wrap)return;
+  const mk=mkOf(viewMonth),[Y,M]=mk.split('-').map(Number);
+  const days=new Date(Y,M,0).getDate();
+  const per=new Array(days+2).fill(0);
+  let cnt=0;
+  DATA.forEach(r=>{
+    if(!sameMonth(r.ts))return;
+    const dk=isoDay(r.ts);if(!dk)return;
+    const d=+dk.slice(8,10);if(!(d>=1&&d<=days))return;
+    const v=sgdOf(r);
+    if(isInc(r)){if(r.offset)per[d]-=v;return;}
+    per[d]+=v;cnt++;
+  });
+  const cum=new Array(days+2).fill(0);
+  for(let d=1,acc=0;d<=days;d++){acc+=per[d];cum[d]=acc;}
+  const tk=todayKey(),isCur=tk.slice(0,7)===mk;
+  const today=isCur?Math.min(+tk.slice(8,10),days):days;
+  const spent=cum[today]||0,total=cum[days]||0;
+  const lim=Object.keys(BUD).reduce((a,k)=>a+(+BUD[k]>0?+BUD[k]:0),0);
+  const proj=today>0?spent/today*days:0;
+  const top=Math.max(total,spent,lim,proj,1)*1.06;
+  let bars='';
+  for(let d=1;d<=days;d++){
+    if(d<=today){
+      const pct=Math.max(0.6,(cum[d]/top)*100);
+      bars+='<i class="paceb'+(d===today?' on':'')+'" style="height:'+pct.toFixed(2)+'%"></i>';
+    }else bars+='<i class="paceb fu"></i>';
+  }
+  if(lim>0){
+    const y=Math.min(99,(lim/top)*100);
+    bars+='<span class="pacebud" style="bottom:'+y.toFixed(2)+'%"><span class="pacebudl">上限合计 '+fmtK(lim)+'</span></span>';
+  }
+  wrap.innerHTML=bars;
+  const lab=document.getElementById('paceLab');
+  if(lab)lab.textContent=isCur?('还剩 '+(days-today)+' 天'):(M+'月 · 已结束');
+  const msg=document.getElementById('paceMsg');
+  if(msg){
+    if(!cnt&&!spent)msg.innerHTML='本月还没有支出。';
+    else if(lim<=0)msg.innerHTML='本月累计 <b>S$'+fmt(spent)+'</b>'+(isCur?'，照这个速度月底大约 <b>S$'+fmt(proj)+'</b>。<br><span style="opacity:.6">在「设置 → 预算上限」给分类设了上限，这里就会多一条上限线。</span>':'。');
+    else{
+      const left=lim-spent,perDay=isCur&&days>today?left/(days-today):0;
+      const over=proj>lim;
+      msg.innerHTML='本月累计 <b>S$'+fmt(spent)+'</b> / 上限 <b>S$'+fmt(lim)+'</b>（'+Math.round(spent/lim*100)+'%）。'+
+        (isCur
+          ? '<br>'+(left>=0
+              ? '还能花 <b>S$'+fmt(left)+'</b>'+(days>today?'，也就是每天 <b>S$'+fmt(perDay)+'</b>':'')+'；照现在的速度月底约 <b>S$'+fmt(proj)+'</b>，'+(over?'<span class="bad">会超</span>。':'<span class="good">够用</span>。')
+              : '已经超了 <b class="bad">S$'+fmt(-left)+'</b>。')
+          : '');
+    }
+  }
+  const foot=document.getElementById('paceFoot');
+  if(foot)foot.innerHTML='<span>'+M+'/1</span><span>'+(isCur?('今天 '+M+'/'+today+' · 累计 S$'+fmt(spent)):(cnt+' 笔 · 共 S$'+fmt(total)))+'</span><span>'+M+'/'+days+'</span>';
+}
+/* ══════ v11.21 等你处理 ══════
+   四个信号全部现算，一个新变量都不需要：
+     ① IB_BADGE  读不到的银行邮件
+     ② detectSubs()  侦测到的定期扣款（纯只读，绝不新增交易）
+     ③ BUD + catAgg  已超 / 到 80% 的分类
+     ④ REC  7 天内的定期账单
+   点一行 = 触发它原本在设置里的那颗入口按钮（openBud / openSub / openRec），
+   所以打开逻辑只有一份，以后那些页面改了这里自动跟着改。 */
+function buildTodo(){
+  const wrap=document.getElementById('todoWrap');if(!wrap)return;
+  const it=[];
+  /* ① 读不到的邮件 */
+  if(IB_BADGE>0)it.push({w:1,i:'📬',n:IB_BADGE+' 封银行邮件读不到',d:'点开手动补一笔，或在收件箱一键清掉',go:'看看',fn:()=>{if(typeof openInboxPage==='function')openInboxPage();}});
+  /* ② 订阅侦测 */
+  try{
+    const subs=(typeof detectSubs==='function')?detectSubs():[];
+    if(subs.length)it.push({i:'🔁',n:'发现 '+subs.length+' 笔像订阅的扣款',
+      d:subs.slice(0,2).map(x=>x.name+(x.amount?' S$'+fmt(x.amount):'')).join(' · ')||'只看不记，确认后自己决定',
+      go:'确认',fn:()=>{const b=document.getElementById('openSubs');if(b)b.click();}});
+  }catch(e){}
+  /* ③ 快超 / 已超的预算 */
+  try{
+    const keys=Object.keys(BUD).filter(k=>+BUD[k]>0);
+    if(keys.length){
+      const {by}=catAgg(DATA.filter(x=>sameMonth(x.ts)));
+      const hit=keys.map(k=>{const lim=+BUD[k],v=(by[k]&&by[k].v)||0;return {k,lim,v,r:v/lim};})
+        .filter(x=>x.r>=0.8).sort((a,b)=>b.r-a.r);
+      if(hit.length){
+        const t=hit[0],nm=(typeof catDef==='function'&&catDef(t.k)&&catDef(t.k).n)||t.k;
+        const over=t.v>t.lim;
+        it.push({w:over?1:0,i:'🎯',n:over?(nm+' 已经超支'):(nm+' 只剩 S$'+fmt(t.lim-t.v)),
+          d:'上限 S$'+fmt(t.lim)+' · 已花 S$'+fmt(t.v)+'（'+Math.round(t.r*100)+'%）'+(hit.length>1?' · 另外还有 '+(hit.length-1)+' 个':''),
+          go:'调整',fn:()=>{const b=document.getElementById('openBud');if(b)b.click();}});
+      }
+    }
+  }catch(e){}
+  /* ④ 7 天内的定期账单 */
+  try{
+    if(Array.isArray(REC)&&REC.length){
+      const tk=todayKey(),td=+tk.slice(8,10);
+      const dim=new Date(+tk.slice(0,4),+tk.slice(5,7),0).getDate();
+      const soon=REC.map(r=>{const d=+r.day||1;let inD=d-td;if(inD<0)inD+=dim;return {r,inD,d};})
+        .filter(x=>x.inD<=7).sort((a,b)=>a.inD-b.inD);
+      if(soon.length){
+        const s=soon[0],nm=s.r.name||'定期账单';
+        it.push({i:'📅',n:(s.inD===0?'今天':(s.inD===1?'明天':s.inD+' 天后'))+'要扣 '+nm,
+          d:(s.r.currency||'SGD')+' '+fmt(+s.r.amount||0)+' · 每月 '+s.d+' 号'+(soon.length>1?' · 7 天内还有 '+(soon.length-1)+' 笔':''),
+          go:'看看',fn:()=>{const b=document.getElementById('openRec');if(b)b.click();}});
+      }
+    }
+  }catch(e){}
+  const lab=document.getElementById('todoLab');
+  if(lab)lab.textContent=it.length?(it.length+' 件'):'';
+  if(!it.length){wrap.innerHTML='<div class="todonone">都处理完了 · 邮件、预算、订阅都没有要你动手的</div>';return;}
+  it.sort((a,b)=>(b.w||0)-(a.w||0));
+  wrap.innerHTML=it.map((x,n)=>'<button class="todorow'+(x.w?' warn':'')+'" data-todo="'+n+'">'+
+    '<span class="ti">'+x.i+'</span><span class="tt"><span class="tn">'+esc(x.n)+'</span>'+
+    '<div class="td">'+esc(x.d)+'</div></span><span class="tgo">'+x.go+' ›</span></button>').join('');
+  wrap._acts=it.map(x=>x.fn);
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('#todoWrap [data-todo]');if(!b)return;
+  const w=document.getElementById('todoWrap');
+  const fn=w&&w._acts&&w._acts[+b.dataset.todo];if(fn)fn();
+});
 function buildCalendar(){
   const y=viewMonth.getFullYear(),m=viewMonth.getMonth();
   /* v4.7：翻月按钮搬到标题行（#calNav），不再塞在日历格子上面 */
@@ -5663,6 +5826,7 @@ async function loadFx(){
      读不到 = 我没看懂的（对账单、通知之类），要你自己看
    只留最近 3 个月，更早的 Worker 会自动清掉 —— 邮件原文最占地方。 ============ */
 let INBOX=[], IB_KIND='parsed', IB_MONTH='', IB_MONTHS=[], IB_COUNTS={parsed:0,unparsed:0}, IB_KEEP=3;
+let IB_BADGE=0;   /* v11.21 「读不到且没处理」的总数（全部月份），存下来给首页「等你处理」卡用 */
 /* v10.6：按月缓存（月份 → {items, counts, at}）。换月用箭头，命中缓存 = 0 网络、瞬间切；
    落在某个月就 background 预取上/下月，所以按箭头几乎都命中。任何会改数据的动作(删账/粘贴)清空它。 */
 let IB_MCACHE={};
@@ -5693,6 +5857,7 @@ async function loadInbox(opt){
     const j=await r.json();
     if(badgeOnly){                            /* 只更新角标，INBOX 一个字都不动 */
       const n0=j.badge||0;
+      IB_BADGE=n0; if(typeof buildTodo==='function')buildTodo();   /* v11.21 顺手刷新「等你处理」卡 */
       const d0=document.getElementById('navIbDot'); if(d0)d0.style.display=n0?'block':'none';
       return;
     }
@@ -5702,6 +5867,7 @@ async function loadInbox(opt){
     IB_COUNTS=j.counts||{parsed:0,unparsed:0};
     IB_KEEP=j.keep_months||3;
     const n=j.badge||0;                       /* 红角标 = 所有月份里「读不到且没处理」的总数 */
+    IB_BADGE=n; if(typeof buildTodo==='function')buildTodo();   /* v11.21 顺手刷新「等你处理」卡 */
     const nd=document.getElementById('navIbDot'); if(nd)nd.style.display=n?'block':'none';   /* tab 上的红点 */
     if(IB_MONTH)IB_MCACHE[IB_MONTH]={items:INBOX,counts:IB_COUNTS,at:Date.now()};  /* v10.6 存这个月，换回来 0 网络 */
     _ricSafe(()=>ibWarmNeighbors(),400);      /* v10.6 空闲时把上/下月先抓好，按箭头就不闪 */
