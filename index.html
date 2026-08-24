@@ -291,13 +291,15 @@ body.phototheme .cal-c.sel{background:rgba(255,255,255,.13)}
 .dvseg[data-m="card"] .calseg-ind{transform:translateX(200%)}
 .dvseg button{padding:0 11px;min-width:44px}
 .dvpane{animation:dvfade .2s ease}
-/* v11.30 明细四段控 + 汇总卡 + 堆叠条 + 按商家 */
-.dtseg{width:100%;margin:0 0 14px}
-.dtseg .calseg-ind{width:calc(25% - 1.5px)}
+/* v11.31 明细四段控：改成清爽的「下划线」标签（原来那种整条大绿药丸太笨重） */
+.dtseg{width:100%;margin:0 0 16px;background:transparent;border:none;border-bottom:1px solid var(--line);border-radius:0;padding:0;gap:0}
+.dtseg .calseg-ind{top:auto;bottom:-1px;left:0;height:2.5px;width:25%;border-radius:99px;background:var(--brand);box-shadow:none}
+.dtseg[data-m="cats"] .calseg-ind{transform:translateX(0)}
 .dtseg[data-m="days"] .calseg-ind{transform:translateX(100%)}
 .dtseg[data-m="merch"] .calseg-ind{transform:translateX(200%)}
 .dtseg[data-m="card"] .calseg-ind{transform:translateX(300%)}
-.dtseg button{flex:1;min-width:0;padding:0 4px;font-size:13px}
+.dtseg button{flex:1;min-width:0;height:38px;line-height:38px;padding:0;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:0;letter-spacing:.5px}
+.dtseg button.on{color:var(--ink);font-weight:700}
 .dtpane{animation:dvfade .2s ease}
 .dtsum{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 18px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
 .dtsum .dtmo{font-size:12.5px;color:var(--muted);font-weight:600}
@@ -844,6 +846,27 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .setrow .sn{font-weight:600;font-size:14.5px;color:var(--ink)}
 .setrow .sd{font-size:12px;color:var(--muted);margin-top:1px}
 .setrow .sar{color:var(--muted);font-size:18px}
+/* v11.31 设置分组卡（照 mockup）：图标 + 友好标题 + 小字说明 + 状态胶囊，点开露出里面的行 */
+.setgrp{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
+.setgrp-h{display:flex;align-items:center;gap:13px;width:100%;background:none;border:0;padding:15px 16px;font-family:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.setgrp-h:active{background:var(--faint)}
+.setgrp-h .sgi{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:22px;flex-shrink:0;background:var(--faint)}
+.setgrp-h .sgt{flex:1;min-width:0}
+.setgrp-h .sgn{font-weight:700;font-size:15.5px;color:var(--ink);display:flex;align-items:center;gap:7px}
+.setgrp-h .sgd{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.setgrp-h .sgchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;empty:hidden}
+.setgrp-h .sgchips:empty{display:none}
+.sgchip{font-size:10.5px;font-weight:600;color:var(--muted);background:var(--faint);border-radius:99px;padding:2.5px 9px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sgchip.warn{background:rgba(231,163,62,.16);color:#E7A33E}
+.sgchip.ok{background:rgba(11,166,120,.15);color:#12b981}
+.setgrp-h .sgar{flex-shrink:0;color:var(--muted);font-size:20px;transition:transform .25s;align-self:center}
+.setgrp.open .setgrp-h .sgar{transform:rotate(90deg)}
+.statusdot{width:9px;height:9px;border-radius:50%;background:#12b981;display:inline-block;flex-shrink:0;box-shadow:0 0 0 3px rgba(18,185,129,.18)}
+.statusdot.warn{background:#E7A33E;box-shadow:0 0 0 3px rgba(231,163,62,.18)}
+.statusdot.bad{background:#F0665F;box-shadow:0 0 0 3px rgba(240,102,95,.18)}
+.setgrp-body{display:none;border-top:1px solid var(--line);padding:2px 15px 6px}
+.setgrp.open .setgrp-body{display:block}
+.setgrp-body .setrow{padding:14px 0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 :focus-visible{outline:2px solid var(--emerald);outline-offset:2px}
 
@@ -1850,13 +1873,13 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
   <div class="tab" id="tab2">
     <!-- v11.30 明细照 mockup 重排：顶部汇总卡 + 四段（按分类/按天/按商家/按卡） -->
     <div class="dtsum" id="dtSum"></div>
-    <div class="calseg dtseg" id="dtSeg" data-m="cats"><i class="calseg-ind"></i><button data-dt="cats">按分类</button><button data-dt="days">按天</button><button data-dt="merch">按商家</button><button data-dt="card">按卡</button></div>
-    <div class="dtpane" id="dtCats">
+    <div class="calseg dtseg" id="dtSeg" data-m="days"><i class="calseg-ind"></i><button data-dt="cats">按分类</button><button data-dt="days">按天</button><button data-dt="merch">按商家</button><button data-dt="card">按卡</button></div>
+    <div class="dtpane" id="dtCats" style="display:none">
       <div class="dtbar" id="dtBar"></div>
       <div class="dtbarleg" id="dtBarLeg"></div>
       <div class="cats" id="cats"></div>
     </div>
-    <div class="dtpane" id="dtDays" style="display:none">
+    <div class="dtpane" id="dtDays">
       <div id="feed"></div>
     </div>
     <div class="dtpane" id="dtMerch" style="display:none">
@@ -1877,74 +1900,79 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
     <!-- v11.30 「等你处理」从总览挪到设置顶部：总览只留大数字，要动手的事集中在这里 -->
     <div class="section-h"><span class="h">等你处理</span><span class="pacelab" id="todoLab"></span></div>
     <div class="todocard" id="todoWrap"></div>
-    <div class="setcard">
-      <button class="setrow" id="reconnect"><span class="si">🔄</span><div class="st"><div class="sn">重新连接 · 刷新数据</div><div class="sd" id="reconnectSd">断网/弱信号后，网络回来了点这里立刻重拉最新</div></div></button>
-    </div>
-    <div class="section-h"><span class="h">自动记账</span></div>
-    <div class="setcard">
 
-      <button class="setrow" id="openRules"><span class="si">🧠</span><div class="st"><div class="sn">商家记忆</div><div class="sd">它学过的商家→分类 · 左滑改/删</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="openSubs"><span class="si">🔁</span><div class="st"><div class="sn">订阅侦测<span class="badge" id="subBadge" style="display:none">0</span></div><div class="sd" id="subSd">从你的账里找出定期扣款 · 只看不记</div></div><span class="sar">›</span></button>
-    </div>
-
-    <div class="section-h"><span class="h">分类与账单</span></div>
-    <div class="setcard">
-      <button class="setrow" id="openCats"><span class="si">🏷️</span><div class="st"><div class="sn">分类管理</div><div class="sd">加/改/删分类 · 设子分类 · 拖着排顺序</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="openPayMgr"><span class="si">💳</span><div class="st"><div class="sn">付款方式</div><div class="sd">给卡 / PayLah 改名 · 加或删 · 改了全部一起变</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="openRec"><span class="si">🔁</span><div class="st"><div class="sn">定期账单</div><div class="sd">Netflix / iCloud 这种，每月自动记</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="openBud"><span class="si">🎯</span><div class="st"><div class="sn">预算上限</div><div class="sd">每个分类设月上限 · 超支变红</div></div><span class="sar">›</span></button>
-    </div>
-
-    <div class="section-h"><span class="h">备份与同步</span></div>
-    <div class="setcard">
-      <button class="setrow" id="gdRow"><span class="si">☁️</span><div class="st"><div class="sn">Google Drive 备份</div><div class="sd" id="gdSd">检查中…</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="expJson"><span class="si">📤</span><div class="st"><div class="sn">导出 JSON 到手机</div><div class="sd">整包账 + 分类 + 商家记忆 · 这份能拿回来恢复</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="impJson"><span class="si">📥</span><div class="st"><div class="sn">从文件恢复</div><div class="sd">手机里那份 JSON · 只补不覆盖</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="gcRow"><span class="si">📅</span><div class="st"><div class="sn">Google 日历 & 订阅</div><div class="sd" id="gcSd">检查中…</div></div><span class="sar">›</span></button>
-    </div>
-
-    <div class="section-h"><span class="h">导出</span></div>
-    <div class="setcard">
-      <button class="setrow" id="expXlsx"><span class="si">📊</span><div class="st"><div class="sn">导出 Excel</div><div class="sd">汇总 + 明细两个表</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="expPdf"><span class="si">📄</span><div class="st"><div class="sn">导出 PDF</div><div class="sd">报表页 · 可打印 / 存 PDF</div></div><span class="sar">›</span></button>
-    </div>
-
-    <div class="section-h"><span class="h">提醒</span></div>
-    <div class="setcard">
-      <button class="setrow" id="openPush"><span class="si">🔔</span><div class="st"><div class="sn">通知</div><div class="sd" id="pushSd">检查中…</div></div><span class="sar">›</span></button>
-    </div>
-
+    <!-- v11.31 设置照 mockup 重排：5 张分组卡，每张点开露出里面的行（所有原按钮/ID 一字没动） -->
     <input type="file" id="jsonFile" accept=".json,application/json" style="display:none">
-    <div class="section-h"><span class="h">外观</span></div>
-    <div class="setcard">
-      <button class="setrow" id="openDash"><span class="si">🧩</span><div class="st"><div class="sn">总览排序</div><div class="sd">拖一下，决定三张卡谁在上面</div></div><span class="sar">›</span></button>
-    </div>
-    <div class="setcard">
-      <div class="thgrid" id="thGrid"></div>
-      <div class="gxrow" id="gxRow"></div>
-      <div class="numlbl">版式</div>
-      <div class="blrow" id="blRow"></div>
-      <div class="numlbl">数值颜色（收入 / 结余 / 笔数）</div>
-      <div class="numrow" id="numRow"></div>
-      <div class="slrow" id="maskRow" style="display:none">
-        <div class="sl-l"><span>遮罩深浅（照片压暗）</span><span id="maskVal">42%</span></div>
-        <input type="range" id="maskSl" min="0" max="80" value="42">
-      </div>
-      <div class="slrow" id="opRow" style="display:none">
-        <div class="sl-l"><span>卡片玻璃深浅（全部卡片一起，0＝全透明）</span><span id="opVal">30%　·　透明 70%</span></div>
-        <input type="range" id="opSl" min="0" max="80" value="30">
-      </div>
-    </div>
-    <div class="setcard" id="bgCard" style="display:none">
-      <button class="setrow" id="setInsertBg"><span class="si">🖼️</span><div class="st"><div class="sn">插入照片（自动压缩）</div><div class="sd">选一张图当背景 · 存 D1 · 跨设备</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="setClearBg"><span class="si">🗑️</span><div class="st"><div class="sn">清除背景</div><div class="sd">恢复无图</div></div><span class="sar">›</span></button>
-    </div>
     <input type="file" id="bgFile" accept="image/*" style="display:none">
 
-    <div class="section-h"><span class="h">系统</span></div>
-    <div class="setcard">
-      <button class="setrow" id="openHealth"><span class="si">🩺</span><div class="st"><div class="sn">系统自检<span class="badge" id="healthBadge" style="display:none">!</span></div><div class="sd" id="healthSd">检查整个系统运行是否正常 · 不卡不用等</div></div><span class="sar">›</span></button>
-      <button class="setrow" id="openSetup"><span class="si">🔧</span><div class="st"><div class="sn">应用设置</div><div class="sd">Worker 网址 / 名字 / 存取码 / 转发邮箱 · 改了整个 app 跟着换</div></div><span class="sar">›</span></button>
+    <!-- ① 系统状态 -->
+    <div class="setgrp" data-g="sys">
+      <button class="setgrp-h" data-gtoggle><span class="sgi">🩺</span><div class="sgt"><div class="sgn"><span class="statusdot" id="sysDot"></span><span id="sysTitle">系统一切正常</span></div><div class="sgd">邮件转发 · Drive 备份 · 自动分类 · 读不到的信</div><div class="sgchips" id="sysChips"></div></div><span class="sgar">›</span></button>
+      <div class="setgrp-body">
+        <button class="setrow" id="openHealth"><span class="si">🩺</span><div class="st"><div class="sn">系统自检<span class="badge" id="healthBadge" style="display:none">!</span></div><div class="sd" id="healthSd">检查整个系统运行是否正常 · 不卡不用等</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="reconnect"><span class="si">🔄</span><div class="st"><div class="sn">重新连接 · 刷新数据</div><div class="sd" id="reconnectSd">断网/弱信号后，网络回来了点这里立刻重拉最新</div></div></button>
+        <button class="setrow" id="openSetup"><span class="si">🔧</span><div class="st"><div class="sn">应用设置</div><div class="sd">Worker 网址 / 名字 / 存取码 / 转发邮箱 · 改了整个 app 跟着换</div></div><span class="sar">›</span></button>
+      </div>
+    </div>
+
+    <!-- ② 让它替我记账 -->
+    <div class="setgrp" data-g="auto">
+      <button class="setgrp-h" data-gtoggle><span class="sgi">🧠</span><div class="sgt"><div class="sgn">让它替我记账</div><div class="sgd">商家记忆 · 订阅侦测 · 定期账单 · 自动分类</div><div class="sgchips" id="autoChips"></div></div><span class="sgar">›</span></button>
+      <div class="setgrp-body">
+        <button class="setrow" id="openRules"><span class="si">🧠</span><div class="st"><div class="sn">商家记忆</div><div class="sd">它学过的商家→分类 · 左滑改/删</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="openSubs"><span class="si">🔁</span><div class="st"><div class="sn">订阅侦测<span class="badge" id="subBadge" style="display:none">0</span></div><div class="sd" id="subSd">从你的账里找出定期扣款 · 只看不记</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="openRec"><span class="si">🔁</span><div class="st"><div class="sn">定期账单</div><div class="sd">Netflix / iCloud 这种，每月自动记</div></div><span class="sar">›</span></button>
+      </div>
+    </div>
+
+    <!-- ③ 我的钱怎么分 -->
+    <div class="setgrp" data-g="money">
+      <button class="setgrp-h" data-gtoggle><span class="sgi">🎯</span><div class="sgt"><div class="sgn">我的钱怎么分</div><div class="sgd">预算上限 · 分类 · 子分类 · 付款方式</div><div class="sgchips" id="moneyChips"></div></div><span class="sgar">›</span></button>
+      <div class="setgrp-body">
+        <button class="setrow" id="openBud"><span class="si">🎯</span><div class="st"><div class="sn">预算上限</div><div class="sd">每个分类设月上限 · 超支变红</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="openCats"><span class="si">🏷️</span><div class="st"><div class="sn">分类管理</div><div class="sd">加/改/删分类 · 设子分类 · 拖着排顺序</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="openPayMgr"><span class="si">💳</span><div class="st"><div class="sn">付款方式</div><div class="sd">给卡 / PayLah 改名 · 加或删 · 改了全部一起变</div></div><span class="sar">›</span></button>
+      </div>
+    </div>
+
+    <!-- ④ 别丢了我的账 -->
+    <div class="setgrp" data-g="backup">
+      <button class="setgrp-h" data-gtoggle><span class="sgi">💾</span><div class="sgt"><div class="sgn">别丢了我的账</div><div class="sgd">Drive 备份 · 导出 JSON / Excel / PDF · 从文件恢复</div><div class="sgchips" id="backupChips"></div></div><span class="sgar">›</span></button>
+      <div class="setgrp-body">
+        <button class="setrow" id="gdRow"><span class="si">☁️</span><div class="st"><div class="sn">Google Drive 备份</div><div class="sd" id="gdSd">检查中…</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="gcRow"><span class="si">📅</span><div class="st"><div class="sn">Google 日历 & 订阅</div><div class="sd" id="gcSd">检查中…</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="expJson"><span class="si">📤</span><div class="st"><div class="sn">导出 JSON 到手机</div><div class="sd">整包账 + 分类 + 商家记忆 · 这份能拿回来恢复</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="impJson"><span class="si">📥</span><div class="st"><div class="sn">从文件恢复</div><div class="sd">手机里那份 JSON · 只补不覆盖</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="expXlsx"><span class="si">📊</span><div class="st"><div class="sn">导出 Excel</div><div class="sd">汇总 + 明细两个表</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="expPdf"><span class="si">📄</span><div class="st"><div class="sn">导出 PDF</div><div class="sd">报表页 · 可打印 / 存 PDF</div></div><span class="sar">›</span></button>
+      </div>
+    </div>
+
+    <!-- ⑤ 外观 · 通知 · 系统 -->
+    <div class="setgrp" data-g="look">
+      <button class="setgrp-h" data-gtoggle><span class="sgi">🎨</span><div class="sgt"><div class="sgn">外观 · 通知 · 系统</div><div class="sgd">背景照片 · 遮罩与玻璃深浅 · 数值颜色 · 提醒 · 总览排序</div><div class="sgchips" id="lookChips"></div></div><span class="sgar">›</span></button>
+      <div class="setgrp-body">
+        <button class="setrow" id="openPush"><span class="si">🔔</span><div class="st"><div class="sn">通知</div><div class="sd" id="pushSd">检查中…</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="openDash"><span class="si">🧩</span><div class="st"><div class="sn">总览排序</div><div class="sd">拖一下，决定卡片顺序</div></div><span class="sar">›</span></button>
+        <div class="thgrid" id="thGrid"></div>
+        <div class="gxrow" id="gxRow"></div>
+        <div class="numlbl">版式</div>
+        <div class="blrow" id="blRow"></div>
+        <div class="numlbl">数值颜色（收入 / 结余 / 笔数）</div>
+        <div class="numrow" id="numRow"></div>
+        <div class="slrow" id="maskRow" style="display:none">
+          <div class="sl-l"><span>遮罩深浅（照片压暗）</span><span id="maskVal">42%</span></div>
+          <input type="range" id="maskSl" min="0" max="80" value="42">
+        </div>
+        <div class="slrow" id="opRow" style="display:none">
+          <div class="sl-l"><span>卡片玻璃深浅（全部卡片一起，0＝全透明）</span><span id="opVal">30%　·　透明 70%</span></div>
+          <input type="range" id="opSl" min="0" max="80" value="30">
+        </div>
+        <div id="bgCard" style="display:none">
+          <button class="setrow" id="setInsertBg"><span class="si">🖼️</span><div class="st"><div class="sn">插入照片（自动压缩）</div><div class="sd">选一张图当背景 · 存 D1 · 跨设备</div></div><span class="sar">›</span></button>
+          <button class="setrow" id="setClearBg"><span class="si">🗑️</span><div class="st"><div class="sn">清除背景</div><div class="sd">恢复无图</div></div><span class="sar">›</span></button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3274,7 +3302,7 @@ function buildByCard(){
   el.innerHTML=h+'</div>';
 }
 
-function buildAll(){updateHeader();buildPace();buildTodo();buildMonthBars();buildTrend();buildCalendar();buildDonut();buildCats();buildInsights();buildByCard();applyDView();buildFeed();applyFold();if(peekKey)buildDayPeek(peekKey,true);/* v9.87 当天速览跟着刷新（skipCal 防死循环）*/}
+function buildAll(){updateHeader();buildPace();buildTodo();buildSetChips();buildMonthBars();buildTrend();buildCalendar();buildDonut();buildCats();buildInsights();buildByCard();applyDView();buildFeed();applyFold();if(peekKey)buildDayPeek(peekKey,true);/* v9.87 当天速览跟着刷新（skipCal 防死循环）*/}
 
 function updateHeader(){
   const rows=DATA.filter(x=>sameMonth(x.ts));
@@ -6038,7 +6066,7 @@ async function loadInbox(opt){
     const j=await r.json();
     if(badgeOnly){                            /* 只更新角标，INBOX 一个字都不动 */
       const n0=j.badge||0;
-      IB_BADGE=n0; if(typeof buildTodo==='function')buildTodo();   /* v11.21 顺手刷新「等你处理」卡 */
+      IB_BADGE=n0; if(typeof buildTodo==='function')buildTodo(); if(typeof buildSetChips==='function')buildSetChips();   /* v11.21 顺手刷新「等你处理」卡 */
       const d0=document.getElementById('navIbDot'); if(d0)d0.style.display=n0?'block':'none';
       return;
     }
@@ -6048,7 +6076,7 @@ async function loadInbox(opt){
     IB_COUNTS=j.counts||{parsed:0,unparsed:0};
     IB_KEEP=j.keep_months||3;
     const n=j.badge||0;                       /* 红角标 = 所有月份里「读不到且没处理」的总数 */
-    IB_BADGE=n; if(typeof buildTodo==='function')buildTodo();   /* v11.21 顺手刷新「等你处理」卡 */
+    IB_BADGE=n; if(typeof buildTodo==='function')buildTodo(); if(typeof buildSetChips==='function')buildSetChips();   /* v11.21 顺手刷新「等你处理」卡 */
     const nd=document.getElementById('navIbDot'); if(nd)nd.style.display=n?'block':'none';   /* tab 上的红点 */
     if(IB_MONTH)IB_MCACHE[IB_MONTH]={items:INBOX,counts:IB_COUNTS,at:Date.now()};  /* v10.6 存这个月，换回来 0 网络 */
     _ricSafe(()=>ibWarmNeighbors(),400);      /* v10.6 空闲时把上/下月先抓好，按箭头就不闪 */
@@ -6548,7 +6576,7 @@ function applyDView(){
 });}
 
 /* ══════════ v11.30 明细四段：按分类 / 按天 / 按商家 / 按卡 ══════════ */
-let DTVIEW='cats';
+let DTVIEW='days';   /* v11.31 明细默认「按天」 */
 function applyDTView(){
   const seg=document.getElementById('dtSeg');if(!seg)return;
   seg.dataset.m=DTVIEW;
@@ -6606,6 +6634,36 @@ function buildByMerchant(){
     return `<div class="merchrow"><div class="mi" style="background:${soft(c.c)}">${c.i}</div>`+
       `<div class="mm"><div class="mmn">${esc(mn)}</div><div class="mms">${o.c}笔 · 均 S$${fmt(avg)} · 占 ${pct}%${freq}</div></div>`+
       `<div class="mmv">S$${fmt(o.v)}</div></div>`;}).join('');
+}
+/* v11.31 设置分组卡：手风琴开合 + 顶部状态胶囊。点整张卡头开合；里面的行照旧各走各的 onclick。 */
+document.addEventListener('click',e=>{
+  const h=e.target.closest('#tab3 [data-gtoggle]');if(!h)return;
+  h.closest('.setgrp').classList.toggle('open');
+});
+/* 每张卡头的小胶囊 + 系统卡的状态灯，全用现有数据现算，没有新变量 */
+function buildSetChips(){
+  const set=(id,html)=>{const e=document.getElementById(id);if(e)e.innerHTML=html||'';};
+  const chip=(t,cls)=>`<span class="sgchip${cls?' '+cls:''}">${t}</span>`;
+  let memN=0;try{memN=Object.keys(RULES||{}).length;}catch(_){}
+  let subN=0;try{subN=(typeof detectSubs==='function'?detectSubs():[]).length;}catch(_){}
+  let recN=0;try{recN=Array.isArray(REC)?REC.length:0;}catch(_){}
+  let unread=0;try{unread=IB_BADGE||0;}catch(_){}
+  /* ① 系统状态：读不到的信 = 唯一「要你动手」的信号 → 决定灯色 + 标题 */
+  const dot=document.getElementById('sysDot'),title=document.getElementById('sysTitle');
+  if(dot){dot.className='statusdot'+(unread>0?' warn':'');}
+  if(title)title.textContent=unread>0?('有 '+unread+' 封读不到'):'系统一切正常';
+  set('sysChips',(unread>0?chip('读不到 '+unread+' 封','warn'):chip('邮件转发正常','ok'))+chip('自动分类 '+memN+' 条记忆'));
+  /* ② 让它替我记账 */
+  set('autoChips',chip(memN+' 条记忆')+(subN>0?chip(subN+' 个新订阅','warn'):'')+chip(recN+' 笔定期'));
+  /* ③ 我的钱怎么分 */
+  let budN=0,catN=0,cardN=0;
+  try{budN=Object.keys(BUD||{}).filter(k=>+BUD[k]>0).length;}catch(_){}
+  try{catN=Object.keys(CAT||{}).length;}catch(_){}
+  try{const s=new Set();DATA.forEach(r=>{if(r.card_last4&&/^\d{3,6}$/.test(r.card_last4))s.add(r.card_last4);});(PAYX||[]).forEach(x=>s.add(x));cardN=s.size;}catch(_){}
+  set('moneyChips',(budN>0?chip(budN+' 个预算'):chip('未设预算'))+chip(catN+' 分类')+(cardN>0?chip(cardN+' 张卡'):''));
+  /* ④ 别丢了我的账 */
+  let n=0;try{n=DATA.length;}catch(_){}
+  set('backupChips',chip(n.toLocaleString()+' 笔账'));
 }
 function dashOrder(){                                  /* 只认真实存在的 key，且不弄丢任何一张卡 */
   const seen=[];DASH.forEach(k=>{if(DSEC_DEF[k]&&!seen.includes(k))seen.push(k);});
