@@ -300,6 +300,15 @@ body.phototheme .cal-c.sel{background:rgba(255,255,255,.13)}
 .nb,.catrow,.merchrow,.cardrow,.setgrp-h,.thbtn,.crow,.dtseg button{transition:transform .13s cubic-bezier(.3,.7,.3,1)}
 .nb:active,.catrow:active,.merchrow:active,.cardrow:active,.setgrp-h:active,.thbtn:active,.crow:active,.dtseg button:active{transform:scale(.972)}
 @media (prefers-reduced-motion:reduce){.nb:active,.catrow:active,.merchrow:active,.cardrow:active,.setgrp-h:active,.thbtn:active,.crow:active,.dtseg button:active{transform:none}}
+/* v11.36 冷启动骨架屏：默认不占位；只有 booting 且 feed 空时才显示，feed 一有内容就消失（相邻兄弟选择器自清） */
+.feedskel{display:none}
+body.booting #feed:empty + .feedskel{display:block;padding:4px 2px}
+.feedskel .fsk{display:block;height:58px;border-radius:15px;margin:11px 0;
+  background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,255,255,.11) 50%,rgba(255,255,255,.05) 70%);
+  background-size:220% 100%;animation:fskShine 1.25s ease-in-out infinite}
+@keyframes fskShine{0%{background-position:180% 0}100%{background-position:-180% 0}}
+body.theme-journal .feedskel .fsk{background:linear-gradient(100deg,rgba(120,95,55,.07) 30%,rgba(120,95,55,.15) 50%,rgba(120,95,55,.07) 70%);background-size:220% 100%}
+@media (prefers-reduced-motion:reduce){.feedskel .fsk{animation:none;opacity:.5}}
 .dtsum{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 18px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
 .dtsum .dtmo{font-size:12.5px;color:var(--muted);font-weight:600}
 .dtsum .dtbig{font-weight:800;font-size:30px;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--ink);margin-top:2px;line-height:1.1}
@@ -1920,6 +1929,8 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
     </div>
     <div class="dtpane" id="dtDays">
       <div id="feed"></div>
+      <!-- v11.36 冷启动骨架屏：只在 booting 且 feed 还空的时候出现，数据一到（快照或实时）feed 非空即自动消失，纯 CSS、不藏快照 -->
+      <div class="feedskel" aria-hidden="true"><i class="fsk"></i><i class="fsk"></i><i class="fsk"></i><i class="fsk"></i></div>
     </div>
     <div class="dtpane" id="dtMerch" style="display:none">
       <div id="merchList"></div>
