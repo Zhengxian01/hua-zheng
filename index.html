@@ -1592,6 +1592,25 @@ body.inbox-open .searchfab,body.inbox-open .fab{display:none!important;}
 #inboxPage{padding-bottom:calc(80px + env(safe-area-inset-bottom))!important;}
 </style>
 <style id="budget-warn">
+/* v11.36 预算仪表盘 */
+.buddash{margin:0 0 20px}
+.bdtot{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.bdtot .bdtl{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--muted)}
+.bdtot .bdtl b{font-size:15px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.bdtot .bdtl b.over{color:#F0665F}
+.bdtot .bdsub{font-size:11.5px;color:var(--muted);margin-top:7px;font-variant-numeric:tabular-nums}
+.bdbar{display:block;height:8px;border-radius:99px;background:var(--faint);overflow:hidden;margin-top:9px}
+.bdbar i{display:block;height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.bdrow{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--line)}
+.bdrow:last-child{border-bottom:none}
+.bdrow .bdi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px;flex-shrink:0}
+.bdrow .bdmid{flex:1;min-width:0}
+.bdrow .bdn{font-weight:600;font-size:13.5px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.bdrow .bdn .bdp{font-size:11.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.bdrow .bdmid .bdbar{margin-top:6px}
+.bdrow .bdv{text-align:right;flex-shrink:0;min-width:74px}
+.bdrow .bdv .bdvs{font-weight:700;font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.bdrow .bdv .bdvl{font-size:10.5px;font-variant-numeric:tabular-nums;margin-top:1px}
 .nm{display:flex;align-items:center;flex-wrap:wrap;gap:4px;}
 .budtag{display:inline-block;font-size:10px;font-weight:700;padding:1.5px 8px;border-radius:99px;line-height:1.45;white-space:nowrap;}
 .budtag.warn{background:rgba(231,163,62,.18);color:#E7A33E;}
@@ -2214,6 +2233,8 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
     <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px">
       给分类设每月上限（SGD）。留空 = 不限。总览的分类里会显示进度条：<b style="color:#0BA678">绿</b> 安全 · <b style="color:#E7A33E">黄</b> 到 80% · <b style="color:#DB5A54">红</b> 超支。
     </div>
+    <!-- v11.36 预算仪表盘：设了上限的分类一眼看完花到哪、谁快爆 -->
+    <div id="budDash"></div>
     <div id="budList"></div>
   </div>
 </div>
@@ -7804,7 +7825,25 @@ async function evAskDelete(id,dayKey,rowEl){
 const budPage=document.getElementById('budPage');
 document.getElementById('openBud').onclick=()=>{budRender();budPage.classList.add('show');budPage.scrollTop=0;syncPageOpen();};
 document.getElementById('budBack').onclick=()=>{budPage.classList.remove('show');syncPageOpen();};
+/* v11.36 预算仪表盘：设了上限的分类，一眼看完本月花到哪、谁快爆。只在打开预算页时算，O(当月)，不上热路径 */
+function budDashRender(){
+  const el=document.getElementById('budDash');if(!el)return;
+  const budgeted=Object.keys(BUD).filter(k=>+BUD[k]>0);
+  if(!budgeted.length){el.innerHTML='';return;}
+  const {by}=catAgg(DATA.filter(x=>sameMonth(x.ts)));
+  const rows=budgeted.map(k=>{const lim=+BUD[k],spent=(by[k]&&by[k].v)||0;return {k,lim,spent,r:lim>0?spent/lim:0};})
+    .sort((a,b)=>b.r-a.r);
+  const totLim=rows.reduce((s,x)=>s+x.lim,0),totSpent=rows.reduce((s,x)=>s+x.spent,0),totR=totLim>0?totSpent/totLim:0;
+  const col=r=>r>=1?'#F0665F':(r>=0.8?'#E7A33E':'#12b981');
+  const bar=(r,c)=>`<span class="bdbar"><i style="width:${Math.min(100,Math.round(r*100))}%;background:${c}"></i></span>`;
+  let h=`<div class="buddash"><div class="bdtot"><div class="bdtl"><span>本月预算</span><b class="${totR>=1?'over':''}">已花 S$${fmt(totSpent)} / S$${fmt(totLim)}</b></div>${bar(totR,col(totR))}<div class="bdsub">${totR>=1?('总体超了 S$'+fmt(totSpent-totLim)):('还剩 S$'+fmt(totLim-totSpent)+' · '+Math.round(totR*100)+'%')}</div></div>`;
+  h+=rows.map(x=>{const c=catDef(x.k,'expense'),cc=col(x.r),over=x.r>=1;
+    return `<div class="bdrow"><span class="bdi" style="background:${soft(c.c)}">${c.i}</span><div class="bdmid"><div class="bdn">${esc(c.n)}<span class="bdp" style="color:${cc}">${Math.round(x.r*100)}%</span></div>${bar(x.r,cc)}</div><div class="bdv"><div class="bdvs">S$${fmt(x.spent)}</div><div class="bdvl" style="color:${cc}">${over?'超 S$'+fmt(x.spent-x.lim):'剩 S$'+fmt(x.lim-x.spent)}</div></div></div>`;}).join('');
+  h+='</div>';
+  el.innerHTML=h;
+}
 function budRender(){
+  budDashRender();
   const list=document.getElementById('budList');
   const ents=Object.entries(CAT);
   if(!ents.length){list.innerHTML='<div style="color:var(--muted);font-size:13px">还没有支出分类</div>';return;}
@@ -7817,7 +7856,7 @@ document.getElementById('budList').addEventListener('change',async e=>{
   const k=inp.dataset.k, v=parseFloat(inp.value);
   const snap={...BUD};
   if(isFinite(v)&&v>0)BUD[k]=Math.round(v*100)/100; else {delete BUD[k];inp.value='';}
-  buildCats();                       /* 主页分类列表上的预算条 */
+  buildCats();budDashRender();        /* 主页分类列表上的预算条 + 预算页仪表盘一起刷新 */
   const ok=await saveBudgets();
   /* ⚠️ v9.2 修：回滚只做了 budRender()（预算页），漏了 buildCats()（主页的预算条）
      → 存失败时，主页会一直显示那个「其实没存进去」的预算。跟商家记忆那个是同一类 bug：
