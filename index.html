@@ -294,6 +294,8 @@ body.phototheme .cal-c.sel{background:rgba(255,255,255,.13)}
 .dtseg button{flex:1;min-width:0;height:38px;line-height:38px;padding:0;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:0;letter-spacing:.5px}
 .dtseg button.on{color:var(--ink);font-weight:700}
 .dtpane{animation:dvfade .2s ease}
+/* v11.34 按分类：环形卡和下面分类清单之间留口气，别粘一起 */
+#dtCats .donutcard{margin-bottom:14px}
 .dtsum{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 18px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
 .dtsum .dtmo{font-size:12.5px;color:var(--muted);font-weight:600}
 .dtsum .dtbig{font-weight:800;font-size:30px;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--ink);margin-top:2px;line-height:1.1}
@@ -1201,6 +1203,9 @@ body.booting .hero .fxlines{opacity:.72}
 .hero .fxloc small{opacity:.62;font-size:10px;font-weight:700;margin-right:3px}
 .hero .fxchip .arr{opacity:.5;margin:0 1px}
 .hero .fxchip .sg{font-weight:800}
+/* v11.34 SGD 那颗是「本月总额本币」，跟换算 chip 同形状但用中性白底，一眼分得出它是基准、不是折算 */
+.fxchip.base{background:rgba(255,255,255,.14);color:#fff}
+body.theme-journal .fxchip.base{background:#E4DCCF!important;color:#2A2521!important}
 .hero .fxdot{opacity:.4;font-weight:700}
 .hero .fxmore{font-size:11px;font-weight:700;opacity:.6}
 .fxnote{display:flex;align-items:center;gap:8px;font-size:10.5px;opacity:.72;margin-top:6px;letter-spacing:.2px}
@@ -3375,7 +3380,7 @@ function updateHeader(){
     .sort((a,b)=>a==='SGD'?-1:b==='SGD'?1:(per[b]*(FX[b]||1))-(per[a]*(FX[a]||1)));
   const _fgn=used.filter(c=>c!=='SGD');
   const _segs=[];
-  if(per.SGD>0)_segs.push(`<span class="fxloc"><small>SGD</small>${r0(per.SGD)}</span>`);
+  if(per.SGD>0)_segs.push(`<span class="fxchip base">${flagOf('SGD')}${r0(per.SGD)}</span>`);   /* v11.34 SGD 也做成 chip，跟外币那几颗长一样，不再是一坨裸字 */
   _fgn.slice(0,3).forEach(c=>{
     const rate=FX[c];
     if(typeof rate==='number'&&rate>0){
@@ -3771,7 +3776,13 @@ function catDeltaChip(now,prev){
   if(!(prev>0))return '';
   const pc=Math.round((now-prev)/prev*100);
   if(pc===0)return ` <span class="catdelta flat">持平</span>`;
-  return ` <span class="catdelta ${pc>0?'up':'down'}">${pc>0?'+':'−'}${Math.abs(pc)}%</span>`;
+  const up=pc>0;
+  /* v11.34 涨过 5 倍（+400%）百分比就开始难读，涨到几十倍更是天文数字（上月这类几乎没花才会这样）
+     → 一律改用「↑N×」倍数，更直观。例：上月 S$9、这月 S$1256 → 以前 +14004%，现在 ↑140×；+817% → ↑9.2×。 */
+  let txt;
+  if(up&&pc>=400){const m=now/prev;txt='↑'+(m>=10?Math.round(m):m.toFixed(1))+'×';}
+  else txt=(up?'+':'−')+Math.abs(pc)+'%';
+  return ` <span class="catdelta ${up?'up':'down'}">${txt}</span>`;
 }
 function buildCats(){
   /* v11.30 buildCats 是每条刷新链路都会调到的公约数 → 顺手把明细另外三块（汇总卡/堆叠条/按商家）+ 按卡一起刷新，
