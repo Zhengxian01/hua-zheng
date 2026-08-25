@@ -400,11 +400,13 @@ body.theme-journal .ptr.ready .ptr-spin{background:#256B5E;color:#fff}
 .budrow{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
 .budrow .ei{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-size:18px;flex-shrink:0}
 .budrow .budmid{flex:1;min-width:0}
-.budrow .budname{font-weight:600;font-size:14px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.budrow .budpct{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;flex-shrink:0}
-.budrow .budprog{display:flex;align-items:center;gap:9px;margin-top:7px}
-.budrow .budprog .bdbar{flex:1;margin:0}
-.budrow .budspent{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* v11.39 标题一行：名字在左、数值(已花·剩/超·%)紧挨在旁边；进度条改成标题下面一整条 */
+.budrow .budname{display:flex;align-items:baseline;gap:8px;min-width:0}
+.budrow .budname .bnm{font-weight:600;font-size:14px;flex-shrink:0}
+.budrow .budinfo{flex:1;min-width:0;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.budrow .budinfo b{font-weight:800}
+.budrow .budbarfull{height:7px;border-radius:99px;background:var(--faint);overflow:hidden;margin-top:8px}
+.budrow .budbarfull i{display:block;height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
 .budrow .budcur{color:var(--muted);font-size:13px}
 /* v8.8：格子里的字一律置中（用户：「那种格子里面的字都要在中间」） */
 .budrow .budinp{width:82px;flex-shrink:0;text-align:center;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 8px;font-size:15px;font-weight:700;font-family:inherit}
@@ -7864,9 +7866,10 @@ function budRender(){
   const {by}=catAgg(DATA.filter(x=>sameMonth(x.ts)));
   list.innerHTML=ents.map(([k,c])=>{
     const lim=+BUD[k]||0,has=lim>0,spent=(by[k]&&by[k].v)||0,r=lim>0?spent/lim:0,over=r>=1,cc=budCol(r),w=Math.max(0,Math.min(100,Math.round(r*100)));
-    const pct=has?`<span class="budpct" style="color:${cc}">${Math.round(r*100)}%</span>`:'';
-    const prog=has?`<div class="budprog"><span class="bdbar"><i style="width:${w}%;background:${cc}"></i></span><span class="budspent">已花 S$${fmt(spent)} · <b style="color:${cc}">${over?'超 S$'+fmt(spent-lim):'剩 S$'+fmt(lim-spent)}</b></span></div>`:'';
-    return `<div class="budrow${has?' has':''}"><span class="ei" style="background:${soft(c.c)}">${c.i}</span><div class="budmid"><div class="budname">${esc(c.n)}${pct}</div>${prog}</div>`+
+    /* 数值写在标题旁边：已花 · 剩/超（整数、无小数）。% 不写文字了——下面那条满宽 bar 本身就是 %，省得挤到被截断 */
+    const info=has?`<span class="budinfo">已花 S$${r0(spent)} · <b style="color:${cc}">${over?'超 S$'+r0(spent-lim):'剩 S$'+r0(lim-spent)}</b></span>`:'';
+    const bar=has?`<div class="budbarfull"><i style="width:${w}%;background:${cc}"></i></div>`:'';
+    return `<div class="budrow${has?' has':''}"><span class="ei" style="background:${soft(c.c)}">${c.i}</span><div class="budmid"><div class="budname"><span class="bnm">${esc(c.n)}</span>${info}</div>${bar}</div>`+
       `<span class="budcur">S$</span><input class="budinp" inputmode="decimal" data-k="${k}" value="${lim?fmt(lim):''}" placeholder="不限"></div>`;
   }).join('');
 }
