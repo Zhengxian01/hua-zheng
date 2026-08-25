@@ -1852,13 +1852,14 @@ body.blook .catrow .cv .cm{font-size:15.5px;font-weight:600;letter-spacing:-.3px
 body.blook .catrow .cv .cp{font-size:10.5px;letter-spacing:.3px;opacity:.75}
 body.blook .catrow .track{height:4px;border-radius:99px;margin-top:7px}
 body.blook .catrow .track .fl{border-radius:99px}
-/* 每笔账：金额跟着「数值颜色」走（1b 就是全部一个颜色，只有收入另算） */
+/* v11.35 每笔「花钱」的金额 = 语意色（浅红），不再跟「数值颜色」走青绿 —— 花钱理应偏红，收入才绿。
+   收入照旧走 --emerald；hero 的 收入/结余/笔数 仍受「数值颜色」控制（那是统计，不是收支方向）。 */
 body.blook .tx .amt{font-size:15.5px;font-weight:600;letter-spacing:-.3px}
-body.blook.numamt .tx .amt.exp{color:var(--num,#f5e9c8)}
+body.blook.numamt .tx .amt.exp{color:#FF8A8F}   /* 照片/暗底：浅红 coral，亮得清、又不刺眼 */
 body.blook .tx .m{letter-spacing:.2px}
 /* 手账主题是浅纸底，1b 那套深底字距不适用 → 版式层整体让位（原本的手账 override 继续管） */
 body.theme-journal.blook .hero .amt .int{font-size:52px!important;letter-spacing:-.01em!important}
-body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
+body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸底：暖砖红 */
 /* 外观页那两颗小开关（沿用 numsw 的长相） */
 .blrow{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 4px}
 </style>
