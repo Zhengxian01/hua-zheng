@@ -6767,17 +6767,19 @@ function applyDTView(){
 function buildDetailSummary(){
   const el=document.getElementById('dtSum');if(!el)return;
   const mo=(viewMonth.getMonth()+1)+'月';
-  const rows=DATA.filter(x=>sameMonth(x.ts)&&!isInc(x));
-  const exp=rows.reduce((s,r)=>s+sgdOf(r),0);
-  if(!rows.length){el.innerHTML=`<div class="dtmo">${mo} · 支出</div><div class="dtbig"><span class="s">S$</span>0</div>`;return;}
+  /* v11.38 修：以前这里只 filter !isInc → **没把退款抵扣(offset)减掉**，所以总额比 hero/环形/分类都高。
+     现在跟 hero(updateHeader) 一模一样：支出照加，抵扣退款(offset 收入)减掉 → 三处总额永远对得上。cnt 只数真花费。 */
+  let exp=0,cnt=0;
+  DATA.forEach(r=>{if(!sameMonth(r.ts))return;const v=sgdOf(r);if(isInc(r)){if(r.offset)exp-=v;return;}exp+=v;cnt++;});
+  if(!cnt&&exp===0){el.innerHTML=`<div class="dtmo">${mo} · 支出</div><div class="dtbig"><span class="s">S$</span>0</div>`;return;}
   const {by:pby,samePeriod}=catPrevSamePeriod();
   const lastExp=Object.values(pby).reduce((s,v)=>s+v,0);
   let dchip='';
   if(lastExp>0){const pc=Math.round((exp-lastExp)/lastExp*100);const lab=samePeriod?'比上月同期':'比上月';
     dchip=pc===0?`<span class="dtchip">${lab} 持平</span>`:`<span class="dtchip ${pc>0?'up':'down'}">${lab} ${pc>0?'+':'−'}${Math.abs(pc)}%</span>`;}
-  const avg=exp/rows.length;
+  const avg=cnt>0?exp/cnt:0;
   el.innerHTML=`<div class="dtmo">${mo} · 支出</div><div class="dtbig"><span class="s">S$</span>${fmt(exp)}</div>`+
-    `<div class="dt2">${dchip}<span class="dtchip">${rows.length} 笔</span><span class="dtchip">均 S$${fmt(avg)}</span></div>`;
+    `<div class="dt2">${dchip}<span class="dtchip">${cnt} 笔</span><span class="dtchip">均 S$${fmt(avg)}</span></div>`;
 }
 /* 一条横向堆叠条：本月各分类占比（Top5 + 其他），跟下面分类行同色 */
 function buildDetailBar(){
