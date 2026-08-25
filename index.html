@@ -3558,6 +3558,29 @@ function buildTodo(){
       }
     }
   }catch(e){}
+  /* ⑤ v11.36 不寻常的一笔：本月最大一笔若明显高于平常，或商家第一次出现 → 提醒复查（防盗刷/误扣）。
+     纯 O(当月) + 一次 O(全量) 的首次判断；只挑最大那笔，不刷屏。可「本月知道了」一键消。 */
+  try{
+    const mk2=mkOf(viewMonth),ign2=(IGN_BUD['unusual@'+mk2]||{});
+    const mrows=DATA.filter(x=>sameMonth(x.ts)&&!isInc(x));
+    if(mrows.length>=4){
+      let big=mrows[0];for(const r of mrows)if(sgdOf(r)>sgdOf(big))big=r;
+      const bigv=sgdOf(big),avg=mrows.reduce((a,r)=>a+sgdOf(r),0)/mrows.length;
+      const mkey=(big.merchant||'').trim().toUpperCase();
+      const bt=+new Date(big.ts);
+      const firstEver=!!mkey&&!DATA.some(x=>x!==big&&+new Date(x.ts)<bt&&(x.merchant||'').trim().toUpperCase()===mkey);
+      const huge=bigv>=Math.max(80,avg*3);
+      const key=isoDay(big.ts)+'#'+Math.round(bigv);
+      if((huge||firstEver)&&!ign2[key]){
+        const nm=big.merchant||catInfo(big).n, mult=avg>0?(bigv/avg).toFixed(1):null;
+        const parts=[];if(huge&&mult)parts.push('约平常的 '+mult+' 倍');if(firstEver)parts.push('第一次在这家花');
+        it.push({i:'🔎',n:'复查一笔 · '+nm+' S$'+fmt(bigv),
+          d:(parts.join(' · ')||'看着有点不寻常')+' · 确认不是盗刷/误扣',
+          go:'看看',fn:()=>{const dk=isoDay(big.ts);if(dk&&typeof openDay==='function')openDay(dk);},
+          ignore:()=>ignoreBudMonth('unusual@'+mk2,key)});
+      }
+    }
+  }catch(e){}
   const lab=document.getElementById('todoLab');
   if(lab)lab.textContent=it.length?(it.length+' 件'):'';
   if(!it.length){wrap.innerHTML='<div class="todonone">都处理完了 · 邮件、预算、订阅都没有要你动手的</div>';return;}
