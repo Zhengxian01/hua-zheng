@@ -1369,6 +1369,14 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
 .subbreak .mbr .mx{color:var(--muted);font-weight:600;font-size:11px;margin-left:4px}
 .subbreak .mbr .mv{font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink);flex-shrink:0}
 .subbreak .mnote{font-size:10.5px;color:var(--muted);padding:1px 0 2px}
+/* v11.36 分类展开里的近半年趋势小图（柱用该分类色，当月满色） */
+.cattrend{padding:4px 0 12px;margin-bottom:4px;border-bottom:1px solid var(--line)}
+.cattrend .ctcap{font-size:10.5px;color:var(--muted);margin:0 0 7px;letter-spacing:.3px}
+.cattrend .ctbars{display:flex;align-items:flex-end;gap:6px;height:46px}
+.cattrend .ctb{flex:1;min-width:0;border-radius:3px 3px 0 0;background:var(--tc,#888);opacity:.34;min-height:2px}
+.cattrend .ctb.on{opacity:1}
+.cattrend .ctfoot{display:flex;gap:6px;margin-top:5px}
+.cattrend .ctfoot span{flex:1;text-align:center;font-size:9.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 
 /* ===== v3.0 收件箱 / 定期账单 行 ===== */
 /* v6.1：只会有 3 个月 → 排 3 个按钮就好，不用下拉，也不用折叠。
@@ -3865,16 +3873,23 @@ function buildCats(){
   const merch={};
   rows.forEach(r=>{if(isOffset(r))return;const k=catKey(r);const mn=(r.merchant||'').trim()||'（未标商家）';
     const mm=merch[k]||(merch[k]={});(mm[mn]||(mm[mn]={v:0,c:0}));mm[mn].v+=sgdOf(r);mm[mn].c++;});
+  /* v11.36 每个分类近半年趋势：一趟共用的 (月×分类) 分桶，O(6 个月)，不按分类重复扫 */
+  const tEnd=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),1);
+  const tMonths=[];for(let i=5;i>=0;i--)tMonths.push(new Date(tEnd.getFullYear(),tEnd.getMonth()-i,1));
+  const tLabels=tMonths.map(d=>(d.getMonth()+1)+'月');
+  const trendBy={};
+  tMonths.forEach((d,mi)=>{monthsIn(d).forEach(r=>{if(isOffset(r))return;const kk=catKey(r);(trendBy[kk]||(trendBy[kk]=[0,0,0,0,0,0]))[mi]+=sgdOf(r);});});
   ce.innerHTML=entries.map(([k,o])=>{const c=catDef(k,'expense');const pct=Math.round(o.v/(tot||1)*100);
     const delta=catDeltaChip(o.v,prev.by[k]||0);
-    /* 商家频次明细：默认收着，点分类行才展开 */
+    /* 展开明细：近半年趋势小图 + 商家频次；默认收着，点分类行才展开 */
+    const ser=trendBy[k]||[0,0,0,0,0,0],tmx=Math.max.apply(null,ser)||1;
+    const tbars=ser.map((v,i)=>`<i class="ctb${i===5?' on':''}" style="height:${v>0?Math.max(6,v/tmx*100).toFixed(1):0}%"></i>`).join('');
+    const trend=`<div class="cattrend" style="--tc:${c.c}"><div class="ctcap">近半年 · 月总 SGD</div><div class="ctbars">${tbars}</div><div class="ctfoot">${tLabels.map(l=>`<span>${l}</span>`).join('')}</div></div>`;
     const ms=Object.entries(merch[k]||{}).sort((a,b)=>b[1].v-a[1].v).slice(0,8);
-    const detail=ms.length
-      ? `<div class="subbreak hide" data-sb="${k}">`+ms.map(([mn,m])=>{
-          const freq=m.c>=4,avg=m.v/m.c;
-          return `<div class="mbr"><span class="mn">${esc(mn)}${m.c>1?` <span class="mx">×${m.c}</span>`:''}</span><span class="mv">S$${fmt(m.v)}</span></div>`
-            +(freq?`<div class="mnote">本月常去 · 平均 S$${fmt(avg)}</div>`:'');
-        }).join('')+`</div>` : '';
+    const mrows2=ms.map(([mn,m])=>{const freq=m.c>=4,avg=m.v/m.c;
+      return `<div class="mbr"><span class="mn">${esc(mn)}${m.c>1?` <span class="mx">×${m.c}</span>`:''}</span><span class="mv">S$${fmt(m.v)}</span></div>`
+        +(freq?`<div class="mnote">本月常去 · 平均 S$${fmt(avg)}</div>`:'');}).join('');
+    const detail=`<div class="subbreak hide" data-sb="${k}">`+trend+mrows2+`</div>`;
     return `<div class="catrow" data-cat="${k}" style="--catc:${c.c}"><div class="ci" style="background:${soft(c.c)}">${c.i}</div><div class="cn"><div class="nm">${c.n}${delta}${budTag(k,o.v)}</div><div class="track"><div class="fl" style="width:${Math.max(o.v/maxV*100,4)}%;background:${c.c}"></div></div></div><div class="cv"><div class="cm${budOver(k,o.v)}">${fmt(o.v)}</div><div class="cp">${pct}% · ${cnt[k]}笔</div></div></div>${detail}`;}).join('');
 }
 /* v9.80 预算徽章（解法1）：主进度条不动（保留分类比大小），预算做成名字右边的彩色徽章。
