@@ -296,6 +296,10 @@ body.phototheme .cal-c.sel{background:rgba(255,255,255,.13)}
 .dtpane{animation:dvfade .2s ease}
 /* v11.34 按分类：环形卡和下面分类清单之间留口气，别粘一起 */
 #dtCats .donutcard{margin-bottom:14px}
+/* v11.36 统一点按微回弹：只动 transform（GPU 友好、零持续成本），快进快出，被 passive 手势/滚动完全不挡 */
+.nb,.catrow,.merchrow,.cardrow,.setgrp-h,.thbtn,.crow,.dtseg button{transition:transform .13s cubic-bezier(.3,.7,.3,1)}
+.nb:active,.catrow:active,.merchrow:active,.cardrow:active,.setgrp-h:active,.thbtn:active,.crow:active,.dtseg button:active{transform:scale(.972)}
+@media (prefers-reduced-motion:reduce){.nb:active,.catrow:active,.merchrow:active,.cardrow:active,.setgrp-h:active,.thbtn:active,.crow:active,.dtseg button:active{transform:none}}
 .dtsum{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 18px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
 .dtsum .dtmo{font-size:12.5px;color:var(--muted);font-weight:600}
 .dtsum .dtbig{font-weight:800;font-size:30px;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--ink);margin-top:2px;line-height:1.1}
@@ -3344,6 +3348,18 @@ function buildAll(){updateHeader();buildTodo();buildSetChips();buildMonthBars();
 const FLAG={SGD:'🇸🇬',MYR:'🇲🇾',CNY:'🇨🇳',USD:'🇺🇸',EUR:'🇪🇺',GBP:'🇬🇧',JPY:'🇯🇵',HKD:'🇭🇰',AUD:'🇦🇺',THB:'🇹🇭',VND:'🇻🇳',IDR:'🇮🇩',TWD:'🇹🇼',KRW:'🇰🇷',INR:'🇮🇳',PHP:'🇵🇭'};
 function flagOf(c){return FLAG[c]?FLAG[c]+' ':esc(curSym(c))+' ';}
 function r0(n){return Math.round(n).toLocaleString('en-US');}
+/* v11.36 hero 大数字滚动到位：只在**数值真的变了**且非首帧/非 booting 时animate，
+   单条 rAF、来新的就取消旧的 → 换月/改账好看，平时重画(改主题/折叠)零成本、不闪。 */
+let _heroPrev=null,_heroRaf=0;
+function _heroRender(x){const el=document.getElementById('tExp');if(!el)return;const [i,d]=fmt(x).split('.');el.innerHTML='<span class="int">'+i+'</span><span class="dec">.'+(d||'00')+'</span>';}
+function setHeroAmount(v){
+  if(_heroPrev===null||document.body.classList.contains('booting')||Math.abs(v-_heroPrev)<0.005){_heroPrev=v;_heroRender(v);return;}
+  cancelAnimationFrame(_heroRaf);
+  const from=_heroPrev,to=v,t0=performance.now(),dur=Math.min(620,Math.max(300,Math.abs(to-from)*0.5));
+  _heroPrev=v;
+  const tick=now=>{let p=(now-t0)/dur;if(p>=1){p=1;}const e=1-Math.pow(1-p,3);_heroRender(from+(to-from)*e);if(p<1)_heroRaf=requestAnimationFrame(tick);};
+  _heroRaf=requestAnimationFrame(tick);
+}
 function updateHeader(){
   const rows=DATA.filter(x=>sameMonth(x.ts));
   let exp=0,inc=0;
@@ -3366,9 +3382,8 @@ function updateHeader(){
     per[c]=(per[c]||0)+r.amount;   /* 分币种时显示原币金额 */
   });
   document.getElementById('monthLbl').textContent=(viewMonth.getMonth()+1)+'月 '+viewMonth.getFullYear();
-  /* 整数和小数拆开，各自的字号在 CSS 里 */
-  const [ei,ed]=fmt(exp).split('.');
-  document.getElementById('tExp').innerHTML=`<span class="int">${ei}</span><span class="dec">.${ed||'00'}</span>`;
+  /* 整数和小数拆开，各自的字号在 CSS 里；v11.36 换月/改账时数字滚动到位（count-up） */
+  setHeroAmount(exp);
 
   /* 三个币种各列一行（原币 + 折算后的 SGD），只列有花的 */
   /* v4.0：SGD 本来就是 SGD，右边不该再冒一个没标题的裸数字（就是你看到的那个孤儿）。
