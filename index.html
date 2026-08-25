@@ -309,6 +309,18 @@ body.booting #feed:empty + .feedskel{display:block;padding:4px 2px}
 @keyframes fskShine{0%{background-position:180% 0}100%{background-position:-180% 0}}
 body.theme-journal .feedskel .fsk{background:linear-gradient(100deg,rgba(120,95,55,.07) 30%,rgba(120,95,55,.15) 50%,rgba(120,95,55,.07) 70%);background-size:220% 100%}
 @media (prefers-reduced-motion:reduce){.feedskel .fsk{animation:none;opacity:.5}}
+/* v11.36 下拉刷新指示器：玻璃圆徽 + ↻，跟手时无过渡（不拖手），松手/回弹才有过渡 */
+.ptr{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:50%;z-index:38;opacity:0;pointer-events:none;
+  transform:translateX(-50%) translateY(-12px);transition:opacity .2s ease,transform .28s cubic-bezier(.3,.7,.3,1)}
+.ptr.dragging{transition:none}
+.ptr .ptr-spin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:17px;font-weight:700;color:#fff;
+  background:rgba(8,10,16,.55);border:1px solid rgba(255,255,255,.20);box-shadow:0 4px 14px rgba(0,0,0,.32);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:background .18s,transform .1s linear}
+.ptr.ready .ptr-spin{background:var(--emerald,#0BA678);border-color:transparent;color:#fff}
+.ptr.spin .ptr-spin{animation:ptrSpin .7s linear infinite}
+@keyframes ptrSpin{to{transform:rotate(360deg)}}
+body.theme-journal .ptr .ptr-spin{background:rgba(251,248,241,.85);color:#2A2521;border-color:#E4DCCF}
+body.theme-journal .ptr.ready .ptr-spin{background:#256B5E;color:#fff}
 .dtsum{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 18px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
 .dtsum .dtmo{font-size:12.5px;color:var(--muted);font-weight:600}
 .dtsum .dtbig{font-weight:800;font-size:30px;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--ink);margin-top:2px;line-height:1.1}
@@ -2057,6 +2069,8 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
   <button class="ut-btn" id="utBtn" type="button">撤销</button>
   <span class="ut-bar" id="utBar"></span>
 </div>
+<!-- v11.36 下拉刷新指示器：固定在 .wrap 之外，纯视口定位 -->
+<div class="ptr" id="ptr" aria-hidden="true"><div class="ptr-spin">↻</div></div>
 <button class="fab" id="fab" aria-label="记一笔">＋</button>
 <div class="nav">
   <button class="nb on" id="nav1"><span class="ni">📊</span>总览</button>
@@ -5050,6 +5064,59 @@ document.addEventListener('touchstart',tsStart,{passive:true});
 document.addEventListener('touchmove',tsMove,{passive:true});
 document.addEventListener('touchend',tsEnd);
 document.addEventListener('touchcancel',tsEnd);
+
+/* ══════ v11.36 下拉刷新（全 passive，不碰默认滚动、不跟 ts 打架）══════
+   只在「页面已到最顶 + 单指向下 + 纵向为主 + 没开任何全屏页/加账/搜索」时激活；
+   一旦发现是横滑/向上滑/已经滚下去了，立刻退出（后面 touchmove 只剩一个布尔判断，零成本）。
+   松手过阈值 → 复用现成的 reconnectNow('pull')（它自己有 busy 锁 + 回 Promise）。 */
+let _ptrY0=0,_ptrX0=0,_ptrPull=0,_ptrActive=false,_ptrBusy=false;
+function _scrollTop(){return window.scrollY||(document.scrollingElement&&document.scrollingElement.scrollTop)||0;}
+function ptrSet(p){
+  const el=document.getElementById('ptr');if(!el)return;
+  if(p<=0){el.classList.remove('ready','dragging');el.style.opacity='0';el.style.transform='translateX(-50%) translateY(-12px)';return;}
+  el.classList.add('dragging');
+  el.style.opacity=String(Math.min(1,p/38));
+  el.style.transform='translateX(-50%) translateY('+(p-8)+'px)';
+  const sp=el.querySelector('.ptr-spin');if(sp)sp.style.transform='rotate('+(p*4)+'deg)';
+  el.classList.toggle('ready',p>=58);
+}
+function ptrStart(e){
+  _ptrActive=false;_ptrPull=0;
+  if(_ptrBusy||!e.touches||e.touches.length!==1)return;
+  if(_scrollTop()>0)return;                                   /* 不在最顶 → 不管 */
+  const b=document.body.classList;
+  if(b.contains('pageopen')||b.contains('inbox-open')||b.contains('searching'))return;
+  const ad=document.getElementById('add');if(ad&&/(^|\s)(on|show)(\s|$)/.test(ad.className))return;
+  const tg=e.target;
+  if(tg&&tg.closest&&tg.closest('input,textarea,[contenteditable="true"],.pad,.sheet,.emod,.cmod,[data-noswipe],[data-grip]'))return;
+  _ptrY0=e.touches[0].clientY;_ptrX0=e.touches[0].clientX;_ptrActive=true;
+}
+function ptrMove(e){
+  if(!_ptrActive||_ptrBusy)return;
+  if(e.touches.length>1){_ptrActive=false;ptrSet(0);return;}
+  const t=e.touches[0],dy=t.clientY-_ptrY0,dx=t.clientX-_ptrX0;
+  if(dy<=0||Math.abs(dx)>Math.abs(dy)||_scrollTop()>0){_ptrActive=false;ptrSet(0);return;}  /* 向上/横滑/滚下去了 → 退出 */
+  _ptrPull=Math.min(92,dy*0.5);
+  ptrSet(_ptrPull);
+}
+function ptrEnd(){
+  if(!_ptrActive){return;}
+  _ptrActive=false;
+  const el=document.getElementById('ptr'),go=_ptrPull>=58;_ptrPull=0;
+  if(el)el.classList.remove('dragging');
+  if(go&&typeof reconnectNow==='function'){
+    _ptrBusy=true;
+    if(el){el.classList.remove('ready');el.classList.add('spin');el.style.opacity='1';el.style.transform='translateX(-50%) translateY(46px)';const sp=el.querySelector('.ptr-spin');if(sp)sp.style.transform='';}
+    Promise.resolve(reconnectNow('manual')).catch(()=>{}).finally(()=>{   /* 用 manual：成功/失败都有 toast 反馈 */
+      _ptrBusy=false;
+      if(el){el.classList.remove('spin');el.style.opacity='0';el.style.transform='translateX(-50%) translateY(-12px)';}
+    });
+  }else ptrSet(0);
+}
+document.addEventListener('touchstart',ptrStart,{passive:true});
+document.addEventListener('touchmove',ptrMove,{passive:true});
+document.addEventListener('touchend',ptrEnd,{passive:true});
+document.addEventListener('touchcancel',ptrEnd,{passive:true});
 
 /* add/edit sheet */
 const scrim=document.getElementById('scrim'),add=document.getElementById('add');
