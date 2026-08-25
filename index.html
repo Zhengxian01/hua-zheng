@@ -105,14 +105,7 @@ body.pagelock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .hero .herochip .pc{font-weight:800;font-variant-numeric:tabular-nums;margin-right:5px}
 .hero .herochip .pc.up{color:#FFD9B0}.hero .herochip .pc.down{color:#BEF0D8}
 .hero .herochip .hcx{opacity:.82;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hero .heropace{margin:14px 0 2px}
-.hero .heropace .pacechart{position:relative;height:64px;display:flex;align-items:flex-end;gap:2px}
-.hero .heropace .paceb{flex:1 1 0;min-width:0;min-height:1px;border-radius:2px 2px 0 0;background:#fff;opacity:.34}
-.hero .heropace .paceb.on{opacity:.95}
-.hero .heropace .paceb.fu{height:100%;opacity:.10}
-.hero .heropace .pacebud{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,255,255,.55);pointer-events:none}
-.hero .heropace .pacebudl{position:absolute;right:0;top:-13px;font-size:10px;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;white-space:nowrap}
-.hero .heropace .pacefoot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:10.5px;color:rgba(255,255,255,.78);font-variant-numeric:tabular-nums}
+
 
 .calcard{background:var(--card);border-radius:20px;padding:16px 16px 18px;margin-top:16px;box-shadow:var(--shadow)}
 .calcard .ch{font-weight:700;font-size:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
@@ -1202,7 +1195,21 @@ body.booting::before{content:'';position:fixed;left:0;top:0;height:2px;width:100
 /* 快照资料先上画面时，数字压一点点透明度 —— 让你知道「这还不是最新的」，但看得清 */
 body.booting .hero .fxlines{opacity:.72}
 @media (prefers-reduced-motion:reduce){body.booting::before{animation:none;opacity:.5}}
-.fxnote{font-size:10.5px;opacity:.6;margin-top:5px;letter-spacing:.2px}
+/* v11.33 换算一行 chip + 汇率写法C */
+.hero .fxrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px 7px}
+.hero .fxloc{font-weight:700;font-variant-numeric:tabular-nums}
+.hero .fxloc small{opacity:.62;font-size:10px;font-weight:700;margin-right:3px}
+.hero .fxchip .arr{opacity:.5;margin:0 1px}
+.hero .fxchip .sg{font-weight:800}
+.hero .fxdot{opacity:.4;font-weight:700}
+.hero .fxmore{font-size:11px;font-weight:700;opacity:.6}
+.fxnote{display:flex;align-items:center;gap:8px;font-size:10.5px;opacity:.72;margin-top:6px;letter-spacing:.2px}
+.fxnote .fxpill{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(255,255,255,.10);padding:3px 9px;border-radius:99px;font-variant-numeric:tabular-nums}
+.fxnote .fxpill.warn{background:rgba(255,140,140,.16);color:#ff9fa5;opacity:1}
+.fxnote .fxrefresh{flex:none;font-weight:700;opacity:.9;padding:3px 9px;border-radius:99px;background:rgba(125,227,176,.16);color:#7de3b0;cursor:pointer;text-shadow:none}
+.fxnote .fxrefresh:active{transform:scale(.94)}
+body.theme-journal .fxnote .fxpill{background:#EEE7DA!important}
+body.theme-journal .fxnote .fxrefresh{background:#DDE9DE!important;color:#1f5c46!important}
 
 /* ===== v3.0 可折叠卡片头 ===== */
 /* v4.0：整条 bar 都能按。原来只有细细一条（高度才 20px 出头），手指根本瞄不准。
@@ -1501,11 +1508,6 @@ body.theme-journal .hero .mini .v{color:#2A2521!important;}
 body.theme-journal .hero .row2 .mini+.mini{border-left-color:#E4DCCF!important;}
 body.theme-journal .hero .herochip{background:#E4DCCF!important;color:#2A2521!important;}
 body.theme-journal .hero .herochip .pc.up{color:#B5541F!important;}body.theme-journal .hero .herochip .pc.down{color:#3E7A55!important;}
-body.theme-journal .hero .heropace .paceb{background:#8A7F6E!important;}
-body.theme-journal .hero .heropace .paceb.on{background:#2A2521!important;opacity:1!important;}
-body.theme-journal .hero .heropace .paceb.fu{background:#CFC6B6!important;opacity:.5!important;}
-body.theme-journal .hero .heropace .pacebud{border-top-color:#B7AE9E!important;}
-body.theme-journal .hero .heropace .pacebudl,body.theme-journal .hero .heropace .pacefoot{color:#6A6157!important;}
 body.theme-journal .section-h .h{font-weight:600!important;letter-spacing:.02em!important;color:#2A2521!important;}
 /* 账本线条：交易行 */
 body.theme-journal .tx{border-bottom:1px solid #E4DCCF!important;background:transparent!important;}
@@ -1794,21 +1796,7 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
   <div class="banner" id="banner"><span>📋 演示数据 · 填好 WORKER_URL 后显示真实记录</span></div>
 
 <style id="pace-card">
-/* v11.20 新卡「累计 vs 上限」：1b 的累计柱 + 1c 的配速那句话。
-   ⚠️ 颜色一律走主题变量（--num 数值颜色 / --card 玻璃 / --line 细边 / --muted），
-      不写死任何色值 → 设置里的「数值颜色 / 遮罩 / 玻璃」照旧全权控制这张卡。 */
-.pacecard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px 12px}
-.paceline{font-size:12.5px;line-height:1.65;color:var(--ink)}
-.paceline b{color:var(--num);font-variant-numeric:tabular-nums}
-.paceline .bad{color:#F0665F}
-.paceline .good{color:#12b981}
-.pacechart{position:relative;height:88px;display:flex;align-items:flex-end;gap:2px;margin-top:12px}
-.paceb{flex:1 1 0;min-width:0;min-height:1px;border-radius:2px 2px 0 0;background:var(--num);opacity:.26}
-.paceb.on{opacity:1}
-.paceb.fu{height:100%;opacity:.06}
-.pacebud{position:absolute;left:0;right:0;border-top:1px dashed var(--line);pointer-events:none}
-.pacebudl{position:absolute;right:0;top:-13px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.pacefoot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* v11.33 原「累计 vs 上限」卡样式随 heroPace 一起移除；只保留仍在用的 .pacelab（等你处理 / todoLab）。 */
 .pacelab{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 </style>
 <style id="todo-card">
@@ -1876,11 +1864,8 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#2A2521!important}
       <div class="herochip" id="heroChip" style="display:none"></div>
       <div class="fxlines" id="fxLines"></div>
       <div class="fxnote" id="fxNote">&nbsp;</div>
-      <!-- v11.30 累计进度直接长在 hero 里（原「累计 vs 上限」独立卡并进来）：一张卡看完大数字 + 花的节奏 -->
-      <div class="heropace" id="heroPace">
-        <div class="pacechart" id="paceWrap"></div>
-        <div class="pacefoot" id="paceFoot"></div>
-      </div>
+      <!-- v11.33 hero 内累计柱状图 (heroPace) 已移除 -->
+      <!-- v11.34 收入/结余/笔数 那行之前跟着 chart 一起被误删了（updateHeader 找不到 tInc 会整个崩），补回来 -->
       <div class="row2">
         <div class="mini"><div class="k">收入</div><div class="v"><small>S$</small><span id="tInc">0.00</span></div></div>
         <div class="mini"><div class="k">结余</div><div class="v" id="tBal">—</div></div>
@@ -3347,8 +3332,12 @@ function buildByCard(){
   el.innerHTML=h+'</div>';
 }
 
-function buildAll(){updateHeader();buildPace();buildTodo();buildSetChips();buildMonthBars();buildTrend();buildCalendar();buildDonut();buildCats();buildInsights();buildByCard();applyDView();buildFeed();applyFold();if(peekKey)buildDayPeek(peekKey,true);/* v9.87 当天速览跟着刷新（skipCal 防死循环）*/}
+function buildAll(){updateHeader();buildTodo();buildSetChips();buildMonthBars();buildTrend();buildCalendar();buildDonut();buildCats();buildInsights();buildByCard();applyDView();buildFeed();applyFold();if(peekKey)buildDayPeek(peekKey,true);/* v9.87 当天速览跟着刷新（skipCal 防死循环）*/}
 
+/* v11.33 换算 chip 用：货币 → 国旗（查不到就退回货币代号，语义不丢）＋ 整数千分位。 */
+const FLAG={SGD:'🇸🇬',MYR:'🇲🇾',CNY:'🇨🇳',USD:'🇺🇸',EUR:'🇪🇺',GBP:'🇬🇧',JPY:'🇯🇵',HKD:'🇭🇰',AUD:'🇦🇺',THB:'🇹🇭',VND:'🇻🇳',IDR:'🇮🇩',TWD:'🇹🇼',KRW:'🇰🇷',INR:'🇮🇳',PHP:'🇵🇭'};
+function flagOf(c){return FLAG[c]?FLAG[c]+' ':esc(curSym(c))+' ';}
+function r0(n){return Math.round(n).toLocaleString('en-US');}
 function updateHeader(){
   const rows=DATA.filter(x=>sameMonth(x.ts));
   let exp=0,inc=0;
@@ -3384,20 +3373,20 @@ function updateHeader(){
      以前是按 CURS 那个写死的顺序，新币种排哪里全看运气。 */
   const used=Object.keys(per).filter(c=>per[c]>0)
     .sort((a,b)=>a==='SGD'?-1:b==='SGD'?1:(per[b]*(FX[b]||1))-(per[a]*(FX[a]||1)));
-  const lines=used.map(c=>{
-    let chip='';
-    if(c!=='SGD'){
-      const rate=FX[c];
-      if(typeof rate==='number'&&rate>0){
-        /* FX_APPROX = 没有实时汇率、只有保底值的币（TWD/VND/…）→ 标个「约」，别让你以为是准的 */
-        chip=`<span class="fxchip${FX_APPROX.has(c)?' approx':''}">= ${FX_APPROX.has(c)?'约 ':''}S$${fmt(per[c]*rate)}</span>`;
-      }else{
-        /* 完全查不到汇率：以前这里静默当 1:1。现在明讲，免得你把 350 泰铢当成 350 新币看。 */
-        chip=`<span class="fxchip warn">没有汇率 · 暂按 1:1 算</span>`;
-      }
+  const _fgn=used.filter(c=>c!=='SGD');
+  const _segs=[];
+  if(per.SGD>0)_segs.push(`<span class="fxloc"><small>SGD</small>${r0(per.SGD)}</span>`);
+  _fgn.slice(0,3).forEach(c=>{
+    const rate=FX[c];
+    if(typeof rate==='number'&&rate>0){
+      _segs.push(`<span class="fxchip${FX_APPROX.has(c)?' approx':''}">${flagOf(c)}${r0(per[c])}<span class="arr">→</span><span class="sg">${FX_APPROX.has(c)?'约':''}${r0(per[c]*rate)}</span></span>`);
+    }else{
+      _segs.push(`<span class="fxchip warn">${flagOf(c)}${r0(per[c])} · 无汇率</span>`);
     }
-    return `<div class="fxline"><span class="cc">${esc(curSym(c))} ${fmt(per[c])}</span>${chip}</div>`;
-  }).join('');
+  });
+  if(_fgn.length>3)_segs.push(`<span class="fxmore">＋${_fgn.length-3}</span>`);
+  /* v11.33 换算改一行 chip（SGD 段 + 外币「原币→折SGD」小 chip）；外币只列折算最大 3 个，其余「＋N」；approx / 无汇率 状态保留。 */
+  const lines=_segs.length?('<div class="fxrow">'+_segs.join('<span class="fxdot">·</span>')+'</div>'):''
   /* v9.94：分清楚「这个月真的没花钱」和「资料还没到」—— 以前两种情况长得一模一样。 */
   const _empty=document.body.classList.contains('booting')?'正在读取…':(!DATA_FULL?'历史资料补齐中…':'本月还没有支出');
   document.getElementById('fxLines').innerHTML=lines||`<div class="fxline"><span class="cc">${_empty}</span></div>`;
@@ -3407,13 +3396,17 @@ function updateHeader(){
   /* ⚠️ v9.94：这行现在是动态的了，就有了新问题 —— 一个月刷到 5 种外币会排出一条
      长到换行两次的字。手机上只列**花得最多的 3 个**，其余用「＋N」带过（实测 5 个币会撑爆）。 */
   const _fxu=used.filter(c=>c!=='SGD'&&FX[c]>0);
+  /* v11.33 汇率行写法C：货币代号在前「RM 1 = S$0.314」，日期收进 🕐 小胶囊，右边 ↻ 刷新 可点（接现成的 loadFx）。 */
   const _fxr=(_fxu.length
-    ? _fxu.slice(0,3).map(c=>`1 ${curSym(c)}=${FX[c].toFixed(FX[c]<0.01?6:3)} S$`).join('　')
-      +(_fxu.length>3?`　＋${_fxu.length-3}`:'')
-    : `1 US$=${(FX.USD||0).toFixed(3)} S$　1 RM=${(FX.MYR||0).toFixed(3)} S$`);
-  document.getElementById('fxNote').innerHTML=FXDATE
-    ? `汇率 ${FXDATE}　${_fxr}`
-    : (FXOK===false ? `⚠️ 汇率拿不到，用保底值　${_fxr}` : '汇率加载中…');
+    ? _fxu.slice(0,3).map(c=>`${curSym(c)} 1 = S$${FX[c].toFixed(FX[c]<0.01?6:3)}`).join(' · ')
+      +(_fxu.length>3?` ＋${_fxu.length-3}`:'')
+    : `US$ 1 = S$${(FX.USD||0).toFixed(3)} · RM 1 = S$${(FX.MYR||0).toFixed(3)}`);
+  const _fxbody=FXDATE
+    ? `<span class="fxpill">🕐 ${FXDATE} · ${_fxr}</span>`
+    : (FXOK===false ? `<span class="fxpill warn">⚠️ 汇率拿不到，用保底值 · ${_fxr}</span>` : `<span class="fxpill">汇率加载中…</span>`);
+  document.getElementById('fxNote').innerHTML=_fxbody+`<span class="fxrefresh" id="fxRefresh" role="button">↻ 刷新</span>`;
+  const _rf=document.getElementById('fxRefresh');
+  if(_rf)_rf.onclick=async()=>{ if(_rf.dataset.b)return; _rf.dataset.b='1'; _rf.textContent='刷新中…'; try{await loadFx();}catch(e){} updateHeader(); };
 
   document.getElementById('tInc').textContent=fmt(inc);
   const bal=inc-exp;const be=document.getElementById('tBal');
@@ -3463,60 +3456,6 @@ function calAmt(n){
   if(n>=999.5)return (n/1000).toFixed(n>=9999.5?0:1)+'k';
   if(n>=99.5)return String(Math.round(n));
   return n%1?n.toFixed(1):String(n);
-}
-function buildPace(){
-  const wrap=document.getElementById('paceWrap');if(!wrap)return;
-  const mk=mkOf(viewMonth),[Y,M]=mk.split('-').map(Number);
-  const days=new Date(Y,M,0).getDate();
-  const per=new Array(days+2).fill(0);
-  let cnt=0;
-  DATA.forEach(r=>{
-    if(!sameMonth(r.ts))return;
-    const dk=isoDay(r.ts);if(!dk)return;
-    const d=+dk.slice(8,10);if(!(d>=1&&d<=days))return;
-    const v=sgdOf(r);
-    if(isInc(r)){if(r.offset)per[d]-=v;return;}
-    per[d]+=v;cnt++;
-  });
-  const cum=new Array(days+2).fill(0);
-  for(let d=1,acc=0;d<=days;d++){acc+=per[d];cum[d]=acc;}
-  const tk=todayKey(),isCur=tk.slice(0,7)===mk;
-  const today=isCur?Math.min(+tk.slice(8,10),days):days;
-  const spent=cum[today]||0,total=cum[days]||0;
-  const lim=Object.keys(BUD).reduce((a,k)=>a+(+BUD[k]>0?+BUD[k]:0),0);
-  const proj=today>0?spent/today*days:0;
-  const top=Math.max(total,spent,lim,proj,1)*1.06;
-  let bars='';
-  for(let d=1;d<=days;d++){
-    if(d<=today){
-      const pct=Math.max(0.6,(cum[d]/top)*100);
-      bars+='<i class="paceb'+(d===today?' on':'')+'" style="height:'+pct.toFixed(2)+'%"></i>';
-    }else bars+='<i class="paceb fu"></i>';
-  }
-  if(lim>0){
-    const y=Math.min(99,(lim/top)*100);
-    bars+='<span class="pacebud" style="bottom:'+y.toFixed(2)+'%"><span class="pacebudl">上限合计 '+fmtK(lim)+'</span></span>';
-  }
-  wrap.innerHTML=bars;
-  const lab=document.getElementById('paceLab');
-  if(lab)lab.textContent=isCur?('还剩 '+(days-today)+' 天'):(M+'月 · 已结束');
-  const msg=document.getElementById('paceMsg');
-  if(msg){
-    if(!cnt&&!spent)msg.innerHTML='本月还没有支出。';
-    else if(lim<=0)msg.innerHTML='本月累计 <b>S$'+fmt(spent)+'</b>'+(isCur?'，照这个速度月底大约 <b>S$'+fmt(proj)+'</b>。<br><span style="opacity:.6">在「设置 → 预算上限」给分类设了上限，这里就会多一条上限线。</span>':'。');
-    else{
-      const left=lim-spent,perDay=isCur&&days>today?left/(days-today):0;
-      const over=proj>lim;
-      msg.innerHTML='本月累计 <b>S$'+fmt(spent)+'</b> / 上限 <b>S$'+fmt(lim)+'</b>（'+Math.round(spent/lim*100)+'%）。'+
-        (isCur
-          ? '<br>'+(left>=0
-              ? '还能花 <b>S$'+fmt(left)+'</b>'+(days>today?'，也就是每天 <b>S$'+fmt(perDay)+'</b>':'')+'；照现在的速度月底约 <b>S$'+fmt(proj)+'</b>，'+(over?'<span class="bad">会超</span>。':'<span class="good">够用</span>。')
-              : '已经超了 <b class="bad">S$'+fmt(-left)+'</b>。')
-          : '');
-    }
-  }
-  const foot=document.getElementById('paceFoot');
-  if(foot)foot.innerHTML='<span>'+M+'/1</span><span>'+(isCur?('今天 '+M+'/'+today+' · 累计 S$'+fmt(spent)):(cnt+' 笔 · 共 S$'+fmt(total)))+'</span><span>'+M+'/'+days+'</span>';
 }
 /* ══════ v11.21 等你处理 ══════
    四个信号全部现算，一个新变量都不需要：
