@@ -943,7 +943,7 @@ body.phototheme{--bg:#06070b;--ink:#f5e9c8;--ink-2:#ecdcb0;--muted:#cdbf95;--lin
 body.phototheme .calcard,body.phototheme .donutcard,body.phototheme .cats,body.phototheme .daycard,
 body.phototheme .setcard,body.phototheme .msel,body.phototheme .mpick,body.phototheme .barcard,
 body.phototheme .dp-donut,body.phototheme .searchbar,body.phototheme .crow,
-body.phototheme #merchList,body.phototheme .bycardlist,body.phototheme .dtsum,body.phototheme .setgrp,
+body.phototheme #merchList,body.phototheme .bycardlist,body.phototheme .dtsum,body.phototheme .setgrp,body.phototheme .todorow:not(.warn),
 body.phototheme .cseg,body.phototheme .ibrow,body.phototheme .hero,body.phototheme .dp-sum{
   background:rgba(8,10,16,var(--cardop,.30));border:1px solid rgba(255,255,255,.14);box-shadow:none;
   backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -1502,7 +1502,7 @@ body.theme-journal .ibsum{color:#256B5E!important;}
 body.theme-journal #gxRow,body.theme-journal #numRow,body.theme-journal #maskRow,body.theme-journal #opRow,body.theme-journal #bgCard{display:none!important;}
 body.theme-journal.pageopen::after{background-image:none!important;background:#F4F0E9!important;}
 /* 卡片：纸白面 + 柔线 */
-body.theme-journal .calcard,body.theme-journal .donutcard,body.theme-journal .cats,body.theme-journal .daycard,body.theme-journal .setcard,body.theme-journal .msel,body.theme-journal .mpick,body.theme-journal .barcard,body.theme-journal .combocard,body.theme-journal .vsbox,body.theme-journal #merchList,body.theme-journal .bycardlist,body.theme-journal .dtsum,body.theme-journal .setgrp{background:#FBF9F4!important;border:1px solid #E4DCCF!important;box-shadow:var(--shadow)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+body.theme-journal .calcard,body.theme-journal .donutcard,body.theme-journal .cats,body.theme-journal .daycard,body.theme-journal .setcard,body.theme-journal .msel,body.theme-journal .mpick,body.theme-journal .barcard,body.theme-journal .combocard,body.theme-journal .vsbox,body.theme-journal #merchList,body.theme-journal .bycardlist,body.theme-journal .dtsum,body.theme-journal .setgrp,body.theme-journal .todorow:not(.warn){background:#FBF9F4!important;border:1px solid #E4DCCF!important;box-shadow:var(--shadow)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 /* 弹窗 / 记账面板 / 子页面：纸白，别留黑盒 */
 body.theme-journal .emod,body.theme-journal .cmod,body.theme-journal .okmod,body.theme-journal .add{background:#FBF9F4!important;border:1px solid #E4DCCF!important;color:#2A2521!important;}
 body.theme-journal .cpage,body.theme-journal .daypage{background:#F4F0E9!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
@@ -1860,23 +1860,26 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
 /* v11.21 「等你处理」：首页把「现在有什么要我动手的」集中成一张卡。
    ⚠️ 颜色全走主题变量；每一行点下去都是**触发原本那个页面自己的入口按钮**，
       不重写第二份打开逻辑（跟 tsBackGo 用 .dp-back 同一个思路）。 */
-.todocard{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
-.todorow{display:flex;align-items:center;gap:6px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:15px;color:var(--ink);font-family:inherit;-webkit-tap-highlight-color:transparent;overflow:hidden}
-.todorow.warn{border-color:rgba(240,102,95,.45);background:rgba(219,90,84,.12)}
-/* 主区（点它 = 去处理）+ 右边可选的「本月知道了」小叉 */
-.todorow .tomain{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left;background:none;border:0;padding:12px 4px 12px 14px;color:inherit;font-family:inherit;cursor:pointer}
+/* v11.37 等你处理：跟下面的设置分组卡统一语言 —— 同样 18px 圆角、同样玻璃底（见 phototheme/journal 规则）、
+   图标进圆角小色块，收起时不再突兀。紧急那条(warn)保留红边红底。 */
+.todocard{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.todorow{display:flex;align-items:center;gap:6px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);color:var(--ink);font-family:inherit;-webkit-tap-highlight-color:transparent;overflow:hidden}
+.todorow.warn{border-color:rgba(240,102,95,.45);background:rgba(219,90,84,.12);box-shadow:none}
+/* 主区（点它 = 去处理）+ 右边可选的「知道了」小叉 */
+.todorow .tomain{display:flex;align-items:center;gap:13px;flex:1;min-width:0;text-align:left;background:none;border:0;padding:14px 4px 14px 15px;color:inherit;font-family:inherit;cursor:pointer}
 .todorow .tomain:active{transform:scale(.99)}
-.todorow .ti{font-size:19px;flex:0 0 auto;line-height:1}
+.todorow .ti{width:40px;height:40px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;font-size:20px;line-height:1;background:rgba(150,155,170,.14)}
+.todorow.warn .ti{background:rgba(240,102,95,.15)}
 .todorow .tt{flex:1;min-width:0}
 .todorow .tn{font-size:13.5px;font-weight:700;line-height:1.35}
 .todorow .td{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4;font-variant-numeric:tabular-nums}
 .todorow .tgo{font-size:12px;font-weight:700;color:var(--num);flex:0 0 auto}
 .todorow.warn .tgo{color:#F0665F}
-.todorow .toclose{flex:0 0 auto;align-self:stretch;width:46px;border:0;border-left:1px solid var(--line);background:none;color:var(--muted);font-size:15px;cursor:pointer;font-family:inherit;line-height:1.1}
-.todorow .toclose .tcx{display:block;font-size:16px}
-.todorow .toclose .tcl{display:block;font-size:8.5px;margin-top:1px;letter-spacing:.3px}
-.todorow.warn .toclose{border-left-color:rgba(240,102,95,.3)}
-.todorow .toclose:active{background:rgba(128,128,140,.14)}
+/* v11.37 关掉这条提醒：干净的圆形 ✕（人人都懂 = 收起这条），月内范围由 toast 说明，不再用「✕ 本月」那种拧巴写法 */
+.todorow .toclose{flex:0 0 auto;align-self:center;width:30px;height:30px;margin-right:11px;border:0;border-radius:50%;
+  background:rgba(150,155,170,.15);color:var(--muted);font-size:13px;line-height:1;cursor:pointer;font-family:inherit;display:grid;place-items:center;transition:transform .12s,background .15s}
+.todorow .toclose:active{transform:scale(.88);background:rgba(150,155,170,.28)}
+.todorow.warn .toclose{background:rgba(240,102,95,.16);color:#F0665F}
 .todonone{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px;font-size:12.5px;color:var(--muted);text-align:center}
 </style>
 <style id="b-look">
@@ -3605,7 +3608,7 @@ function buildTodo(){
         const parts=[];if(huge&&mult)parts.push('约平常的 '+mult+' 倍');if(firstEver)parts.push('第一次在这家花');
         it.push({i:'🔎',n:'复查一笔 · '+nm+' S$'+fmt(bigv),
           d:(parts.join(' · ')||'看着有点不寻常')+' · 确认不是盗刷/误扣',
-          go:'看看',fn:()=>{const dk=isoDay(big.ts);if(dk&&typeof openDay==='function')openDay(dk);},
+          go:'看看',fn:()=>{const dk=isoDay(big.ts);if(dk&&typeof openDay==='function')openDay(dk,'money');},   /* 花费提醒 → 开在花费页 */
           ignore:()=>ignoreBudMonth('unusual@'+mk2,key)});
       }
     }
@@ -3617,7 +3620,7 @@ function buildTodo(){
   wrap.innerHTML=it.map((x,n)=>'<div class="todorow'+(x.w?' warn':'')+'">'+
     '<button class="tomain" data-todo="'+n+'"><span class="ti">'+x.i+'</span><span class="tt"><span class="tn">'+esc(x.n)+'</span>'+
     '<div class="td">'+esc(x.d)+'</div></span><span class="tgo">'+x.go+' ›</span></button>'+
-    (x.ignore?'<button class="toclose" data-todoclose="'+n+'" aria-label="本月知道了"><span class="tcx">✕</span><span class="tcl">本月</span></button>':'')+
+    (x.ignore?'<button class="toclose" data-todoclose="'+n+'" aria-label="知道了，本月不再提醒这条">✕</button>':'')+
     '</div>').join('');
   wrap._acts=it.map(x=>x.fn);
   wrap._igns=it.map(x=>x.ignore||null);
@@ -3628,7 +3631,7 @@ function ignoreBudMonth(mk,k){
   IGN_BUD[mk][k]=1;
   try{localStorage.setItem('hz_ignbud',JSON.stringify(IGN_BUD));}catch(_){}
   buildTodo();buildSetChips();
-  if(typeof toast==='function')toast('本月先不提醒这条 · 预算没动');
+  if(typeof toast==='function')toast('知道了 · 本月不再提醒这条');
 }
 document.addEventListener('click',e=>{
   const c=e.target.closest('#todoWrap [data-todoclose]');
@@ -4388,9 +4391,10 @@ function isPastEvent(e){
   if(en>tk)return false;         /* 还在进行中（今天在范围里） */
   return !!(e.time&&e.time<sgtHM(new Date()));
 }
-function openDay(k){
-  /* v7.9：从「事项」模式的日历点进来 → 直接落在事项 tab（你点的是事项，就别让你再点一次） */
-  dpTab=(CALMODE==='todo')?'todo':'money';
+function openDay(k,forceTab){
+  /* v7.9：从「事项」模式的日历点进来 → 直接落在事项 tab（你点的是事项，就别让你再点一次）
+     v11.37：带 forceTab 的（如「复查一笔」那种花费提醒）强制落在指定 tab —— 花费的提醒就该开在花费页，不管日历现在是什么模式 */
+  dpTab=forceTab||((CALMODE==='todo')?'todo':'money');
   buildDayPage(k);const p=document.getElementById('dayPage');p.classList.add('show');p.scrollTop=0;syncPageOpen();
   if(dpTab==='todo')scrollDayToEvents();
 }
