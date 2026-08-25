@@ -1371,10 +1371,12 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
 .subbreak .mnote{font-size:10.5px;color:var(--muted);padding:1px 0 2px}
 /* v11.36 分类展开里的近半年趋势小图（柱用该分类色，当月满色） */
 .cattrend{padding:4px 0 12px;margin-bottom:4px;border-bottom:1px solid var(--line)}
-.cattrend .ctcap{font-size:10.5px;color:var(--muted);margin:0 0 7px;letter-spacing:.3px}
-.cattrend .ctbars{display:flex;align-items:flex-end;gap:6px;height:46px}
-.cattrend .ctb{flex:1;min-width:0;border-radius:3px 3px 0 0;background:var(--tc,#888);opacity:.34;min-height:2px}
+.cattrend .ctcap{font-size:10.5px;color:var(--muted);margin:0 0 16px;letter-spacing:.3px}
+.cattrend .ctbars{display:flex;align-items:flex-end;gap:6px;height:66px}
+.cattrend .ctb{flex:1;min-width:0;position:relative;border-radius:3px 3px 0 0;background:var(--tc,#888);opacity:.34;min-height:2px}
 .cattrend .ctb.on{opacity:1}
+.cattrend .ctb .ctval{position:absolute;bottom:100%;left:-3px;right:-3px;text-align:center;font-size:9px;font-weight:600;font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:3px;white-space:nowrap;line-height:1}
+.cattrend .ctb.on .ctval{color:var(--ink);font-weight:800}
 .cattrend .ctfoot{display:flex;gap:6px;margin-top:5px}
 .cattrend .ctfoot span{flex:1;text-align:center;font-size:9.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 
@@ -3908,7 +3910,8 @@ function buildCats(){
     const delta=catDeltaChip(o.v,prev.by[k]||0);
     /* 展开明细：近半年趋势小图 + 商家频次；默认收着，点分类行才展开 */
     const ser=trendBy[k]||[0,0,0,0,0,0],tmx=Math.max.apply(null,ser)||1;
-    const tbars=ser.map((v,i)=>`<i class="ctb${i===5?' on':''}" style="height:${v>0?Math.max(6,v/tmx*100).toFixed(1):0}%"></i>`).join('');
+    const tbars=ser.map((v,i)=>{const lab=v>0?(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v)):'';   /* 每根柱上标月总（紧凑：782 / 1.3k），当月加粗 */
+      return `<i class="ctb${i===5?' on':''}" style="height:${v>0?Math.max(8,v/tmx*80).toFixed(1):0}%">${lab?`<b class="ctval">${lab}</b>`:''}</i>`;}).join('');
     const trend=`<div class="cattrend" style="--tc:${c.c}"><div class="ctcap">近半年 · 月总 SGD</div><div class="ctbars">${tbars}</div><div class="ctfoot">${tLabels.map(l=>`<span>${l}</span>`).join('')}</div></div>`;
     const ms=Object.entries(merch[k]||{}).sort((a,b)=>b[1].v-a[1].v).slice(0,8);
     const mrows2=ms.map(([mn,m])=>{const freq=m.c>=4,avg=m.v/m.c;
