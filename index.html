@@ -3380,13 +3380,15 @@ function updateHeader(){
     .sort((a,b)=>a==='SGD'?-1:b==='SGD'?1:(per[b]*(FX[b]||1))-(per[a]*(FX[a]||1)));
   const _fgn=used.filter(c=>c!=='SGD');
   const _segs=[];
-  if(per.SGD>0)_segs.push(`<span class="fxchip base">${flagOf('SGD')}${r0(per.SGD)}</span>`);   /* v11.34 SGD 也做成 chip，跟外币那几颗长一样，不再是一坨裸字 */
+  /* v11.34 每颗 chip 都带货币代号（RM / ¥ / S$…），不然光国旗 + 号码看不出是什么钱。
+     外币格式：🇲🇾 RM 1,194 → S$375（原币 → 折算 SGD）；SGD 本币：🇸🇬 S$2,176。 */
+  if(per.SGD>0)_segs.push(`<span class="fxchip base">${flagOf('SGD')}${curSym('SGD')} ${r0(per.SGD)}</span>`);
   _fgn.slice(0,3).forEach(c=>{
     const rate=FX[c];
     if(typeof rate==='number'&&rate>0){
-      _segs.push(`<span class="fxchip${FX_APPROX.has(c)?' approx':''}">${flagOf(c)}${r0(per[c])}<span class="arr">→</span><span class="sg">${FX_APPROX.has(c)?'约':''}${r0(per[c]*rate)}</span></span>`);
+      _segs.push(`<span class="fxchip${FX_APPROX.has(c)?' approx':''}">${flagOf(c)}${curSym(c)} ${r0(per[c])}<span class="arr">→</span><span class="sg">${FX_APPROX.has(c)?'约 ':''}S$${r0(per[c]*rate)}</span></span>`);
     }else{
-      _segs.push(`<span class="fxchip warn">${flagOf(c)}${r0(per[c])} · 无汇率</span>`);
+      _segs.push(`<span class="fxchip warn">${flagOf(c)}${curSym(c)} ${r0(per[c])} · 无汇率</span>`);
     }
   });
   if(_fgn.length>3)_segs.push(`<span class="fxmore">＋${_fgn.length-3}</span>`);
@@ -6664,9 +6666,9 @@ function buildSetChips(){
   const dot=document.getElementById('sysDot'),title=document.getElementById('sysTitle');
   if(dot){dot.className='statusdot'+(unread>0?' warn':'');}
   if(title)title.textContent=unread>0?('有 '+unread+' 封读不到'):'系统一切正常';
-  set('sysChips',(unread>0?chip('读不到 '+unread+' 封','warn'):chip('邮件转发正常','ok'))+chip('自动分类 '+memN+' 条记忆'));
-  /* ② 让它替我记账 */
-  set('autoChips',chip(memN+' 条记忆')+(subN>0?chip(subN+' 个新订阅','warn'):'')+chip(recN+' 笔定期'));
+  set('sysChips',(unread>0?chip('读不到 '+unread+' 封','warn'):chip('邮件转发正常','ok'))+chip('自动分类 · 认得 '+memN+' 家店'));
+  /* ② 让它替我记账（v11.34「N 条记忆」太黑话 → 说人话：认得 N 家商家 = 它学过这些店该记哪一类） */
+  set('autoChips',chip('认得 '+memN+' 家商家')+(subN>0?chip(subN+' 个新订阅','warn'):'')+chip(recN+' 笔定期'));
   /* ③ 我的钱怎么分 */
   let budN=0,catN=0,cardN=0;
   try{budN=Object.keys(BUD||{}).filter(k=>+BUD[k]>0).length;}catch(_){}
