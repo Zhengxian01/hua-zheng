@@ -3092,6 +3092,8 @@ async function reconnectNow(src){
     if(sd)sd.textContent=DEFT;
     if(typeof loadInbox==='function')loadInbox({badgeOnly:true});   /* 顺手把收件箱角标 / 日历也刷一下 */
     if(typeof gcSyncQuiet==='function')gcSyncQuiet(true);
+    /* v11.37 顺手刷汇率（原来 hero 上那颗 ↻ 的活）——**不 await**，汇率 API 慢也不拖累这次刷新；回来了再 updateHeader */
+    if(typeof loadFx==='function')loadFx().then(()=>updateHeader()).catch(()=>{});
     toast(src==='online'?`网络恢复 · 已刷新（${DATA.length} 笔）`:`已更新 · ${DATA.length} 笔`);
   }catch(e){
     if(sd)sd.textContent='还是连不上 · 检查网络后再试';
@@ -3484,9 +3486,8 @@ function updateHeader(){
   const _fxbody=FXDATE
     ? `<span class="fxpill">🕐 ${FXDATE} · ${_fxr}</span>`
     : (FXOK===false ? `<span class="fxpill warn">⚠️ 汇率拿不到，用保底值 · ${_fxr}</span>` : `<span class="fxpill">汇率加载中…</span>`);
-  document.getElementById('fxNote').innerHTML=_fxbody+`<span class="fxrefresh" id="fxRefresh" role="button">↻ 刷新</span>`;
-  const _rf=document.getElementById('fxRefresh');
-  if(_rf)_rf.onclick=async()=>{ if(_rf.dataset.b)return; _rf.dataset.b='1'; _rf.textContent='刷新中…'; try{await loadFx();}catch(e){} updateHeader(); };
+  /* v11.37 ↻刷新 按钮拿掉：下拉刷新已经会连汇率一起刷（见 reconnectNow），不用第二颗按钮 */
+  document.getElementById('fxNote').innerHTML=_fxbody;
 
   document.getElementById('tInc').textContent=fmt(inc);
   const bal=inc-exp;const be=document.getElementById('tBal');
