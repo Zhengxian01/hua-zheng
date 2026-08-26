@@ -684,6 +684,8 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .dp-top{display:flex;align-items:center;justify-content:space-between;padding:12px 0 10px;position:sticky;top:0;background:var(--bg);z-index:20}
 .dp-back{background:none;border:none;color:var(--emerald);font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;padding:4px 0}
 .dp-title{font-weight:700;font-size:16px}
+/* v11.40 整页标题的农历：强制中性色 + 关掉渐变文字（不然 gxon 下会跟着标题变透明/渐变、看不清） */
+.dp-title .dptlun{font-weight:600;font-size:12px;margin-left:5px;opacity:.9;color:var(--muted);-webkit-text-fill-color:var(--muted);background:none;-webkit-background-clip:border-box;background-clip:border-box}
 .dp-sum{background:linear-gradient(160deg,#0BA678,#0a8f68 60%,#0b7d5c);border-radius:20px;padding:20px;color:#fff;text-align:center;box-shadow:0 6px 20px rgba(11,140,100,.26)}
 .dp-sum .l{font-size:12px;opacity:.85;font-weight:500}
 .dp-sum .v{font-weight:800;font-size:38px;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.05;margin-top:3px}
@@ -4246,7 +4248,8 @@ function buildDayPage(dayKey){
    改成先算好 key 再排（decorate-sort-undecorate）。"HH:MM" 用 < 比大小结果跟 localeCompare 逐字相同。 */
   const rows=DATA.filter(x=>isoDay(x.ts)===dayKey).map(x=>[sgtHM(x.ts),x])
     .sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0).map(p=>p[1]);
-  const d=new Date(dayKey+'T00:00:00');document.getElementById('dpTitle').textContent=`${d.getMonth()+1}月${d.getDate()}日 ${WD[d.getDay()]}`;
+  const d=new Date(dayKey+'T00:00:00');const _lun=lunarText(dayKey);
+  document.getElementById('dpTitle').innerHTML=`${d.getMonth()+1}月${d.getDate()}日 ${WD[d.getDay()]}`+(_lun?` <span class="dptlun">${_lun}</span>`:'');
   const exp=rows.filter(r=>!isInc(r));const totExp=exp.reduce((s,r)=>s+sgdOf(r),0);
   const inc=rows.filter(r=>isInc(r)).reduce((s,r)=>s+sgdOf(r),0);
   const {by,cnt}=catAgg(exp);
