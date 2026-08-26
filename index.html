@@ -535,8 +535,9 @@ body.theme-journal .ptr.ready .ptr-spin{background:#256B5E;color:#fff}
 .daypeek .dpd{font-size:16px;font-weight:800;color:var(--ink)}
 .daypeek .dpw{font-size:11px;color:var(--muted);margin-left:6px;font-weight:600}
 /* v11.43 整个「农历 七月十四」放进一颗椭圆胶囊里 */
-.daypeek .dplun{display:inline-block;padding:2.5px 10px;border-radius:99px;background:rgba(150,158,175,.20);color:var(--muted);font-size:11px;font-weight:600;margin-left:9px;vertical-align:middle;font-variant-numeric:normal}
-.daypeek .dplun i,.dp-title .dptlun i{font-style:normal;font-weight:inherit;font-size:inherit;color:inherit;-webkit-text-fill-color:inherit;background:none;margin-right:4px;opacity:.72}
+.daypeek .dplun{display:inline-block;padding:2.5px 10px;border-radius:99px;background:rgba(150,158,175,.20);color:var(--muted);font-size:11px;font-weight:800;margin-left:9px;vertical-align:middle;font-variant-numeric:normal}
+/* v11.44 「农历」跟日期同颜色（不分深浅），只有日期加粗；农历二字用常规字重 */
+.daypeek .dplun i,.dp-title .dptlun i{font-style:normal;font-weight:500;font-size:inherit;color:inherit;-webkit-text-fill-color:inherit;background:none;margin-right:5px;opacity:1}
 .daypeek .dpfull{font-size:12px;font-weight:600;color:var(--emerald);background:rgba(11,166,120,.12);padding:4px 10px;border-radius:9px;cursor:pointer}
 /* ⚠️ v9.90 重排（用户：「字体乱乱放，不好看」）。
    旧版是 flex + flex-wrap:wrap，商家名一长就换行 → 名字被挤到图标底下、金额还固定贴在顶端
@@ -687,7 +688,7 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .dp-back{background:none;border:none;color:var(--emerald);font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;padding:4px 0}
 .dp-title{font-weight:700;font-size:16px}
 /* v11.40 整页标题的农历：强制中性色 + 关掉渐变文字（不然 gxon 下会跟着标题变透明/渐变、看不清） */
-.dp-title .dptlun{display:inline-block;padding:2.5px 10px;border-radius:99px;background:rgba(150,158,175,.20);font-weight:600;font-size:11.5px;margin-left:8px;vertical-align:middle;color:var(--muted);-webkit-text-fill-color:var(--muted);-webkit-background-clip:border-box;background-clip:border-box}
+.dp-title .dptlun{display:inline-block;padding:2.5px 10px;border-radius:99px;background:rgba(150,158,175,.20);font-weight:800;font-size:11.5px;margin-left:8px;vertical-align:middle;color:var(--muted);-webkit-text-fill-color:var(--muted);-webkit-background-clip:border-box;background-clip:border-box}
 .dp-sum{background:linear-gradient(160deg,#0BA678,#0a8f68 60%,#0b7d5c);border-radius:20px;padding:20px;color:#fff;text-align:center;box-shadow:0 6px 20px rgba(11,140,100,.26)}
 .dp-sum .l{font-size:12px;opacity:.85;font-weight:500}
 .dp-sum .v{font-weight:800;font-size:38px;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.05;margin-top:3px}
