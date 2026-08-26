@@ -536,9 +536,8 @@ body.theme-journal .ptr.ready .ptr-spin{background:#256B5E;color:#fff}
 .daypeek .dpw{font-size:11px;color:var(--muted);margin-left:6px;font-weight:600}
 /* v11.41 农历：把「农历」做成干净的小标签 + 日期用一致的中性色，别两团灰糊在一起 */
 .daypeek .dplun{font-size:11.5px;color:var(--muted);opacity:1;margin-left:9px;font-weight:600;font-variant-numeric:normal}
-.daypeek .dplun i,.dp-title .dptlun i{font-style:normal;font-size:9px;font-weight:800;letter-spacing:1px;
-  display:inline-block;padding:2px 5px;border-radius:6px;margin-right:6px;vertical-align:middle;transform:translateY(-1px);
-  background:rgba(150,158,175,.22);color:var(--muted);-webkit-text-fill-color:var(--muted)}
+/* v11.42 「农历」跟日期连成一句，同字体同颜色，不再是分开的小标签 */
+.daypeek .dplun i,.dp-title .dptlun i{font-style:normal;font-weight:inherit;font-size:inherit;color:inherit;-webkit-text-fill-color:inherit;background:none;margin-right:4px}
 .daypeek .dpfull{font-size:12px;font-weight:600;color:var(--emerald);background:rgba(11,166,120,.12);padding:4px 10px;border-radius:9px;cursor:pointer}
 /* ⚠️ v9.90 重排（用户：「字体乱乱放，不好看」）。
    旧版是 flex + flex-wrap:wrap，商家名一长就换行 → 名字被挤到图标底下、金额还固定贴在顶端
