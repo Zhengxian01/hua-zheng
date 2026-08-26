@@ -535,6 +535,7 @@ body.theme-journal .ptr.ready .ptr-spin{background:#256B5E;color:#fff}
 .daypeek .dpd{font-size:16px;font-weight:800;color:var(--ink)}
 .daypeek .dpw{font-size:11px;color:var(--muted);margin-left:6px;font-weight:600}
 .daypeek .dplun{font-size:11px;color:var(--muted);margin-left:7px;font-weight:600;opacity:.85}   /* v11.40 农历 */
+.daypeek .dplun i,.dp-title .dptlun i{font-style:normal;opacity:.62;margin-right:1px}   /* v11.41 「农历」小标签，比日期淡一点 */
 .daypeek .dpfull{font-size:12px;font-weight:600;color:var(--emerald);background:rgba(11,166,120,.12);padding:4px 10px;border-radius:9px;cursor:pointer}
 /* ⚠️ v9.90 重排（用户：「字体乱乱放，不好看」）。
    旧版是 flex + flex-wrap:wrap，商家名一长就换行 → 名字被挤到图标底下、金额还固定贴在顶端
@@ -4249,7 +4250,7 @@ function buildDayPage(dayKey){
   const rows=DATA.filter(x=>isoDay(x.ts)===dayKey).map(x=>[sgtHM(x.ts),x])
     .sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0).map(p=>p[1]);
   const d=new Date(dayKey+'T00:00:00');const _lun=lunarText(dayKey);
-  document.getElementById('dpTitle').innerHTML=`${d.getMonth()+1}月${d.getDate()}日 ${WD[d.getDay()]}`+(_lun?` <span class="dptlun">${_lun}</span>`:'');
+  document.getElementById('dpTitle').innerHTML=`${d.getMonth()+1}月${d.getDate()}日 ${WD[d.getDay()]}`+(_lun?` <span class="dptlun"><i>农历</i> ${_lun}</span>`:'');
   const exp=rows.filter(r=>!isInc(r));const totExp=exp.reduce((s,r)=>s+sgdOf(r),0);
   const inc=rows.filter(r=>isInc(r)).reduce((s,r)=>s+sgdOf(r),0);
   const {by,cnt}=catAgg(exp);
@@ -4746,7 +4747,7 @@ function buildDayPeek(k,skipCal){
   const wd=['日','一','二','三','四','五','六'][d.getDay()];
   const lun=lunarText(k);
   const body=(CALMODE==='todo')?dayPeekTodo(k):dayPeekMoney(k);
-  p.innerHTML=`<div class="dph"><div><span class="dpd">${(+k.slice(8,10))} 号</span><span class="dpw">周${wd}</span>${lun?`<span class="dplun">${lun}</span>`:''}</div><button class="dpfull" data-peekfull="${k}">查看全部 ›</button></div>${body}`;
+  p.innerHTML=`<div class="dph"><div><span class="dpd">${(+k.slice(8,10))} 号</span><span class="dpw">周${wd}</span>${lun?`<span class="dplun"><i>农历</i> ${lun}</span>`:''}</div><button class="dpfull" data-peekfull="${k}">查看全部 ›</button></div>${body}`;
   p.style.display='block';
   if(!skipCal)buildCalendar();  /* 高亮选中的那天；从刷新链路来时 skipCal=true 避免死循环 */
 }
