@@ -16,7 +16,7 @@
    （先留着旧值当 fallback，是为了让你「先部署、再设 secret」也不会整个 app 401 掉。） */
 const TOKEN_DEFAULT = "";
 const appToken = (env) => env.APP_TOKEN || TOKEN_DEFAULT;
-const WORKER_VER = "v10.33";   // 改这个档就顺手 +1，方便对版本
+const WORKER_VER = "v10.34";   // 改这个档就顺手 +1，方便对版本
 
 // 背景图上限（解码后字节）。前端 compressImage 目标 260KB，这里留一倍余量。
 const MAX_BG_BYTES = 600 * 1024;
@@ -2519,6 +2519,7 @@ export default {
           ["OCBC 卡·网址名", `Dear Valued Customer\nWe wish to inform you that SGD9.90 was charged at 21:31 on 10-Aug-26 to your card (-3578) at www.anywheel.sg Singapore.\nOCBC`, "notifications@ocbc.com", "ocbc", "expense", "www.anywheel.sg Singapore", 9.9],
           ["OCBC 提款", `OCBC Bank\nAlert: Withdrawal Made\nA sum of SGD 60.46 has been withdrawn from your account (-857001) at 5:12 AM on 07 Aug 2026.`, "notifications@ocbc.com", "ocbc", "expense", "Alipay*RED Note", 60.46],
           ["OCBC 存款→Refund收入", `OCBC Alert: Deposit in your account\nA deposit was made in your account.\nTime of deposit: 5:23 AM\nAmount: SGD 6.42\nAccount that money was deposited in: (-857001)\nReference: 06/08/26\nOCBC`, "notifications@ocbc.com", "ocbc", "income", "Refund", 6.42],
+          ["OCBC GIRO进账·Date of deposit格式+Reference名字+千分位(v10.34)", `OCBC Alert: Money has been deposited in your account\nDear Valued Customer,\nA deposit was made in your account. Here are the details:\nDate of deposit: 28 Aug 2026\nTime of deposit: 4:14 PM\nAmount: SGD 4,178.50\nAccount that money was deposited in: (-862001)\nReference: WOH HUP (PRIVATE) L\nMode of transfer: GIRO\nOCBC`, "notifications@ocbc.com", "ocbc", "income", "WOH HUP (PRIVATE) L", 4178.5],
           ["OCBC PayNow付款·数字开头名", `Dear Valued Customer\nThe following PayNow transfer has been made to 96SUPER GRADE PTE. LTD. using UEN 201323161C.\nDate\n: 09 Jul 2026\nTime\n: 20:59 PM SGT\nAmount\n: SGD 62.00\nReference number\n: 2607090114048000\nOCBC`, "notifications@ocbc.com", "paynow", "expense", "96SUPER GRADE PTE. LTD.", 62],
           ["DBS PayLah 消费", `DBS PayLah!\nTo : NTUC FAIRPRICE\nAmount : SGD 10.00\nDate & Time : 07 Aug 2026 12:41 (SGT)\nTransaction Ref : IP2608071241099`, "notify@dbs.com", "dbs", "expense", "NTUC FAIRPRICE", 10],
           ["DBS PayNow 收款→收入", `digibank Alerts\nYou have received SGD 30.00 via PayNow on 07 Aug 2026 17:18 SGT.\nFrom: CHAN YI SHENG\nTo: Your DBS account ending 7344\nDBS Bank Ltd`, "ibanking.alert@dbs.com", "dbs", "income", "CHAN YI SHENG", 30],
@@ -3622,25 +3623,35 @@ function parseOCBCRefund(raw) {
   let hh = tm ? parseInt(tm[1], 10) : 12;
   const mm = tm ? tm[2] : "00";
   if (tm && tm[3]) { const pm = /p/i.test(tm[3]); if (pm && hh < 12) hh += 12; else if (!pm && hh === 12) hh = 0; }
-  // 日期：Reference: 06/08/26（DD/MM/YY）；退路 on 06 Aug 2026
+  // 日期：v10.34 加「Date of deposit: 28 Aug 2026 / 28/08/26」这种（这封 GIRO 进账就是这格式，日期不在 Reference 里）；
+  //       再退到 Reference: 06/08/26（旧那封）→ on 06 Aug 2026。
   let year, mon, day;
-  const dref = t.match(/Reference\s*:?\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
-  if (dref) {
-    day = parseInt(dref[1], 10); mon = parseInt(dref[2], 10);
-    year = dref[3].length <= 2 ? 2000 + parseInt(dref[3], 10) : parseInt(dref[3], 10);
-  } else {
+  let dm = t.match(/Date\s+of\s+deposit\s*:?\s*(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/i);   // 28 Aug 2026
+  if (dm) { day = parseInt(dm[1], 10); mon = MON[dm[2].toLowerCase()]; year = parseInt(dm[3], 10); }
+  if (!mon) {
+    dm = t.match(/Date\s+of\s+deposit\s*:?\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);                // 28/08/2026
+    if (dm) { day = parseInt(dm[1], 10); mon = parseInt(dm[2], 10); year = dm[3].length <= 2 ? 2000 + parseInt(dm[3], 10) : parseInt(dm[3], 10); }
+  }
+  if (!mon) {
+    const dref = t.match(/Reference\s*:?\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i);
+    if (dref) { day = parseInt(dref[1], 10); mon = parseInt(dref[2], 10); year = dref[3].length <= 2 ? 2000 + parseInt(dref[3], 10) : parseInt(dref[3], 10); }
+  }
+  if (!mon) {
     const don = t.match(/on\s+(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/i);
-    if (!don) return [];
-    day = parseInt(don[1], 10); mon = MON[don[2].toLowerCase()]; year = parseInt(don[3], 10);
+    if (don) { day = parseInt(don[1], 10); mon = MON[don[2].toLowerCase()]; year = parseInt(don[3], 10); }
   }
   if (!mon || mon < 1 || mon > 12 || !day || day < 1 || day > 31) return [];
+  // v10.34 Reference 若是付款方名字（不是纯日期）→ 当商家名（GIRO 进账那家公司/人）；否则沿用 "Refund"
+  let refName = "";
+  const refm = t.match(/Reference\s*:?\s*([^\n]+)/i);
+  if (refm) { const rr = refm[1].trim(); if (rr && !/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(rr)) refName = rr.slice(0, 40); }
   const ts = `${year}-${pad(mon)}-${pad(day)}T${pad(hh)}:${mm}:00+08:00`;
   // 账户末四码：Account … (-857001) → 7001（当付款方式显示）
   const ac = t.match(/account[^()\n]*\(\s*-?\s*(\d{3,})\s*\)/i) || t.match(/\(\s*-\s*(\d{3,})\s*\)/);
   const acct = ac ? ac[1].slice(-4) : null;
   return [{
     ts, amount, currency,
-    merchant: "Refund",                 // 使用者指定：无商家 → 一律记成 "Refund"
+    merchant: refName || "Refund",      // v10.34 有付款方名字(GIRO那家)就用它；没有才记 "Refund"
     isPerson: false,
     card_last4: acct,
     source: "ocbc",

@@ -1730,6 +1730,18 @@ async function suiteIron(W) {
       d.card_last4 === '7001' ? ok('账户末四码 7001') : bad('账户末四码不对', String(d.card_last4));
       /^ocbcrf:/.test(String(d.hash)) ? ok('hash 前缀 ocbcrf:（跟卡 ocbc: / 提款 ocbcw: 永不撞）') : bad('hash 前缀不对', String(d.hash));
     }
+    // ①b v10.34 GIRO 进账：日期在 `Date of deposit: 28 Aug 2026`（不在 Reference 里），
+    //     Reference 放的是【付款方名字】而不是日期，金额带千分位 4,178.50。这封真机读不到过，钉死。
+    const GIRO = `OCBC Alert: Money has been deposited in your account\nDear Valued Customer,\nA deposit was made in your account. Here are the details:\nDate of deposit: 28 Aug 2026\nTime of deposit: 4:14 PM\nAmount: SGD 4,178.50\nAccount that money was deposited in: (-862001)\nReference: WOH HUP (PRIVATE) L\nMode of transfer: GIRO\nOCBC`;
+    const g = (W.parseRaw(GIRO, 'notifications@ocbc.com') || [])[0];
+    if (!g) bad('OCBC GIRO 进账读不到（Date of deposit 格式日期没解析到）');
+    else {
+      g.type === 'income' ? ok('GIRO 进账 type = income') : bad('GIRO 进账 type 不是 income', String(g.type || '(未设)'));
+      g.merchant === 'WOH HUP (PRIVATE) L' ? ok('商家 = 付款方名字 WOH HUP (PRIVATE) L（Reference 是名字不是日期）') : bad('GIRO 商家名不对', String(g.merchant));
+      (g.currency === 'SGD' && g.amount === 4178.5) ? ok('金额 SGD 4,178.50（千分位解对）') : bad('GIRO 金额抓错', `${g.currency} ${g.amount}`);
+      /^2026-08-28T16:14/.test(g.ts) ? ok('日期时间 = 8月28日 16:14（Date of deposit 28 Aug 2026 + 4:14 PM）', g.ts) : bad('GIRO 日期时间抓错', String(g.ts));
+      /^ocbcrf:/.test(String(g.hash)) ? ok('GIRO hash 前缀 ocbcrf:') : bad('GIRO hash 前缀不对', String(g.hash));
+    }
     // ② 反向：普通 OCBC 卡消费不准被存款 parser 吃（仍是支出、商家原样）
     const CARD = `Dear Valued Customer\nWe wish to inform you that SGD3.80 was charged at 19:53 on 06-Aug-26 to your card (-3578) at SG MUYOO.\nOCBC`;
     const c = (W.parseRaw(CARD, 'notifications@ocbc.com') || [])[0];
