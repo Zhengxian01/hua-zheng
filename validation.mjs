@@ -2212,6 +2212,17 @@ async function suiteE2E() {
       await pg.evaluate(() => { try { closeSheet(); } catch (e) {} }); await pg.waitForTimeout(200);
     } catch (e) { bad('＋跟日历模式走 抛错', String(e.message).slice(0, 80)); }
 
+    // 3c) v11.13 选了某天（速览高亮 peekKey）→ ＋ 该加到那天，不是默认今天；没选才默认今天
+    try {
+      await tap('#nav1'); await pg.waitForTimeout(300);
+      const pickDay = await pg.evaluate(() => { const cs = [...document.querySelectorAll('.cal-c[data-day]')]; const c = cs.find(x => !x.classList.contains('today')) || cs[0]; if (c) c.click(); return c ? c.dataset.day : null; });
+      await pg.waitForTimeout(300);
+      await tap('#navAdd'); await pg.waitForTimeout(400);
+      const gotDate = await pg.evaluate(() => document.getElementById('date').value);
+      (pickDay && gotDate === pickDay) ? ok('选了某天（不是今天）→ tap ＋ 花费日期就是那天', pickDay) : bad('选了某天 ＋ 没加到那天（还停在今天？）', `选 ${pickDay} · 得 ${gotDate}`);
+      await pg.evaluate(() => { try { closeSheet(); } catch (e) {} try { closeDayPeek(); } catch (e) {} }); await pg.waitForTimeout(200);
+    } catch (e) { bad('选日期加账 抛错', String(e.message).slice(0, 80)); }
+
     // 4) 设置：真实 tap 数值颜色色卡（顺带验搜索上色那条链没抛错）
     try {
       await tap('#nav3'); await pg.waitForTimeout(400);
