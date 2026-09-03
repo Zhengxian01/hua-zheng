@@ -4983,7 +4983,7 @@ function switchTab(n){
   clearTimeout(_ibLoadT);                    /* 滑走了就别再打那个还没发出去的收件箱请求 */
   document.body.classList.toggle('on-feed',n===2);if(n!==2&&document.body.classList.contains('searching')&&typeof closeSearch==='function')closeSearch();document.getElementById('tab1').classList.toggle('on',n===1);document.getElementById('tab2').classList.toggle('on',n===2);document.getElementById('tab3').classList.toggle('on',n===3);document.getElementById('nav1').classList.toggle('on',n===1);document.getElementById('nav2').classList.toggle('on',n===2);document.getElementById('nav3').classList.toggle('on',n===3);var _ib=document.getElementById('inboxPage');if(_ib)_ib.classList.remove('show');document.body.classList.remove('inbox-open');var _nib=document.getElementById('navInbox');if(_nib)_nib.classList.remove('on');if(typeof syncPageOpen==='function')syncPageOpen();window.scrollTo({top:TAB_SCROLL[n]||0});}
 document.getElementById('nav1').onclick=()=>switchTab(1);document.getElementById('nav2').onclick=()=>switchTab(2);document.getElementById('nav3').onclick=()=>switchTab(3);
-document.getElementById('navAdd').onclick=()=>openSheet();                                   /* nav 中间「＋」= 记一笔（原 fab 逻辑）*/
+document.getElementById('navAdd').onclick=()=>{ _saveLock=false; if(CALMODE==='todo')openEvEdit(null,todayKey()); else openSheet(); };   /* nav 中间「＋」= 记一笔（原 fab 逻辑）· v11.12 跟日历模式走：日历现在在「事项」→ ＋ 直接开事项，不用自己上去切（跟日页 ＋ 跟 dpTab 走同一套） */
 document.getElementById('navInbox').onclick=()=>openInboxPage();  /* nav「收件箱」→ 开收件箱页 */
 
 /* ═══════════════ v9.93 全页横滑换 tab ═══════════════
@@ -5286,7 +5286,7 @@ function openSheet(dayKey){
 }
 function lockScroll(on){try{document.documentElement.style.overflow=on?'hidden':'';document.body.style.overflow=on?'hidden':'';}catch(e){}}
 function closeSheet(){scrim.classList.remove('show');add.classList.remove('show');lockScroll(false);}
-document.getElementById('fab').onclick=()=>openSheet();
+document.getElementById('fab').onclick=()=>{ _saveLock=false; if(CALMODE==='todo')openEvEdit(null,todayKey()); else openSheet(); };   /* v11.12 遗留 fab（现已隐藏）跟 navAdd 同步：日历在事项 → 直接开事项 */
 
 /* v9.18 付款方式选择器：现金 / PayLah / 卡（卡号自动取你数据里最常用的那张）。
    存进 card_last4：现金=null、PayLah='PayLah'、卡=卡号。银行邮件来的不经这里、照旧自动分。 */
@@ -7315,6 +7315,7 @@ function openEvEdit(id,day,occDay){
      （evSetRO 藏了，这里又显示 = 藏了个寂寞）。踩到过，别拿掉。 */
   document.getElementById('evDel').style.display=(e&&!evRO)?'block':'none';
   if(!add.classList.contains('show')){scrim.classList.add('show');add.classList.add('show');lockScroll(true);}
+  [...document.getElementById('ieSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t==='event'));   /* v11.12 进事项 → 顶部「支出/收入/事项」高亮也切到事项（FAB 直开 + 日页 ＋ 两条路都对） */
   setAddMode('event');
   if(!e)setTimeout(()=>document.getElementById('evName').focus(),120);
 }

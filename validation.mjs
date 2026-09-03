@@ -2196,6 +2196,22 @@ async function suiteE2E() {
       await pg.evaluate(() => { try { closeSheet(); } catch (e) {} }); await pg.waitForTimeout(300);
     } catch (e) { bad('记一笔抛错', String(e.message).slice(0, 80)); }
 
+    // 3b) v11.12 ＋ 跟日历模式走：日历切到「事项」→ tap ＋ 该直接开事项（顶部高亮也要跟着切），别再停在支出让人自己换
+    try {
+      await tap('#nav1'); await pg.waitForTimeout(300);
+      await pg.evaluate(() => { const t = [...document.querySelectorAll('#calSeg [data-cm]')].find(b => b.dataset.cm === 'todo'); if (t) t.click(); }); await pg.waitForTimeout(300);
+      await tap('#navAdd'); await pg.waitForTimeout(500);
+      const ev = await pg.evaluate(() => { const add = document.getElementById('add'); const ie = [...document.querySelectorAll('#ieSeg button')].find(b => b.dataset.t === 'event'); return { eventMode: add.classList.contains('event'), ieOn: !!(ie && ie.classList.contains('on')) }; });
+      (ev.eventMode && ev.ieOn) ? ok('日历在「事项」→ tap ＋ 直接开事项（顶部「事项」也高亮）') : bad('日历在事项时 ＋ 没直接开事项', JSON.stringify(ev));
+      await pg.evaluate(() => { try { closeSheet(); } catch (e) {} }); await pg.waitForTimeout(200);
+      // 反向：切回「金额」→ tap ＋ 该回到支出（别粘在事项）
+      await pg.evaluate(() => { const t = [...document.querySelectorAll('#calSeg [data-cm]')].find(b => b.dataset.cm === 'money'); if (t) t.click(); }); await pg.waitForTimeout(300);
+      await tap('#navAdd'); await pg.waitForTimeout(500);
+      const mo = await pg.evaluate(() => { const add = document.getElementById('add'); const ie = [...document.querySelectorAll('#ieSeg button')].find(b => b.dataset.t === 'expense'); return { eventMode: add.classList.contains('event'), ieOn: !!(ie && ie.classList.contains('on')) }; });
+      (!mo.eventMode && mo.ieOn) ? ok('日历切回「金额」→ tap ＋ 回到支出') : bad('日历在金额时 ＋ 没回到支出', JSON.stringify(mo));
+      await pg.evaluate(() => { try { closeSheet(); } catch (e) {} }); await pg.waitForTimeout(200);
+    } catch (e) { bad('＋跟日历模式走 抛错', String(e.message).slice(0, 80)); }
+
     // 4) 设置：真实 tap 数值颜色色卡（顺带验搜索上色那条链没抛错）
     try {
       await tap('#nav3'); await pg.waitForTimeout(400);
@@ -2315,6 +2331,11 @@ async function suiteFullPipeline(W) {
     const num = (s) => { const m = String(s || '').replace(/,/g, '').match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : NaN; };
     const ctx = await b.newContext({ ...(pw.devices && pw.devices['iPhone 13'] || {}), viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     const pg = await ctx.newPage();
+    /* v11.12 把浏览器「现在」钉到 2026-08-08（跟 server_now 一致）：app 的 viewMonth=sgMonthDate(Date.now())
+       是按【设备时钟】算「本月」的。样本邮件都是 8 月，真机跑到 9 月后设备时钟一漂 → 8 月数据全被 sameMonth 筛掉、
+       hero 归零 → §F 假红。钉死设备时钟后测试跟真实日期无关，这才是这组该守的东西。 */
+    await pg.addInitScript(() => { const R = Date, F = R.parse('2026-08-08T12:00:00+08:00'), off = F - R.now();
+      function D(...a){ return a.length ? new R(...a) : new R(R.now() + off); } D.now = () => R.now() + off; D.parse = R.parse; D.UTC = R.UTC; D.prototype = R.prototype; Object.setPrototypeOf(D, R); window.Date = D; });
     await pg.addInitScript(o => { localStorage.setItem('hz_wurl', o); localStorage.setItem('hz_tk', 't'); if (navigator.serviceWorker) { try { navigator.serviceWorker.register = () => Promise.resolve({ scope: '/', addEventListener() {}, update() {} }); } catch (e) {} } }, O);
     await pg.goto(O + '/', { waitUntil: 'load' }); await pg.waitForTimeout(2200);
     const hero = await pg.evaluate(() => {
@@ -2397,6 +2418,9 @@ async function suiteEdit() {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 });
     const pg = await ctx.newPage();
     const errs = []; pg.on('pageerror', e => errs.push(String(e.message || e)));
+    /* v11.12 同 §F：把设备时钟钉到 2026-08-08，免得真机跑到隔月后「本月」漂走、8 月样本被 sameMonth 筛光 → 假红。 */
+    await pg.addInitScript(() => { const R = Date, F = R.parse('2026-08-08T12:00:00+08:00'), off = F - R.now();
+      function D(...a){ return a.length ? new R(...a) : new R(R.now() + off); } D.now = () => R.now() + off; D.parse = R.parse; D.UTC = R.UTC; D.prototype = R.prototype; Object.setPrototypeOf(D, R); window.Date = D; });
     await pg.addInitScript(o => { localStorage.setItem('hz_wurl', o); localStorage.setItem('hz_tk', 't'); if (navigator.serviceWorker) { try { navigator.serviceWorker.register = () => Promise.resolve({ scope: '/', addEventListener() {}, update() {} }); } catch (e) {} } }, O);
     await pg.goto(O + '/', { waitUntil: 'load' }); await pg.waitForTimeout(2000);
     const dismiss = () => pg.evaluate(() => { ['hpopScrim', 'hpop', 'okScrim', 'okmod'].forEach(id => document.getElementById(id) && document.getElementById(id).classList.remove('show')); });
