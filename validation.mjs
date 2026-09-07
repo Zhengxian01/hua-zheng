@@ -2391,7 +2391,7 @@ async function suiteEdit() {
   const ok  = (m, d) => { pass++; if (VERBOSE) console.log(`${L.ok}  ✅ ${m}${L.off}${d ? `  ${L.dim}${d}${L.off}` : ''}`); };
   const bad = (m, d) => { fail++; console.log(`${L.bad}  ❌ ${m}${L.off}${d ? `\n     ${d}` : ''}`); };
 
-  const updates = [], settings = [];
+  const updates = [], settings = [], catsSaved = [];
   let expenses = [
     { id: 99, ts: '2026-08-07T17:18:00+08:00', amount: 30, currency: 'SGD', merchant: 'CHAN YI SHENG', card_last4: 'PayNow', source: 'dbs', type: 'expense', category: 'other', raw: '' },
     { id: 98, ts: '2026-08-07T12:00:00+08:00', amount: 10, currency: 'SGD', merchant: 'NTUC', card_last4: 'PayLah', source: 'dbs', type: 'expense', category: 'food', raw: '' },
@@ -2405,6 +2405,7 @@ async function suiteEdit() {
     if (p.startsWith('/api/')) {
       if (p === '/api/update' && req.method === 'POST') { const j = await body(req); updates.push(j); const r = expenses.find(x => String(x.id) === String(j.id)); if (r) Object.assign(r, { type: j.type, amount: j.amount, category: j.category, merchant: j.merchant, offset: j.offset ? 1 : 0 }); return J(res, { ok: true }); }
       if (p === '/api/settings' && req.method === 'POST') { const j = await body(req); settings.push(j.prefs || j); return J(res, { ok: true }); }
+      if (p === '/api/cats' && req.method === 'POST') { const j = await body(req); catsSaved.push(j.cats || j); return J(res, { ok: true }); }
       if (p === '/api/data') return J(res, { expenses, rules: {} });
       if (p === '/api/health') return J(res, { ok: true, server_now_ms: Date.parse('2026-08-08T12:00:00+08:00') });
       if (p === '/api/settings') return J(res, { prefs: { theme: 'photo' }, rec: [], subignore: [], paymethods: [], paynames: {} });
@@ -2483,6 +2484,24 @@ async function suiteEdit() {
       (donutC && Math.abs(n(donutC) - n(spendAfter)) < 0.01) ? ok('环形中心 = hero（净额口径一致）', `${donutC}`) : bad('环形中心跟 hero 对不上（分类没跟着减）', `环形${donutC} vs hero${spendAfter}`);
     }
     await dismiss();
+
+    // 2c) v11.14 内联加子分类：编辑里点「＋ 子分类」→ 打字 Enter → 进 CAT + 选中 + 存 /api/cats（不用再跑设置）
+    try {
+      catsSaved.length = 0;
+      await pg.evaluate(() => openEdit(DATA.find(x => x.id === 97)));   // UNIQLO · shop（原本无子分类，验空分类也能加第一个）
+      await pg.waitForTimeout(400);
+      const hasAdd = await pg.evaluate(() => !!document.querySelector('#emSubs [data-subadd]'));
+      hasAdd ? ok('支出编辑：子分类排有「＋ 子分类」入口（空分类也出）') : bad('编辑里没有「＋ 子分类」入口');
+      await pg.evaluate(() => document.querySelector('#emSubs [data-subadd]').click()); await pg.waitForTimeout(150);
+      await pg.evaluate(() => { const i = document.querySelector('#emSubs [data-subinput]'); i.value = '网购'; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+      await pg.waitForTimeout(400);
+      const added = await pg.evaluate(() => (CAT.shop.subs || []).includes('网购'));
+      const sel = await pg.evaluate(() => [...document.querySelectorAll('#emSubs .subchip.on')].map(x => x.textContent.trim()).includes('网购'));
+      (added && sel) ? ok('打字 Enter → 新子分类「网购」进 CAT 且当场选中') : bad('内联加子分类没进 CAT / 没选中', `added=${added} sel=${sel}`);
+      await pg.waitForTimeout(300);
+      catsSaved.some(c => c && c.expense && c.expense.shop && (c.expense.shop.subs || []).includes('网购')) ? ok('新子分类 POST 到 /api/cats（存库，reload 还在）') : bad('新子分类没存到 /api/cats', JSON.stringify(catsSaved).slice(0, 120));
+      await pg.evaluate(() => { try { closeEdit(); } catch (e) {} }); await dismiss();
+    } catch (e) { bad('内联加子分类 抛错', String(e.message).slice(0, 80)); }
 
     // 3) 设置：改数值颜色 → 存
     settings.length = 0;

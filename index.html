@@ -1126,6 +1126,16 @@ body.phototheme .slrow input[type=range]{background:rgba(255,255,255,.20)}
 .subchip.on{background:var(--brand);border-color:var(--brand);color:#fff}
 body.phototheme .subchip{background:rgba(8,10,16,.45);border-color:rgba(255,255,255,.16);color:var(--ink-2)}
 body.phototheme .subchip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+/* v11.14 子分类内联添加：末尾一颗虚线「＋ 子分类」，点了当场变输入框打字，Enter 就加好并选中、自动存库。
+   跟现有 subchip 同一套药丸外形，只是虚线 + 更淡，一眼看得出是「加」不是已有的子分类。 */
+.subchip.subadd{border-style:dashed;color:var(--muted);font-weight:600}
+.subchip.subadd:active{opacity:.55}
+.subchip.subaddbox{padding:0;border-style:solid;border-color:var(--brand);display:inline-flex;align-items:center;overflow:hidden}
+.subaddinput{border:0;background:transparent;color:var(--ink);font-family:inherit;font-size:12px;font-weight:600;padding:5px 11px;width:84px;outline:none}
+.subaddinput::placeholder{color:var(--muted)}
+body.phototheme .subchip.subadd{border-color:rgba(255,255,255,.32);color:var(--ink-2)}
+body.phototheme .subchip.subaddbox{border-color:var(--brand)}
+body.theme-journal .subchip.subadd{border-color:#CDBEA6!important;color:#8A7F6E!important}
 .add .subrow{margin:-4px 0 8px}
 
 /* ===== v2.0 分类管理页（复用 daypage 的骨架） ===== */
@@ -4516,20 +4526,43 @@ function emBuildCats(){
     `<button class="ecat${k===emCat?' on':''}" data-c="${k}"><span class="ei" style="background:${soft(c.c)};${k===emCat?'border-color:'+c.c:''}">${c.i}</span><span class="en">${c.n}</span></button>`).join('');
   emBuildSubs();
 }
+/* v11.14 子分类内联添加共用逻辑：把新子分类塞进 CAT/INC[cat].subs（去重）并存库。
+   改的是全局那份 CAT/INC → 加完记账页、编辑页、设置里到处都看得到，不用再跑设置。 */
+function addSubTo(type,cat,name){
+  name=(name||'').trim().replace(/\s+/g,' ');
+  if(!name)return '';
+  if(name.length>12)name=name.slice(0,12);
+  const set=(type==='income'?INC:CAT),def=set[cat];
+  if(!def)return '';
+  if(!Array.isArray(def.subs))def.subs=[];
+  if(!def.subs.includes(name)){def.subs.push(name);saveCats().then(ok=>{if(!ok)toast('新子分类没同步上去，网好了再加一次','err');});}
+  return name;
+}
+/* 一颗子分类排的通用样子：不分 + 已有 subs +（仅支出非餐饮）末尾「＋ 子分类」或正在打字的输入框。 */
+function subRowHTML(subs,cur,adding){
+  return `<button class="subchip${cur?'':' on'}" data-s="">不分</button>`+
+    subs.map(x=>`<button class="subchip${x===cur?' on':''}" data-s="${esc(x)}">${esc(x)}</button>`).join('')+
+    (adding?`<span class="subchip subaddbox"><input class="subaddinput" data-subinput maxlength="12" placeholder="新子分类" autocomplete="off" enterkeyhint="done"></span>`
+           :`<button class="subchip subadd" data-subadd>＋ 子分类</button>`);
+}
+let emSubAdding=false;
 function emBuildSubs(){
   const row=document.getElementById('emSubs');
   if(emCat===FOOD_KEY&&emType==='expense'){   // 餐饮：按这笔的交易时间自动算
-    emSubVal='';row.classList.remove('hide');
+    emSubVal='';emSubAdding=false;row.classList.remove('hide');
     const meal=emRow?foodSub(emRow.ts):'';
     row.innerHTML=`<div class="rulenote">🍜 餐饮按交易时间自动记${meal?' · 这笔算「<b>'+meal+'</b>」':''}</div>`;
     return;
   }
   const subs=(catDef(emCat,emType).subs)||[];
-  if(!subs.length){row.classList.add('hide');row.innerHTML='';emSubVal='';return;}
-  row.classList.remove('hide');
-  row.innerHTML=`<button class="subchip${emSubVal?'':' on'}" data-s="">不分</button>`+
-    subs.map(x=>`<button class="subchip${x===emSubVal?' on':''}" data-s="${esc(x)}">${esc(x)}</button>`).join('');
+  if(emType==='income'){   // 收入：维持原样（没子分类就不出这排，也不给内联加）
+    if(!subs.length){row.classList.add('hide');row.innerHTML='';emSubVal='';emSubAdding=false;return;}
+    row.classList.remove('hide');row.innerHTML=subRowHTML(subs,emSubVal,false);return;
+  }
+  row.classList.remove('hide');   // 支出（非餐饮）：永远出这排，末尾带「＋ 子分类」→ 没有想要的当场加
+  row.innerHTML=subRowHTML(subs,emSubVal,emSubAdding);
 }
+function emConfirmAddSub(v){emSubAdding=false;const n=addSubTo(emType,emCat,v);if(n)emSubVal=n;emBuildSubs();}
 function emValidate(){const v=parseFloat(document.getElementById('emAmt').value);document.getElementById('emConfirm').disabled=!(v>0);}
 function openEdit(r){
   emRow=r;emType=isInc(r)?'income':'expense';emCat=catKey(r);
@@ -4620,7 +4653,15 @@ document.getElementById('emOffBtn').onclick=()=>{
   /* 开抵扣 → 分类换成支出分类（选抵扣哪个）；关掉 → 换回收入分类。重置成新那套第一个。 */
   emCat=Object.keys((emType==='income'&&!emOffset)?INC:CAT)[0]||(emOffset?'other':'incother');emBuildCats();emValidate();
 };
-document.getElementById('emSubs').addEventListener('click',e=>{const b=e.target.closest('.subchip');if(!b)return;emSubVal=b.dataset.s||'';emBuildSubs();});
+document.getElementById('emSubs').addEventListener('click',e=>{
+  if(e.target.closest('[data-subadd]')){emSubAdding=true;emBuildSubs();const inp=document.querySelector('#emSubs [data-subinput]');if(inp)inp.focus();return;}
+  const b=e.target.closest('.subchip');if(!b||b.classList.contains('subaddbox'))return;   /* 点输入框那颗别当选择 */
+  emSubVal=b.dataset.s||'';emSubAdding=false;emBuildSubs();});
+document.getElementById('emSubs').addEventListener('keydown',e=>{const inp=e.target.closest('[data-subinput]');if(!inp)return;
+  if(e.key==='Enter'){e.preventDefault();emConfirmAddSub(inp.value);}
+  else if(e.key==='Escape'){e.preventDefault();emSubAdding=false;emBuildSubs();}});
+document.getElementById('emSubs').addEventListener('focusout',e=>{const inp=e.target.closest('[data-subinput]');if(!inp)return;
+  const v=inp.value;setTimeout(()=>{if(emSubAdding)emConfirmAddSub(v);},120);});   /* 点走/收键盘也当确认；空的话 addSubTo 自动忽略 */
 /* v4.0 确认 = 立刻生效，网络在后台跑。
    以前是 await 网络 → 按钮卡在「保存中…」半秒到两秒，手感很差。
    现在：先改本地 + 关弹窗 + 重画（0 延迟），POST 在后台发；
@@ -5245,11 +5286,15 @@ function buildSubRow(){
     return;
   }
   const subs=(catDef(selCat,selType).subs)||[];
-  if(!subs.length){row.classList.add('hide');row.innerHTML='';selSub='';return;}
-  row.classList.remove('hide');
-  row.innerHTML=`<button class="subchip${selSub?'':' on'}" data-s="">不分</button>`+
-    subs.map(x=>`<button class="subchip${x===selSub?' on':''}" data-s="${esc(x)}">${esc(x)}</button>`).join('');
+  if(selType==='income'){   // 收入：维持原样（没子分类不出这排、不给内联加）
+    if(!subs.length){row.classList.add('hide');row.innerHTML='';selSub='';addSubAdding=false;return;}
+    row.classList.remove('hide');row.innerHTML=subRowHTML(subs,selSub,false);return;
+  }
+  row.classList.remove('hide');   // 支出（非餐饮）：永远出这排，末尾带「＋ 子分类」
+  row.innerHTML=subRowHTML(subs,selSub,addSubAdding);
 }
+let addSubAdding=false;
+function addConfirmAddSub(v){addSubAdding=false;const n=addSubTo(selType,selCat,v);if(n)selSub=n;buildSubRow();}
 function updAmt(){const el=document.getElementById('amtDisp');el.innerHTML=`<span class="s">${esc(curSym(selCur))}</span>${amtStr}`;el.classList.toggle('zero',amtStr==='0');el.classList.toggle('inc',selType==='income');document.getElementById('save').disabled=(parseFloat(amtStr)||0)<=0;}
 function setType(t){selType=t;selCat=Object.keys(t==='income'?INC:CAT)[0]||'other';selSub='';[...document.getElementById('ieSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t===t));buildCatGrid();buildPayRow();addBuildOffset();updAmt();}
 /* v11.10 记一笔·退款抵扣开关：只在收入时显示；切到收入时按当前备注这家的记忆预设默认值。 */
@@ -5489,7 +5534,15 @@ document.getElementById('ieSeg').addEventListener('click',e=>{
    改成 %CURS.length，以后再加币种这行不用再动。 */
 document.getElementById('curBtn').onclick=()=>{selCur=CURS[(CURS.indexOf(selCur)+1)%CURS.length];document.getElementById('curBtn').textContent=selCur;updAmt();};
 document.getElementById('catgrid').addEventListener('click',e=>{const b=e.target.closest('.catpick');if(!b)return;selCat=b.dataset.c;selSub='';buildSubRow();const set=curSet();[...e.currentTarget.children].forEach(x=>{const pi=x.querySelector('.pi');pi.style.borderColor=x===b?set[x.dataset.c].c:'transparent';});[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));});
-document.getElementById('subRow').addEventListener('click',e=>{const b=e.target.closest('.subchip');if(!b)return;selSub=b.dataset.s||'';buildSubRow();});
+document.getElementById('subRow').addEventListener('click',e=>{
+  if(e.target.closest('[data-subadd]')){addSubAdding=true;buildSubRow();const inp=document.querySelector('#subRow [data-subinput]');if(inp)inp.focus();return;}
+  const b=e.target.closest('.subchip');if(!b||b.classList.contains('subaddbox'))return;
+  selSub=b.dataset.s||'';addSubAdding=false;buildSubRow();});
+document.getElementById('subRow').addEventListener('keydown',e=>{const inp=e.target.closest('[data-subinput]');if(!inp)return;
+  if(e.key==='Enter'){e.preventDefault();addConfirmAddSub(inp.value);}
+  else if(e.key==='Escape'){e.preventDefault();addSubAdding=false;buildSubRow();}});
+document.getElementById('subRow').addEventListener('focusout',e=>{const inp=e.target.closest('[data-subinput]');if(!inp)return;
+  const v=inp.value;setTimeout(()=>{if(addSubAdding)addConfirmAddSub(v);},120);});
 /* v4.0：备注里打的是商家名的话，只要以前记过这家 → 分类自动跳过去 */
 document.getElementById('note').addEventListener('input',e=>{
   const ru=ruleOf(merchantKey(e.target.value.trim()));
