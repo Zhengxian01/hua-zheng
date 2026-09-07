@@ -2503,6 +2503,26 @@ async function suiteEdit() {
       await pg.evaluate(() => { try { closeEdit(); } catch (e) {} }); await dismiss();
     } catch (e) { bad('内联加子分类 抛错', String(e.message).slice(0, 80)); }
 
+    // 2d) v11.15 内联加分类：编辑里点分类网格末尾「＋新增分类」瓷砖 → 正规弹窗填名字 → 存 → 进 CAT + 选中 + 存 /api/cats
+    try {
+      catsSaved.length = 0;
+      await pg.evaluate(() => openEdit(DATA.find(x => x.id === 97)));
+      await pg.waitForTimeout(400);
+      const hasCatAdd = await pg.evaluate(() => !!document.querySelector('#emCats [data-catadd]'));
+      hasCatAdd ? ok('编辑分类网格末尾有「＋新增分类」瓷砖') : bad('分类网格没有「＋新增分类」入口');
+      await pg.evaluate(() => document.querySelector('#emCats [data-catadd]').click()); await pg.waitForTimeout(300);
+      const modalOpen = await pg.evaluate(() => document.getElementById('cmod').classList.contains('show') && document.getElementById('cmTitle').textContent.includes('新增'));
+      modalOpen ? ok('点＋ → 开正规「新增分类」弹窗（emoji/名字/颜色都能设）') : bad('＋没开新增分类弹窗');
+      await pg.evaluate(() => { document.getElementById('cmName').value = '宠物'; document.getElementById('cmEmoji').value = '🐶'; });
+      await pg.evaluate(() => document.getElementById('cmSave').click()); await pg.waitForTimeout(500);
+      const catIn = await pg.evaluate(() => Object.values(CAT).some(c => c.n === '宠物'));
+      const catSel = await pg.evaluate(() => [...document.querySelectorAll('#emCats .ecat.on .en')].map(x => x.textContent).includes('宠物'));
+      (catIn && catSel) ? ok('存 → 新分类「宠物」进 CAT 且回编辑页自动选中') : bad('内联加分类没进 CAT / 没选中', `in=${catIn} sel=${catSel}`);
+      await pg.waitForTimeout(300);
+      catsSaved.some(c => c && c.expense && Object.values(c.expense).some(v => v && v.n === '宠物')) ? ok('新分类 POST 到 /api/cats（存库，reload 还在）') : bad('新分类没存到 /api/cats', JSON.stringify(catsSaved).slice(0, 120));
+      await pg.evaluate(() => { try { closeEdit(); } catch (e) {} }); await dismiss();
+    } catch (e) { bad('内联加分类 抛错', String(e.message).slice(0, 80)); }
+
     // 3) 设置：改数值颜色 → 存
     settings.length = 0;
     await pg.locator('#nav3').tap(); await pg.waitForTimeout(500); await dismiss();

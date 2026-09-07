@@ -633,6 +633,12 @@ body.theme-journal .ptr.ready .ptr-spin{background:#256B5E;color:#fff}
 .ecat .en{font-size:9.5px;color:var(--muted);font-weight:500;white-space:nowrap}
 .ecat.on .en{color:var(--ink);font-weight:700}
 .ecat.on .ei{transform:scale(1.06)}
+/* v11.15 分类网格「＋新增分类」瓷砖：跟分类图标同尺寸，虚线方框 + 大加号，一眼是「加」不是某个分类。
+   点了开正规的新增分类弹窗（emoji/名字/颜色都能选），存完自动选中并刷新这排。两张网格（记账 .catadd / 编辑 .ecatadd）同一套。 */
+.catadd .pi,.ecatadd .ei{border:2px dashed var(--line)!important;background:transparent!important;color:var(--muted);font-size:26px;font-weight:300;line-height:1}
+.catadd:active .pi,.ecatadd:active .ei{transform:scale(.94)}
+body.phototheme .catadd .pi,body.phototheme .ecatadd .ei{border-color:rgba(255,255,255,.3)!important;color:var(--ink-2)}
+body.theme-journal .catadd .pi,body.theme-journal .ecatadd .ei{border-color:#CDBEA6!important;color:#8A7F6E}
 /* v9.73 收件箱详情按钮：更小、半透明磨砂（emerald 淡色调 + 细边），字不折行 */
 .ibacts{margin-top:16px;display:flex;flex-direction:column;gap:8px}
 .ibprimary{width:100%;border:1px solid rgba(11,166,120,.35);border-radius:12px;padding:11px;font-family:inherit;font-weight:600;font-size:14px;
@@ -4523,7 +4529,8 @@ function subHintFor(m){
 function emBuildCats(){
   const set=(emType==='income'&&!emOffset)?INC:CAT;   /* v11.11 开抵扣的收入用支出分类，选要抵扣哪个 */
   document.getElementById('emCats').innerHTML=Object.entries(set).map(([k,c])=>
-    `<button class="ecat${k===emCat?' on':''}" data-c="${k}"><span class="ei" style="background:${soft(c.c)};${k===emCat?'border-color:'+c.c:''}">${c.i}</span><span class="en">${c.n}</span></button>`).join('');
+    `<button class="ecat${k===emCat?' on':''}" data-c="${k}"><span class="ei" style="background:${soft(c.c)};${k===emCat?'border-color:'+c.c:''}">${c.i}</span><span class="en">${c.n}</span></button>`).join('')+
+    `<button class="ecat ecatadd" data-catadd><span class="ei">＋</span><span class="en">+Cat</span></button>`;
   emBuildSubs();
 }
 /* v11.14 子分类内联添加共用逻辑：把新子分类塞进 CAT/INC[cat].subs（去重）并存库。
@@ -4543,7 +4550,7 @@ function subRowHTML(subs,cur,adding){
   return `<button class="subchip${cur?'':' on'}" data-s="">不分</button>`+
     subs.map(x=>`<button class="subchip${x===cur?' on':''}" data-s="${esc(x)}">${esc(x)}</button>`).join('')+
     (adding?`<span class="subchip subaddbox"><input class="subaddinput" data-subinput maxlength="12" placeholder="新子分类" autocomplete="off" enterkeyhint="done"></span>`
-           :`<button class="subchip subadd" data-subadd>＋ 子分类</button>`);
+           :`<button class="subchip subadd" data-subadd>+Sub</button>`);
 }
 let emSubAdding=false;
 function emBuildSubs(){
@@ -4627,7 +4634,7 @@ document.getElementById('emCancel').onclick=closeEdit;   /* 取消 = 不保存 *
 emScrim.onclick=closeEdit;                               /* 点外面 = 不保存 */
 document.getElementById('emAmt').addEventListener('input',emValidate);
 document.getElementById('emCur').onclick=()=>{emCur=CURS[(CURS.indexOf(emCur)+1)%3];document.getElementById('emCur').textContent=emCur;};
-document.getElementById('emCats').addEventListener('click',e=>{const b=e.target.closest('.ecat');if(!b)return;emCat=b.dataset.c;emSubVal='';emBuildCats();});
+document.getElementById('emCats').addEventListener('click',e=>{if(e.target.closest('[data-catadd]')){openCatAddFromSheet('edit');return;}const b=e.target.closest('.ecat');if(!b)return;emCat=b.dataset.c;emSubVal='';emBuildCats();});
 /* v9.72 记住分类开关：只在「可编辑的支出」显示（收入 / 银行商家消费不显示）。 */
 function emBuildRemember(){
   const wrap=document.getElementById('emRemWrap');if(!wrap)return;
@@ -5275,7 +5282,8 @@ const scrim=document.getElementById('scrim'),add=document.getElementById('add');
 /* v11.11 抵扣的收入用【支出分类】—— 你选这笔退款抵扣哪个支出分类，那个分类就跟着减，环形/hero 才对得上。
    普通收入用收入分类 INC；支出和「开了抵扣的收入」都用支出分类 CAT。 */
 function curSet(){return (selType==='income'&&!selOffset)?INC:CAT;}
-function buildCatGrid(){const set=curSet();document.getElementById('catgrid').innerHTML=Object.entries(set).map(([k,c])=>`<button class="catpick" data-c="${k}"><div class="pi" style="background:${soft(c.c)};${k===selCat?'border-color:'+c.c:''}">${c.i}</div><div class="pn">${c.n}</div></button>`).join('');buildSubRow();}
+function buildCatGrid(){const set=curSet();document.getElementById('catgrid').innerHTML=Object.entries(set).map(([k,c])=>`<button class="catpick" data-c="${k}"><div class="pi" style="background:${soft(c.c)};${k===selCat?'border-color:'+c.c:''}">${c.i}</div><div class="pn">${c.n}</div></button>`).join('')+
+  `<button class="catpick catadd" data-catadd><div class="pi">＋</div><div class="pn">+Cat</div></button>`;buildSubRow();}
 /* 子分类 chips：选中的分类有 subs 才出现 */
 function buildSubRow(){
   const row=document.getElementById('subRow');
@@ -5533,7 +5541,7 @@ document.getElementById('ieSeg').addEventListener('click',e=>{
 /* ⚠️ v9.91 修：这里以前写死 %3 —— 加了 CNY 之后手动记账**永远轮不到第四个币**（默默的，不报错）。
    改成 %CURS.length，以后再加币种这行不用再动。 */
 document.getElementById('curBtn').onclick=()=>{selCur=CURS[(CURS.indexOf(selCur)+1)%CURS.length];document.getElementById('curBtn').textContent=selCur;updAmt();};
-document.getElementById('catgrid').addEventListener('click',e=>{const b=e.target.closest('.catpick');if(!b)return;selCat=b.dataset.c;selSub='';buildSubRow();const set=curSet();[...e.currentTarget.children].forEach(x=>{const pi=x.querySelector('.pi');pi.style.borderColor=x===b?set[x.dataset.c].c:'transparent';});[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));});
+document.getElementById('catgrid').addEventListener('click',e=>{if(e.target.closest('[data-catadd]')){openCatAddFromSheet('add');return;}const b=e.target.closest('.catpick');if(!b)return;selCat=b.dataset.c;selSub='';buildSubRow();const set=curSet();[...e.currentTarget.children].forEach(x=>{if(!x.dataset.c)return;const pi=x.querySelector('.pi');pi.style.borderColor=x===b?set[x.dataset.c].c:'transparent';});[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b&&!!x.dataset.c));});
 document.getElementById('subRow').addEventListener('click',e=>{
   if(e.target.closest('[data-subadd]')){addSubAdding=true;buildSubRow();const inp=document.querySelector('#subRow [data-subinput]');if(inp)inp.focus();return;}
   const b=e.target.closest('.subchip');if(!b||b.classList.contains('subaddbox'))return;
@@ -6148,7 +6156,15 @@ document.getElementById('cpAdd').onclick=()=>openCatEdit(null);
 
 /* ---- 分类编辑弹窗 ---- */
 const cmScrim=document.getElementById('cmScrim'),cmod=document.getElementById('cmod');
-let cmKey=null,cmSubsArr=[],cmColor=COLORS[0];
+let cmKey=null,cmSubsArr=[],cmColor=COLORS[0],cmFromSheet=null;
+/* v11.15 从记账/编辑页那颗「＋新增分类」瓷砖进来：设好 cpType（跟当前那排同一套 收入/支出），
+   直接开正规的新增分类弹窗（emoji/名字/颜色/子分类都能设）。存完 cmSave 里会自动选中并刷新那排。 */
+function openCatAddFromSheet(from){
+  cmFromSheet=from;
+  cpType=(from==='edit')?((emType==='income'&&!emOffset)?'income':'expense')
+                        :((selType==='income'&&!selOffset)?'income':'expense');
+  openCatEdit(null);
+}
 function cmRenderSubs(){
   document.getElementById('cmSubs').innerHTML=cmSubsArr.length
     ? cmSubsArr.map((x,i)=>`<span class="subtag">${esc(x)}<button data-i="${i}">✕</button></span>`).join('')
@@ -6177,7 +6193,7 @@ function openCatEdit(k){
   cmRenderColors();cmRenderSubs();
   cmScrim.classList.add('show');cmod.classList.add('show');
 }
-function closeCatEdit(){cmScrim.classList.remove('show');cmod.classList.remove('show');cmKey=null;}
+function closeCatEdit(){cmScrim.classList.remove('show');cmod.classList.remove('show');cmKey=null;cmFromSheet=null;}
 document.getElementById('cmCancel').onclick=closeCatEdit;
 cmScrim.onclick=closeCatEdit;
 document.getElementById('cmColors').addEventListener('click',e=>{const b=e.target.closest('button[data-c]');if(!b)return;cmColor=b.dataset.c;const _set=cpType==='income'?INC:CAT;const _clash=Object.entries(_set).find(([k,c])=>k!==cmKey&&c&&(c.c||'').toLowerCase()===cmColor.toLowerCase());if(_clash)toast('这个颜色「'+(_clash[1].n||_clash[0])+'」已经在用了');cmRenderColors();});
@@ -6200,8 +6216,12 @@ document.getElementById('cmSave').onclick=()=>{
   const key=cmKey||('c'+Date.now().toString(36));
   const before=set[key]?{...set[key]}:null;
   const wasNew=!cmKey;
+  const fromSheet=cmFromSheet;   /* closeCatEdit 会清掉，先抓住 */
   set[key]={i:emoji,n:name,c:cmColor,subs:cmSubsArr.slice()};
   closeCatEdit();cpRender();buildAll();
+  /* v11.15 从记账/编辑页加的新分类：回到那张表，自动选中它并刷新那排（不用自己再找） */
+  if(wasNew&&fromSheet==='add'){selCat=key;selSub='';buildCatGrid();}
+  else if(wasNew&&fromSheet==='edit'){emCat=key;emSubVal='';emBuildCats();}
   toast(wasNew?'分类已新增':'分类已更新');
   saveCats().then(ok=>{
     if(ok)return;
