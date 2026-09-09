@@ -2530,8 +2530,11 @@ async function suiteEdit() {
       const split = await pg.evaluate(() => cpfSplit(6000, '2026-09'));   // 公民 ≤35 → OA23% SA6% MA8%
       (Math.abs(split.oa - 1380) < 0.01 && Math.abs(split.sa - 360) < 0.01 && Math.abs(split.ma - 480) < 0.01) ? ok('CPF 公民≤35 工资 6000 按 23/6/8 拆 = OA1380 / SA360 / MA480') : bad('CPF 自动拆比例错', JSON.stringify(split));
       // PR 第1年（拿 PR 2026-06，供款 2026-09 → 3 个月 → 第1年）总费率 9% → 540
-      const pr1 = await pg.evaluate(() => { CPF.status = 'pr1'; CPF.prStart = '2026-06'; const s = cpfSplit(6000, '2026-09'); CPF.status = 'citizen'; CPF.prStart = ''; return s; });
-      (pr1.rate.prYear === 1 && Math.abs(pr1.total - 540) < 0.02) ? ok('CPF PR 第1年 工资 6000 只算 9% = 540（PR 头两年费率低，问对了 PR 年资）') : bad('CPF PR 年资费率错', JSON.stringify(pr1));
+      const pr1 = await pg.evaluate(() => { CPF.status = 'pr'; CPF.prStart = '2026-06'; const s = cpfSplit(6000, '2026-09'); CPF.status = 'citizen'; CPF.prStart = ''; return s; });
+      (pr1.rate.prYear === 1 && Math.abs(pr1.total - 540) < 0.02) ? ok('CPF PR 第1年（拿证3个月）工资 6000 只算 9% = 540（PR 头两年费率低）') : bad('CPF PR 年资费率错', JSON.stringify(pr1));
+      // 自己升级：同一个拿证日期，明年（2027-09 → 15 个月）自动变第2年 24%
+      const pr2 = await pg.evaluate(() => { CPF.status = 'pr'; CPF.prStart = '2026-06'; const s = cpfSplit(6000, '2027-09'); CPF.status = 'citizen'; CPF.prStart = ''; return s; });
+      (pr2.rate.prYear === 2 && Math.abs(pr2.total - 1440) < 0.02) ? ok('CPF 同一拿证日 → 明年自动升第2年 24% = 1440（不用手动改）') : bad('CPF PR 年资没自动升级', JSON.stringify(pr2));
       const capped = await pg.evaluate(() => cpfSplit(10000, '2026-09'));  // 超上限 8000 → 只算 8000×37%=2960
       (capped.capped && Math.abs(capped.total - 2960) < 0.02) ? ok('CPF 工资超上限只算到 8000（本月共 2960）') : bad('CPF 工资上限没生效', JSON.stringify(capped));
       await pg.evaluate(() => { CPF.entries.push({ id: 't1', month: '2026-09', gross: 6000, oa: 1380, sa: 360, ma: 480, ts: 1 }); });

@@ -1223,22 +1223,22 @@ body.phototheme .report{background:#fff;color:#141414}   /* PDF 报表页仍然�
 .cmod .econfirm{background:var(--brand);color:#fff}
 .cdel{width:100%;margin-top:9px;border:1px solid rgba(200,70,60,.35);background:transparent;color:#C8463C;border-radius:13px;padding:11px;font-weight:700;font-size:13px;font-family:inherit}
 
-/* ===== v11.40 CPF 公积金 ===== */
-.cpfcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 17px;cursor:pointer;transition:transform .12s}
-.cpfcard:active{transform:scale(.99)}
-body.phototheme .cpfcard{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1);backdrop-filter:blur(8px)}
-body.theme-journal .cpfcard{background:#FBF7EF;border-color:#E4DCCF}
-.cpfcard .cc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.cpfcard .cc-cap{font-size:11.5px;color:var(--muted);font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:6px}
-.cpfcard .cc-go{font-size:12px;color:var(--muted);font-weight:600}
-.cpfcard .cc-amt{font-size:27px;font-weight:800;letter-spacing:-.5px;color:var(--ink)}
-.cpfcard .cc-amt .s{font-size:15px;font-weight:700;color:var(--muted);margin-right:3px}
-.cpfcard .cc-sub{margin-top:7px;display:flex;gap:14px;flex-wrap:wrap}
-.cpfcard .cc-seg{font-size:11px;color:var(--muted);font-weight:600}
-.cpfcard .cc-seg b{color:var(--ink);font-weight:800}
-.cpfcard .cc-setup{font-size:12px;color:var(--ink-2,var(--muted));font-weight:600;margin-top:8px;line-height:1.5;
-  border:1px dashed var(--brand);border-radius:12px;padding:9px 12px;background:rgba(11,166,120,.06)}
-.cpfcard .cc-setup b{color:var(--brand);font-weight:800}
+/* ===== v11.42 CPF 公积金 —— 并进 hero 底部一条 ===== */
+.herocpf{margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.14);cursor:pointer}
+body.theme-journal .herocpf{border-top-color:#E4DCCF}
+.herocpf .hc-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.herocpf .hc-l{display:flex;align-items:center;gap:7px;min-width:0}
+.herocpf .hc-ico{font-size:14px}
+.herocpf .hc-cap{font-size:11.5px;color:var(--muted);font-weight:700;letter-spacing:.2px}
+.herocpf .hc-r{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.herocpf .hc-amt{font-size:17px;font-weight:800;letter-spacing:-.3px;color:var(--ink)}
+.herocpf .hc-amt .s{font-size:11px;color:var(--muted);font-weight:700;margin-right:1px}
+.herocpf .hc-go{font-size:14px;color:var(--muted);font-weight:700}
+.herocpf .hc-seg{margin-top:5px;display:flex;gap:12px;flex-wrap:wrap}
+.herocpf .hc-seg span{font-size:10.5px;font-weight:700}
+.herocpf .hc-seg b{font-weight:800}
+.herocpf .hc-setup{font-size:11.5px;color:var(--muted);font-weight:600}
+.herocpf .hc-setup b{color:var(--ink);font-weight:800}
 .cpf-setbtn{width:52px;border:0;background:none;color:var(--muted);font-size:18px;font-family:inherit;cursor:pointer}
 /* 全屏页里 */
 #cpfBody{padding-bottom:40px}
@@ -1259,9 +1259,9 @@ body.theme-journal .cpf-acct{background:#FBF7EF;border-color:#E4DCCF}
 .cpf-acct .abar{height:3px;border-radius:2px;margin-top:8px;background:currentColor;opacity:.9}
 .cpf-sec-h{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 10px}
 .cpf-sec-h .t{font-size:13.5px;font-weight:800;color:var(--ink)}
-/* v11.41 CPF 按钮统一：透明底 + 品牌色边框 + 品牌色字（不要实心绿）；按下淡淡填一点 */
-.cpf-add{border:1.5px solid var(--brand);background:transparent;color:var(--brand);font-family:inherit;font-size:12.5px;font-weight:800;border-radius:100px;padding:7px 15px;cursor:pointer;transition:.12s}
-.cpf-add:active{transform:scale(.96);background:rgba(11,166,120,.12)}
+/* v11.42 CPF 按钮：中性描边（不要青色）——透明底 + 淡墨边 + 墨字，按下淡填一点 */
+.cpf-add{border:1.5px solid var(--muted);border-color:color-mix(in srgb,var(--ink) 38%,transparent);background:transparent;color:var(--ink);font-family:inherit;font-size:12.5px;font-weight:800;border-radius:100px;padding:7px 15px;cursor:pointer;transition:.12s}
+.cpf-add:active{transform:scale(.96);background:rgba(140,140,150,.16)}
 .cpf-mrow{display:flex;align-items:center;gap:10px;padding:12px 13px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:8px}
 body.phototheme .cpf-mrow{background:rgba(12,16,22,.42);border-color:rgba(255,255,255,.08)}
 body.theme-journal .cpf-mrow{background:#FBF7EF;border-color:#E4DCCF}
@@ -1287,16 +1287,16 @@ body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,2
 .cpf-bands{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 6px}
 .cpf-band{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:100px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
 .cpf-band.on{background:var(--brand);border-color:var(--brand);color:#fff}
-.cpf-splitprev{background:rgba(11,166,120,.08);border:1px solid rgba(11,166,120,.25);border-radius:12px;padding:10px 12px;margin:6px 0 2px;font-size:12px;color:var(--ink);font-weight:600;line-height:1.7}
-.cpf-splitprev b{color:#0BA678;font-weight:800}
+.cpf-splitprev{background:rgba(140,140,150,.1);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0 2px;font-size:12px;color:var(--ink);font-weight:600;line-height:1.7}
+.cpf-splitprev b{color:var(--ink);font-weight:800}
 .cpf-cap{color:#E7A33E;font-weight:700}
 .cpf-del-all{width:100%;margin-top:16px;border:1px solid rgba(200,70,60,.3);background:transparent;color:#C8463C;border-radius:13px;padding:11px;font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer}
-/* v11.41 CPF 弹窗的「保存」也改成描边（不要实心绿），跟卡片按钮同一套 */
-#cpfMod .econfirm{background:transparent;border:1.5px solid var(--brand);color:var(--brand)}
-#cpfMod .econfirm:active{background:rgba(11,166,120,.12)}
+/* v11.42 CPF 弹窗「保存」也用中性描边（不要青色），跟卡片按钮同一套 */
+#cpfMod .econfirm{background:transparent;border:1.5px solid var(--muted);border-color:color-mix(in srgb,var(--ink) 38%,transparent);color:var(--ink)}
+#cpfMod .econfirm:active{background:rgba(140,140,150,.16)}
 .cpf-statrow{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 6px}
 .cpf-stat{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:100px;padding:7px 13px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
-.cpf-stat.on{border-color:var(--brand);color:var(--brand);background:rgba(11,166,120,.08)}
+.cpf-stat.on{border-color:color-mix(in srgb,var(--ink) 55%,transparent);color:var(--ink);background:rgba(140,140,150,.16)}
 
 /* ===== v3.0 hero 多币种 ===== */
 /* v9.72 记住分类开关 */
@@ -2040,9 +2040,9 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
         <div class="mini"><div class="k">结余</div><div class="v" id="tBal">—</div></div>
         <div class="mini"><div class="k">笔数</div><div class="v" id="tCount">0</div></div>
       </div>
+      <!-- v11.42 CPF 公积金：并进 hero 底部一条（不再是最后一张卡），点一下进全屏明细页 -->
+      <div class="herocpf" id="cpfCard"></div>
     </div></div>
-    <!-- v11.40 CPF 公积金卡：只显示总额，点一下进全屏页看 OA/SA/MA 明细 + 每月供款 -->
-    <div class="dsec" data-sec="cpf"><div class="cpfcard" id="cpfCard"></div></div>
     <!-- v11.30 日历紧跟 hero（用户要的顺序）；支出趋势排它后面 -->
     <div class="dsec" data-sec="cal">
     <div class="section-h"><span class="h">日历</span><div class="calseg" id="calSeg" data-m="money"><i class="calseg-ind"></i><button data-cm="money">金额</button><button data-cm="todo">事项</button></div></div>
@@ -2911,7 +2911,7 @@ let CAT=clone(CAT_DEF), INC=clone(INC_DEF);
       所以每笔都能【手动微调】，也请对着你的 CPF 月结单核一下。 */
 const CPF_ALLOC=[   // [年龄上限, {oa,sa,ma}]：各账户占工资的%（公民/PR满3年，≤55 全额）
   [35,{oa:23,sa:6,ma:8}],[45,{oa:21,sa:7,ma:9}],[50,{oa:19,sa:8,ma:10}],[55,{oa:15,sa:11.5,ma:10.5}],[999,{oa:12,sa:3.5,ma:10.5}]];
-const CPF_STATUS={citizen:{n:'公民 / PR 满3年',total:37},pr2:{n:'PR 第2年',total:24},pr1:{n:'PR 第1年',total:9}};
+const CPF_STATUS={citizen:{n:'公民 / PR 满3年'},pr:{n:'PR（填拿证年月）'}};   /* PR 的第几年按【拿 PR 年月→供款月】自己算，会自动升级，不用每年来改 */
 function cpfAllocFor(age){const a=(age==null||!isFinite(age))?30:age;for(const[cap,al]of CPF_ALLOC)if(a<=cap)return al;return CPF_ALLOC[CPF_ALLOC.length-1][1];}
 function defaultCpf(){return {on:false,open:{oa:0,sa:0,ma:0},status:'citizen',prStart:'',birthYear:0,ceiling:8000,entries:[]};}
 let CPF=defaultCpf();
@@ -2921,7 +2921,8 @@ function normCpf(c){
   const n=defaultCpf();
   n.on=!!c.on;
   if(c.open)n.open={oa:cpfNum(c.open.oa,0),sa:cpfNum(c.open.sa,0),ma:cpfNum(c.open.ma,0)};
-  if(c.status&&CPF_STATUS[c.status])n.status=c.status;
+  if(c.status==='pr1'||c.status==='pr2')n.status='pr';   /* v11.42 旧的分年状态 → 统一 pr（年资改成按拿证日期自己算） */
+  else if(c.status&&CPF_STATUS[c.status])n.status=c.status;
   if(typeof c.prStart==='string'&&/^\d{4}-\d{2}$/.test(c.prStart))n.prStart=c.prStart;
   n.birthYear=Math.round(cpfNum(c.birthYear,0))||0;
   n.ceiling=cpfNum(c.ceiling,8000)||8000;
@@ -2936,10 +2937,10 @@ function normCpf(c){
 function cpfBal(){const b={oa:CPF.open.oa,sa:CPF.open.sa,ma:CPF.open.ma};CPF.entries.forEach(e=>{b.oa+=e.oa;b.sa+=e.sa;b.ma+=e.ma;});return b;}
 function cpfTotal(){const b=cpfBal();return b.oa+b.sa+b.ma;}
 function cpfActive(){return CPF.on||CPF.entries.length>0||(CPF.open.oa+CPF.open.sa+CPF.open.ma)>0;}
-/* PR 年资：拿 PR 的年月 → 到某供款月是第几年（1/2/3+）。没填当满3年（全额）。 */
+/* PR 年资：拿 PR 的年月 → 到某供款月是第几年（1/2/3+），会随月份自己往上升。
+   公民 / PR 满3年 / 说是 PR 但没填年月 → 一律当满3年（全额）。 */
 function cpfPrYear(monthStr){
-  if(CPF.status==='citizen')return 3;
-  if(!CPF.prStart)return CPF.status==='pr1'?1:CPF.status==='pr2'?2:3;
+  if(CPF.status!=='pr'||!CPF.prStart)return 3;
   const [sy,sm]=CPF.prStart.split('-').map(Number),[my,mm]=(monthStr||'').split('-').map(Number);
   if(!my)return 3;
   const months=(my-sy)*12+(mm-sm);
@@ -2950,8 +2951,8 @@ function cpfRatesFor(monthStr){
   const yr=parseInt((monthStr||'').slice(0,4),10)||new Date().getFullYear();
   const age=CPF.birthYear?(yr-CPF.birthYear):null;
   const al=cpfAllocFor(age),full=al.oa+al.sa+al.ma;
-  const py=cpfPrYear(monthStr);
-  const total=(CPF.status==='citizen'||py>=3)?37:(py===2?24:9);
+  const py=cpfPrYear(monthStr);   // 1/2/3（公民或满3年=3）
+  const total=py>=3?37:(py===2?24:9);   // PR 第1年 9% · 第2年 24% · 满3年/公民 37%
   const k=total/full,rd=x=>Math.round(x*100)/100;
   return {oa:rd(al.oa*k),sa:rd(al.sa*k),ma:rd(al.ma*k),total,prYear:py,age};
 }
@@ -7000,8 +7001,7 @@ document.addEventListener('click',e=>{
    DSEC_DEF 是唯一真相：以后总览加新卡，往这里加一条就会自动出现在排序页。 */
 /* v11.30 默认顺序：hero → 日历 → 支出趋势（用户要日历紧跟大数字卡）。
    用户在「总览排序」里拖过的话，走他存的顺序；没拖过就按这个。 */
-const DSEC_DEF={hero:{i:'💰',n:'本月支出',d:'大字总额 + 收入/结余/笔数'},
-                cpf:{i:'🏦',n:'CPF 公积金',d:'总额卡 · 点进去看 OA/SA/MA 明细 + 每月供款'},
+const DSEC_DEF={hero:{i:'💰',n:'本月支出',d:'大字总额 + 收入/结余/笔数 + CPF'},
                 cal:{i:'📅',n:'日历',d:'花费 + 事项 · 点日期看当天'},
                 spend:{i:'📊',n:'支出趋势',d:'每月支出 + 半年趋势'}};
 let DASH=Object.keys(DSEC_DEF);
@@ -8115,17 +8115,18 @@ const CPF_ACCTS=[['oa','OA','普通账户 · 可买房','#0BA678'],['sa','SA','�
 function buildCpfCard(){
   const el=document.getElementById('cpfCard');if(!el)return;
   if(!cpfActive()){
-    el.innerHTML=`<div class="cc-top"><span class="cc-cap">🏦 CPF 公积金</span><span class="cc-go">开始 ›</span></div>
-      <div class="cc-setup">存钱买房从这开始 —— 点一下，填<b>年龄 / 身份</b>和现在的 <b>CPF 余额</b>，之后每月工资进来记一笔。</div>`;
+    el.innerHTML=`<div class="hc-row"><span class="hc-l"><span class="hc-ico">🏦</span><span class="hc-setup">CPF 公积金 · <b>点一下开始记</b></span></span><span class="hc-go">›</span></div>`;
     return;
   }
   const b=cpfBal();
-  el.innerHTML=`<div class="cc-top"><span class="cc-cap">🏦 CPF 公积金 · 总额</span><span class="cc-go">明细 ›</span></div>
-    <div class="cc-amt"><span class="s">S$</span>${cpfFmt0(b.oa+b.sa+b.ma)}</div>
-    <div class="cc-sub">
-      <span class="cc-seg" style="color:#0BA678">OA <b>${cpfFmt0(b.oa)}</b></span>
-      <span class="cc-seg" style="color:#7C6FF0">SA <b>${cpfFmt0(b.sa)}</b></span>
-      <span class="cc-seg" style="color:#12B5A6">MA <b>${cpfFmt0(b.ma)}</b></span>
+  el.innerHTML=`<div class="hc-row">
+      <span class="hc-l"><span class="hc-ico">🏦</span><span class="hc-cap">CPF 公积金</span></span>
+      <span class="hc-r"><span class="hc-amt"><span class="s">S$</span>${cpfFmt0(b.oa+b.sa+b.ma)}</span><span class="hc-go">›</span></span>
+    </div>
+    <div class="hc-seg">
+      <span style="color:#0BA678">OA <b>${cpfFmt0(b.oa)}</b></span>
+      <span style="color:#7C6FF0">SA <b>${cpfFmt0(b.sa)}</b></span>
+      <span style="color:#12B5A6">MA <b>${cpfFmt0(b.ma)}</b></span>
     </div>`;
 }
 document.getElementById('cpfCard').addEventListener('click',openCpf);
@@ -8175,7 +8176,7 @@ function buildCpfPage(){
     <div class="cpf-tot"><div class="k">CPF 总额</div><div class="v"><span class="s">S$</span>${cpfFmt(tot)}</div>
       <div class="g">今年供款 <b>+S$${cpfFmt(yrIn)}</b> · 期初 S$${cpfFmt(CPF.open.oa+CPF.open.sa+CPF.open.ma)}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
-    <div class="cpf-note" style="text-align:center;margin-top:10px">${idn} · ${ageTxt} · 每 S$100 工资 → OA ${rt.oa} / SA ${rt.sa} / MA ${rt.ma}　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--brand);font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
+    <div class="cpf-note" style="text-align:center;margin-top:10px">${idn} · ${ageTxt} · 每 S$100 工资 → OA ${rt.oa} / SA ${rt.sa} / MA ${rt.ma}　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></div>
     ${entriesHTML}`;
 }
@@ -8237,7 +8238,7 @@ function openCpfMod(mode,id){
       <div class="cpf-inrow"><label>月份</label><input class="cpf-in" type="month" id="cpfMonth" value="${m}"></div>
       <div class="cpf-inrow"><label>工资总额<small>Gross（税前）</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfGross" value="${e&&e.gross?e.gross:''}" placeholder="例：6000"></div>
       <div class="cpf-splitprev" id="cpfPrev">填工资 → 按你的年龄 / 身份自动拆</div>
-      <div class="cpf-note" style="margin-top:8px"><button type="button" id="cpfAdvT" style="border:0;background:none;color:var(--brand);font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;padding:0">手动微调各账户 ▾</button></div>
+      <div class="cpf-note" style="margin-top:8px"><button type="button" id="cpfAdvT" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;padding:0">手动微调各账户 ▾</button></div>
       <div id="cpfAdv" hidden style="margin-top:6px">
         ${CPF_ACCTS.map(([k,n])=>`<div class="cpf-inrow"><label>${n} 进账</label><input class="cpf-in" type="number" inputmode="decimal" id="cpfE_${k}" value="${e?e[k]:''}"></div>`).join('')}
       </div>`;
