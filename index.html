@@ -1223,6 +1223,72 @@ body.phototheme .report{background:#fff;color:#141414}   /* PDF 报表页仍然�
 .cmod .econfirm{background:var(--brand);color:#fff}
 .cdel{width:100%;margin-top:9px;border:1px solid rgba(200,70,60,.35);background:transparent;color:#C8463C;border-radius:13px;padding:11px;font-weight:700;font-size:13px;font-family:inherit}
 
+/* ===== v11.40 CPF 公积金 ===== */
+.cpfcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 17px;cursor:pointer;transition:transform .12s}
+.cpfcard:active{transform:scale(.99)}
+body.phototheme .cpfcard{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1);backdrop-filter:blur(8px)}
+body.theme-journal .cpfcard{background:#FBF7EF;border-color:#E4DCCF}
+.cpfcard .cc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.cpfcard .cc-cap{font-size:11.5px;color:var(--muted);font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:6px}
+.cpfcard .cc-go{font-size:12px;color:var(--muted);font-weight:600}
+.cpfcard .cc-amt{font-size:27px;font-weight:800;letter-spacing:-.5px;color:var(--ink)}
+.cpfcard .cc-amt .s{font-size:15px;font-weight:700;color:var(--muted);margin-right:3px}
+.cpfcard .cc-sub{margin-top:7px;display:flex;gap:14px;flex-wrap:wrap}
+.cpfcard .cc-seg{font-size:11px;color:var(--muted);font-weight:600}
+.cpfcard .cc-seg b{color:var(--ink);font-weight:800}
+.cpfcard .cc-setup{font-size:12.5px;color:var(--brand);font-weight:700;margin-top:2px}
+.cpf-setbtn{width:52px;border:0;background:none;color:var(--muted);font-size:18px;font-family:inherit;cursor:pointer}
+/* 全屏页里 */
+#cpfBody{padding-bottom:40px}
+.cpf-tot{text-align:center;padding:14px 0 6px}
+.cpf-tot .k{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.4px}
+.cpf-tot .v{font-size:38px;font-weight:800;letter-spacing:-1px;color:var(--ink);margin-top:2px}
+.cpf-tot .v .s{font-size:19px;font-weight:700;color:var(--muted);margin-right:4px}
+.cpf-tot .g{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:4px}
+.cpf-tot .g b{color:#0BA678}
+.cpf-accts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin:14px 0 4px}
+.cpf-acct{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px 11px;position:relative;overflow:hidden}
+body.phototheme .cpf-acct{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1)}
+body.theme-journal .cpf-acct{background:#FBF7EF;border-color:#E4DCCF}
+.cpf-acct .an{font-size:11px;font-weight:800;letter-spacing:.3px}
+.cpf-acct .ad{font-size:9.5px;color:var(--muted);font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cpf-acct .av{font-size:16px;font-weight:800;color:var(--ink);margin-top:8px;letter-spacing:-.4px;white-space:nowrap}
+.cpf-acct .av .s{font-size:10.5px;color:var(--muted);font-weight:700;margin-right:1px}
+.cpf-acct .abar{height:3px;border-radius:2px;margin-top:8px;background:currentColor;opacity:.9}
+.cpf-sec-h{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 10px}
+.cpf-sec-h .t{font-size:13.5px;font-weight:800;color:var(--ink)}
+.cpf-add{border:0;background:var(--brand);color:#fff;font-family:inherit;font-size:12.5px;font-weight:800;border-radius:100px;padding:7px 14px;cursor:pointer}
+.cpf-add:active{transform:scale(.96)}
+.cpf-mrow{display:flex;align-items:center;gap:10px;padding:12px 13px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:8px}
+body.phototheme .cpf-mrow{background:rgba(12,16,22,.42);border-color:rgba(255,255,255,.08)}
+body.theme-journal .cpf-mrow{background:#FBF7EF;border-color:#E4DCCF}
+.cpf-mrow .mm{font-size:13px;font-weight:800;color:var(--ink);min-width:66px}
+.cpf-mrow .mg{font-size:10.5px;color:var(--muted);font-weight:600;margin-top:2px}
+.cpf-mrow .msplit{flex:1;display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.cpf-mrow .mseg{font-size:10.5px;color:var(--muted);font-weight:600}
+.cpf-mrow .mseg b{color:var(--ink);font-weight:800}
+.cpf-mrow .mtot{font-size:14px;font-weight:800;color:#0BA678;min-width:64px;text-align:right}
+.cpf-mrow .mdel{border:0;background:none;color:var(--muted);font-size:15px;font-family:inherit;padding:2px 4px;cursor:pointer}
+.cpf-empty{text-align:center;color:var(--muted);font-size:12.5px;padding:22px 10px;line-height:1.7}
+.cpf-setup{background:var(--card);border:1px dashed var(--line);border-radius:16px;padding:16px}
+body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,255,255,.18)}
+.cpf-setup .st{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:3px}
+.cpf-setup .sd{font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:12px}
+.cpf-inrow{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.cpf-inrow label{font-size:12px;font-weight:800;width:104px;color:var(--ink)}
+.cpf-inrow label small{display:block;font-size:9.5px;color:var(--muted);font-weight:600}
+.cpf-in{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:11px;padding:10px 12px;font-size:15px;font-family:inherit;font-weight:700;width:100%;box-sizing:border-box;-moz-appearance:textfield}
+.cpf-in::-webkit-outer-spin-button,.cpf-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.cpf-in:focus{outline:none;border-color:var(--brand)}
+.cpf-note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:2px}
+.cpf-bands{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 6px}
+.cpf-band{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:100px;padding:6px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
+.cpf-band.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.cpf-splitprev{background:rgba(11,166,120,.08);border:1px solid rgba(11,166,120,.25);border-radius:12px;padding:10px 12px;margin:6px 0 2px;font-size:12px;color:var(--ink);font-weight:600;line-height:1.7}
+.cpf-splitprev b{color:#0BA678;font-weight:800}
+.cpf-cap{color:#E7A33E;font-weight:700}
+.cpf-del-all{width:100%;margin-top:16px;border:1px solid rgba(200,70,60,.3);background:transparent;color:#C8463C;border-radius:13px;padding:11px;font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer}
+
 /* ===== v3.0 hero 多币种 ===== */
 /* v9.72 记住分类开关 */
 .emremember{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:12px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:13px}
@@ -1966,6 +2032,8 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
         <div class="mini"><div class="k">笔数</div><div class="v" id="tCount">0</div></div>
       </div>
     </div></div>
+    <!-- v11.40 CPF 公积金卡：只显示总额，点一下进全屏页看 OA/SA/MA 明细 + 每月供款 -->
+    <div class="dsec" data-sec="cpf"><div class="cpfcard" id="cpfCard"></div></div>
     <!-- v11.30 日历紧跟 hero（用户要的顺序）；支出趋势排它后面 -->
     <div class="dsec" data-sec="cal">
     <div class="section-h"><span class="h">日历</span><div class="calseg" id="calSeg" data-m="money"><i class="calseg-ind"></i><button data-cm="money">金额</button><button data-cm="todo">事项</button></div></div>
@@ -2294,6 +2362,20 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
     </div>
     <div id="dashList"></div>
   </div>
+</div>
+
+<!-- v11.40 CPF 公积金全屏页：余额（OA/SA/MA + 总额）· 每月供款 · 设置 -->
+<div class="cpage" id="cpfPage">
+  <div class="cp-top"><button class="dp-back" id="cpfBack">‹ 返回</button><span class="cp-title">CPF 公积金</span><button class="cpf-setbtn" id="cpfSetBtn" aria-label="设置">⚙︎</button></div>
+  <div class="cp-body" id="cpfBody"></div>
+</div>
+
+<!-- v11.40 CPF 输入弹窗：既用于「第一次填现有余额」，也用于「记这个月供款」 -->
+<div class="cmScrim" id="cpfScrim"></div>
+<div class="cmod" id="cpfMod">
+  <div class="eh" id="cpfModTitle">记这个月 CPF</div>
+  <div id="cpfModBody"></div>
+  <div class="ebtns"><button class="ecancel" id="cpfModCancel">取消</button><button class="econfirm" id="cpfModSave">保存</button></div>
 </div>
 
 <div class="cpage" id="pushPage">
@@ -2813,6 +2895,41 @@ const INC_DEF={ salary:{i:'💰',n:'工资',c:'#0BA678',subs:[]}, bonus:{i:'🧧
   invest:{i:'📈',n:'理财',c:'#12B5A6',subs:[]}, incother:{i:'➕',n:'其他',c:'#6EA88A',subs:[]} };
 const FALLBACK={i:'✦',n:'其他',c:'#94A0AE',subs:[]};
 let CAT=clone(CAT_DEF), INC=clone(INC_DEF);
+/* ===== v11.40 CPF 公积金：全部存在 prefs.cpf（跟主题/预算同一条 /api/settings，换手机也跟着走）。
+   余额 = 期初(open) + 所有月供(entries) 之和 —— 单一真相，随时可改可删。
+   每月供款：填工资总额 → 按【年龄段比例】自动拆进 OA/SA/MA，工资超过上限只算到上限。 */
+const CPF_BANDS={   // 各账户占「当月计入 CPF 的工资」的百分比（雇员+雇主合计，≤55 的官方分配比例）
+  '35及以下':{oa:23,sa:6,ma:8},   '35–45':{oa:21,sa:7,ma:9},
+  '45–50':{oa:19,sa:8,ma:10},     '50–55':{oa:15,sa:11.5,ma:10.5}};
+function defaultCpf(){return {on:false,open:{oa:0,sa:0,ma:0},band:'35及以下',rate:{oa:23,sa:6,ma:8},ceiling:8000,entries:[]};}
+let CPF=defaultCpf();
+function cpfNum(v,d){const x=parseFloat(v);return isFinite(x)&&x>=0?x:d;}
+function normCpf(c){
+  if(!c||typeof c!=='object')return defaultCpf();
+  const n=defaultCpf();
+  n.on=!!c.on;
+  if(c.open)n.open={oa:cpfNum(c.open.oa,0),sa:cpfNum(c.open.sa,0),ma:cpfNum(c.open.ma,0)};
+  if(c.band&&CPF_BANDS[c.band])n.band=c.band;
+  if(c.rate)n.rate={oa:cpfNum(c.rate.oa,23),sa:cpfNum(c.rate.sa,6),ma:cpfNum(c.rate.ma,8)};
+  else if(CPF_BANDS[n.band])n.rate={...CPF_BANDS[n.band]};
+  n.ceiling=cpfNum(c.ceiling,8000)||8000;
+  if(Array.isArray(c.entries))n.entries=c.entries.filter(e=>e&&e.month).map(e=>({
+    id:e.id||('cpf'+Math.random().toString(36).slice(2,9)),
+    month:String(e.month).slice(0,7),
+    gross:cpfNum(e.gross,0),oa:cpfNum(e.oa,0),sa:cpfNum(e.sa,0),ma:cpfNum(e.ma,0),
+    ts:e.ts||Date.now()}))
+    .sort((a,b)=>a.month<b.month?1:a.month>b.month?-1:0);   // 新月在前
+  return n;
+}
+function cpfBal(){const b={oa:CPF.open.oa,sa:CPF.open.sa,ma:CPF.open.ma};CPF.entries.forEach(e=>{b.oa+=e.oa;b.sa+=e.sa;b.ma+=e.ma;});return b;}
+function cpfTotal(){const b=cpfBal();return b.oa+b.sa+b.ma;}
+function cpfActive(){return CPF.on||CPF.entries.length>0||(CPF.open.oa+CPF.open.sa+CPF.open.ma)>0;}
+function cpfSplit(gross){   // 工资总额 → 各账户当月供款（工资超过上限只算到上限）
+  const g=Math.max(cpfNum(gross,0),0),w=Math.min(g,CPF.ceiling),r=CPF.rate;
+  const rd=x=>Math.round(x*100)/100;
+  const oa=rd(w*r.oa/100),sa=rd(w*r.sa/100),ma=rd(w*r.ma/100);
+  return {oa,sa,ma,total:rd(oa+sa+ma),capped:g>CPF.ceiling};
+}
 function clone(o){return JSON.parse(JSON.stringify(o));}
 /* 拿某个 key 的分类定义；分类被删掉了也不会炸，回退到「其他」 */
 function catDef(k,type){const set=(type==='income'?INC:CAT);return set[k]||FALLBACK;}
@@ -3017,6 +3134,7 @@ async function snapPaint(){
     if(s.fold)FOLD={...s.fold};
     if(s.calmode==='money'||s.calmode==='todo')CALMODE=s.calmode;
     if(s.dview&&DV_TITLE[s.dview])DVIEW=s.dview;
+    if(s.cpf)CPF=normCpf(s.cpf);   /* v11.40 CPF 从快照来，不闪 */
     DATA=s.rows;RULES=s.rules||{};SNAP_ON=true;
     document.body.classList.add('booting');      /* 顶部一条细进度线，见 CSS */
     buildAll();
@@ -3434,7 +3552,7 @@ function buildByCard(){
   el.innerHTML=h+'</div>';
 }
 
-function buildAll(){updateHeader();buildTodo();buildSetChips();buildMonthBars();buildTrend();buildCalendar();buildDonut();buildCats();buildInsights();buildByCard();applyDView();buildFeed();applyFold();if(peekKey)buildDayPeek(peekKey,true);/* v9.87 当天速览跟着刷新（skipCal 防死循环）*/}
+function buildAll(){updateHeader();buildTodo();buildSetChips();buildMonthBars();buildTrend();buildCalendar();buildDonut();buildCats();buildInsights();buildByCard();applyDView();buildFeed();applyFold();buildCpfCard();if(peekKey)buildDayPeek(peekKey,true);/* v9.87 当天速览跟着刷新（skipCal 防死循环）*/}
 
 /* v11.33 换算 chip 用：货币 → 国旗（查不到就退回货币代号，语义不丢）＋ 整数千分位。 */
 const FLAG={SGD:'🇸🇬',MYR:'🇲🇾',CNY:'🇨🇳',USD:'🇺🇸',EUR:'🇪🇺',GBP:'🇬🇧',JPY:'🇯🇵',HKD:'🇭🇰',AUD:'🇦🇺',THB:'🇹🇭',VND:'🇻🇳',IDR:'🇮🇩',TWD:'🇹🇼',KRW:'🇰🇷',INR:'🇮🇳',PHP:'🇵🇭'};
@@ -5794,6 +5912,9 @@ async function apiGetSettings(){
   try{const r=await fetch(`${CONFIG.WORKER_URL}/api/settings?token=${encodeURIComponent(CONFIG.TOKEN)}`);
     if(!r.ok)throw 0;return await r.json();}catch(e){return null;}
 }
+/* v11.40 一处生成完整 prefs（含 cpf）。⚠️ worker 存 prefs 是【整块替换】，
+   所以每条存 prefs 的路径都必须带上全部 key，否则会把别的（例如 cpf）冲掉。 */
+function curPrefs(){return {theme:THEME,tp:TP,fold:FOLD,dash:DASH,calmode:CALMODE,dview:DVIEW,cpf:CPF};}
 async function apiSaveSettings(prefs){
   if(!LIVE)return false;
   try{const r=await fetch(`${CONFIG.WORKER_URL}/api/settings`,{method:'POST',headers:{'Content-Type':'application/json'},
@@ -5873,8 +5994,8 @@ function applyTheme(){
 }
 /* 存：D1 是真身，IndexedDB 只是快照 */
 async function saveTheme(){
-  idbSet('prefs',{theme:THEME,tp:TP,bgver:BGVER,fold:FOLD,dash:DASH,calmode:CALMODE,dview:DVIEW});
-  const ok=await apiSaveSettings({theme:THEME,tp:TP,fold:FOLD,dash:DASH,calmode:CALMODE,dview:DVIEW});   /* v3.0：折叠状态也存 D1 · v6.9：总览顺序 */
+  idbSet('prefs',{...curPrefs(),bgver:BGVER});
+  const ok=await apiSaveSettings(curPrefs());   /* v3.0：折叠状态也存 D1 · v6.9：总览顺序 · v11.40：cpf */
   if(!ok&&LIVE)toast('主题没同步上去（连不上 Worker）','err');
 }
 async function loadTheme(){
@@ -5886,6 +6007,7 @@ async function loadTheme(){
   if(p&&Array.isArray(p.dash))DASH=p.dash;                     /* v6.9 总览顺序（本地快照，不闪） */
   if(p&&(p.calmode==='money'||p.calmode==='todo'))CALMODE=p.calmode;
   if(p&&DV_TITLE[p.dview])DVIEW=p.dview;   /* v9.14 三视图卡 */
+  if(p&&p.cpf)CPF=normCpf(p.cpf);          /* v11.40 CPF 本地快照 */
   sanitizeTP();
   applyTheme();renderThemeUI();applyDash();
   /* ② 再拿 D1 的真身覆盖（换了手机就靠这一步） */
@@ -5896,6 +6018,7 @@ async function loadTheme(){
     if(s.prefs&&Array.isArray(s.prefs.dash)){DASH=s.prefs.dash;applyDash();}   /* v6.9 换手机也跟着走 */
     if(s.prefs&&(s.prefs.calmode==='money'||s.prefs.calmode==='todo'))CALMODE=s.prefs.calmode;
     if(s.prefs&&DV_TITLE[s.prefs.dview])DVIEW=s.prefs.dview;   /* v9.14 三视图卡 */
+    if(s.prefs&&s.prefs.cpf)CPF=normCpf(s.prefs.cpf);          /* v11.40 CPF 从 D1 真身来（换手机也跟着走） */
 
     if(s.cats)applyCats(s.cats);          /* v2.0：分类也从 D1 来 */
     if(Array.isArray(s.rec))REC=s.rec;    /* v3.0：定期账单 */
@@ -6846,6 +6969,7 @@ document.addEventListener('click',e=>{
 /* v11.30 默认顺序：hero → 日历 → 支出趋势（用户要日历紧跟大数字卡）。
    用户在「总览排序」里拖过的话，走他存的顺序；没拖过就按这个。 */
 const DSEC_DEF={hero:{i:'💰',n:'本月支出',d:'大字总额 + 收入/结余/笔数'},
+                cpf:{i:'🏦',n:'CPF 公积金',d:'总额卡 · 点进去看 OA/SA/MA 明细 + 每月供款'},
                 cal:{i:'📅',n:'日历',d:'花费 + 事项 · 点日期看当天'},
                 spend:{i:'📊',n:'支出趋势',d:'每月支出 + 半年趋势'}};
 let DASH=Object.keys(DSEC_DEF);
@@ -7229,9 +7353,9 @@ function dsEnd(){
   saveDash().then(ok=>{if(!ok){DASH=before;dashRender();applyDash();toast('顺序没存上，已还原','err');}});
 }
 async function saveDash(){
-  idbSet('prefs',{theme:THEME,tp:TP,bgver:BGVER,fold:FOLD,dash:DASH,calmode:CALMODE,dview:DVIEW});
+  idbSet('prefs',{...curPrefs(),bgver:BGVER});
   if(!LIVE)return true;
-  return await apiSaveSettings({theme:THEME,tp:TP,fold:FOLD,dash:DASH,calmode:CALMODE,dview:DVIEW});
+  return await apiSaveSettings(curPrefs());
 }
 const dashList=document.getElementById('dashList');
 dashList.addEventListener('touchstart',dsStart,{passive:false});
@@ -7951,6 +8075,154 @@ async function evAskDelete(id,dayKey,rowEl){
 
 /* ============ v6.3 预算上限 ============ */
 const budPage=document.getElementById('budPage');
+/* ================= v11.40 CPF 公积金 ================= */
+function cpfFmt(n){return (Math.round((+n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function cpfFmt0(n){return Math.round(+n||0).toLocaleString('en-US');}   /* 账户卡用整数，省位、6 位数也塞得下 */
+const CPF_ACCTS=[['oa','OA','普通账户 · 可买房','#0BA678'],['sa','SA','特别账户 · 退休','#7C6FF0'],['ma','MA','MediSave · 医疗','#12B5A6']];
+/* 总览那张卡：只显示总额（没设过 → 引导第一次填），点一下进全屏页 */
+function buildCpfCard(){
+  const el=document.getElementById('cpfCard');if(!el)return;
+  if(!cpfActive()){
+    el.innerHTML=`<div class="cc-top"><span class="cc-cap">🏦 CPF 公积金</span><span class="cc-go">设置 ›</span></div>
+      <div class="cc-setup">点一下，填现在的 CPF 余额 → 之后每月工资进来记一笔</div>`;
+    return;
+  }
+  const b=cpfBal();
+  el.innerHTML=`<div class="cc-top"><span class="cc-cap">🏦 CPF 公积金 · 总额</span><span class="cc-go">明细 ›</span></div>
+    <div class="cc-amt"><span class="s">S$</span>${cpfFmt(b.oa+b.sa+b.ma)}</div>
+    <div class="cc-sub">
+      <span class="cc-seg">OA <b>${cpfFmt(b.oa)}</b></span>
+      <span class="cc-seg">SA <b>${cpfFmt(b.sa)}</b></span>
+      <span class="cc-seg">MA <b>${cpfFmt(b.ma)}</b></span>
+    </div>`;
+}
+document.getElementById('cpfCard').addEventListener('click',openCpf);
+function openCpf(){buildCpfPage();document.getElementById('cpfPage').classList.add('show');document.getElementById('cpfPage').scrollTop=0;syncPageOpen();}
+document.getElementById('cpfBack').onclick=()=>{document.getElementById('cpfPage').classList.remove('show');syncPageOpen();};
+document.getElementById('cpfSetBtn').onclick=()=>openCpfMod('settings');
+async function saveCpf(){CPF.on=true;idbSet('prefs',{...curPrefs(),bgver:BGVER});buildCpfCard();return LIVE?await apiSaveSettings(curPrefs()):true;}
+
+function buildCpfPage(){
+  const body=document.getElementById('cpfBody');
+  if(!cpfActive()){   // 第一次：引导填现有余额
+    body.innerHTML=`<div class="cpf-setup">
+        <div class="st">先填现在的 CPF 余额</div>
+        <div class="sd">打开你的 CPF app / 月结单，把三个账户现在的余额填进来当起点。之后每个月工资进来，记一笔就会自动往上加。</div>
+        ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n}<small>${d}</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfOpen_${k}" placeholder="0.00"></div>`).join('')}
+        <button class="cpf-add" style="width:100%;padding:12px;margin-top:6px" id="cpfSetupSave">保存，开始追踪</button>
+        <div class="cpf-note" style="margin-top:10px">不想现在填？可以全部留空直接保存，之后每月记的都会累计。</div>
+      </div>`;
+    return;
+  }
+  const b=cpfBal(),tot=b.oa+b.sa+b.ma;
+  const yr=(todayKey()||'').slice(0,4);
+  const yrIn=CPF.entries.filter(e=>e.month.slice(0,4)===yr).reduce((s,e)=>s+e.oa+e.sa+e.ma,0);
+  const acctsHTML=CPF_ACCTS.map(([k,n,d,c])=>{
+    const v=b[k],pct=tot>0?Math.round(v/tot*100):0;
+    return `<div class="cpf-acct" style="color:${c}"><div class="an">${n}</div><div class="ad">${d.split(' · ')[0]}</div>
+      <div class="av"><span class="s">S$</span>${cpfFmt0(v)}</div><div class="abar" style="width:${Math.max(pct,4)}%"></div></div>`;
+  }).join('');
+  const entriesHTML=CPF.entries.length?CPF.entries.map(e=>`
+    <div class="cpf-mrow" data-eid="${e.id}">
+      <div><div class="mm">${e.month}</div>${e.gross?`<div class="mg">工资 S$${cpfFmt(e.gross)}${e.gross>CPF.ceiling?' <span class="cpf-cap">(顶)</span>':''}</div>`:''}</div>
+      <div class="msplit"><span class="mseg">OA <b>${cpfFmt(e.oa)}</b></span><span class="mseg">SA <b>${cpfFmt(e.sa)}</b></span><span class="mseg">MA <b>${cpfFmt(e.ma)}</b></span></div>
+      <div class="mtot">+${cpfFmt(e.oa+e.sa+e.ma)}</div>
+      <button class="mdel" data-cpfdel="${e.id}" aria-label="删除">✕</button>
+    </div>`).join(''):`<div class="cpf-empty">还没记过月供款。<br>每月工资进来，点右上「＋ 记这个月」，填工资总额就自动拆进三个账户。</div>`;
+  body.innerHTML=`
+    <div class="cpf-tot"><div class="k">CPF 总额</div><div class="v"><span class="s">S$</span>${cpfFmt(tot)}</div>
+      <div class="g">今年供款 <b>+S$${cpfFmt(yrIn)}</b> · 期初 S$${cpfFmt(CPF.open.oa+CPF.open.sa+CPF.open.ma)}</div></div>
+    <div class="cpf-accts">${acctsHTML}</div>
+    <div class="cpf-sec-h"><span class="t">每月供款</span><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></div>
+    ${entriesHTML}`;
+}
+document.getElementById('cpfBody').addEventListener('click',e=>{
+  if(e.target.closest('#cpfSetupSave')){
+    CPF_ACCTS.forEach(([k])=>{const el=document.getElementById('cpfOpen_'+k);if(el)CPF.open[k]=cpfNum(el.value,0);});
+    CPF.on=true;saveCpf();buildCpfPage();toast('好了，开始追踪 CPF');return;
+  }
+  if(e.target.closest('#cpfAddBtn')){openCpfMod('month');return;}
+  const del=e.target.closest('[data-cpfdel]');
+  if(del){cpfDelEntry(del.dataset.cpfdel);return;}
+  const row=e.target.closest('.cpf-mrow');
+  if(row&&row.dataset.eid){openCpfMod('edit',row.dataset.eid);}
+});
+async function cpfDelEntry(id){
+  const e=CPF.entries.find(x=>x.id===id);if(!e)return;
+  const yes=await askConfirm(`删掉 ${e.month} 这笔供款？\nOA+SA+MA 共 S$${cpfFmt(e.oa+e.sa+e.ma)} 会从余额里扣回。`,'删除');
+  if(!yes)return;
+  const before=CPF.entries.slice();
+  CPF.entries=CPF.entries.filter(x=>x.id!==id);
+  buildCpfPage();saveCpf().then(ok=>{if(!ok){CPF.entries=before;buildCpfPage();toast('没同步上去，已还原','err');}});
+}
+
+/* ---- CPF 输入弹窗：month(记月供) / edit(改月供) / settings(年龄段·上限·期初) ---- */
+let cpfModMode='month',cpfEditId=null;
+const cpfScrim=document.getElementById('cpfScrim'),cpfMod=document.getElementById('cpfMod');
+function openCpfMod(mode,id){
+  cpfModMode=mode;cpfEditId=id||null;
+  const title=document.getElementById('cpfModTitle'),body=document.getElementById('cpfModBody');
+  if(mode==='settings'){
+    title.textContent='CPF 设置';
+    body.innerHTML=`
+      <div class="cpf-note" style="margin-bottom:6px">年龄段（决定工资怎么拆进三个账户）</div>
+      <div class="cpf-bands" id="cpfBands">${Object.keys(CPF_BANDS).map(bn=>`<button class="cpf-band${bn===CPF.band?' on':''}" data-band="${esc(bn)}">${esc(bn)}</button>`).join('')}</div>
+      <div class="cpf-splitprev" id="cpfRatePrev"></div>
+      <div class="cpf-inrow" style="margin-top:12px"><label>工资上限<small>超过只算到这</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfCeil" value="${CPF.ceiling}"></div>
+      <div class="cpf-note" style="margin:10px 0 6px;font-weight:700;color:var(--ink)">期初余额（第一次填的起点，可改）</div>
+      ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n}<small>${d.split(' · ')[0]}</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfOpenS_${k}" value="${CPF.open[k]||''}" placeholder="0.00"></div>`).join('')}
+      <button class="cpf-del-all" id="cpfResetBtn">清空所有 CPF 记录</button>`;
+    cpfRenderRatePrev();
+    document.getElementById('cpfBands').addEventListener('click',ev=>{const bn=ev.target.closest('[data-band]');if(!bn)return;CPF.band=bn.dataset.band;CPF.rate={...CPF_BANDS[CPF.band]};[...ev.currentTarget.children].forEach(x=>x.classList.toggle('on',x.dataset.band===CPF.band));cpfRenderRatePrev();});
+    document.getElementById('cpfResetBtn').onclick=async()=>{const yes=await askConfirm('清空所有 CPF 记录？\n期初余额 + 每月供款全部删掉，回到没设置的状态。','清空');if(!yes)return;CPF=defaultCpf();saveCpf();closeCpfMod();buildCpfPage();buildCpfCard();toast('CPF 记录已清空');};
+  } else {
+    const isEdit=mode==='edit';
+    const e=isEdit?CPF.entries.find(x=>x.id===id):null;
+    const m=e?e.month:(todayKey()||'2026-01').slice(0,7);
+    title.textContent=isEdit?'改这笔 CPF':'记这个月 CPF';
+    body.innerHTML=`
+      <div class="cpf-inrow"><label>月份</label><input class="cpf-in" type="month" id="cpfMonth" value="${m}"></div>
+      <div class="cpf-inrow"><label>工资总额<small>Gross（税前）</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfGross" value="${e&&e.gross?e.gross:''}" placeholder="例：6000"></div>
+      <div class="cpf-splitprev" id="cpfPrev">填工资 → 按你的年龄段自动拆</div>
+      <div class="cpf-note" style="margin-top:8px"><button type="button" id="cpfAdvT" style="border:0;background:none;color:var(--brand);font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;padding:0">手动微调各账户 ▾</button></div>
+      <div id="cpfAdv" hidden style="margin-top:6px">
+        ${CPF_ACCTS.map(([k,n])=>`<div class="cpf-inrow"><label>${n} 进账</label><input class="cpf-in" type="number" inputmode="decimal" id="cpfE_${k}" value="${e?e[k]:''}"></div>`).join('')}
+      </div>`;
+    const gross=document.getElementById('cpfGross');
+    const recalc=()=>{const sp=cpfSplit(gross.value);CPF_ACCTS.forEach(([k])=>{const f=document.getElementById('cpfE_'+k);if(f)f.value=sp[k]?sp[k]:'';});
+      document.getElementById('cpfPrev').innerHTML=(+gross.value>0)?`OA <b>+${cpfFmt(sp.oa)}</b> · SA <b>+${cpfFmt(sp.sa)}</b> · MA <b>+${cpfFmt(sp.ma)}</b><br>本月共进 <b>+S$${cpfFmt(sp.total)}</b>${sp.capped?` <span class="cpf-cap">· 工资超上限，只算到 S$${cpfFmt(CPF.ceiling)}</span>`:''}`:'填工资 → 按你的年龄段自动拆';};
+    gross.addEventListener('input',recalc);
+    if(!isEdit&&gross.value)recalc();
+    if(isEdit&&e){const sp=cpfSplit(e.gross);document.getElementById('cpfPrev').innerHTML=`OA <b>+${cpfFmt(e.oa)}</b> · SA <b>+${cpfFmt(e.sa)}</b> · MA <b>+${cpfFmt(e.ma)}</b>`;}
+    document.getElementById('cpfAdvT').onclick=()=>{const a=document.getElementById('cpfAdv');a.hidden=!a.hidden;};
+  }
+  cpfScrim.classList.add('show');cpfMod.classList.add('show');
+}
+function cpfRenderRatePrev(){const el=document.getElementById('cpfRatePrev');if(el)el.innerHTML=`每 S$100 工资 → OA <b>${CPF.rate.oa}</b> · SA <b>${CPF.rate.sa}</b> · MA <b>${CPF.rate.ma}</b>（合计 ${CPF.rate.oa+CPF.rate.sa+CPF.rate.ma}%）`;}
+function closeCpfMod(){cpfScrim.classList.remove('show');cpfMod.classList.remove('show');}
+document.getElementById('cpfModCancel').onclick=closeCpfMod;
+cpfScrim.onclick=closeCpfMod;
+document.getElementById('cpfModSave').onclick=()=>{
+  const gv=id=>{const el=document.getElementById(id);return el?el.value:'';};   /* 判空取值：弹窗按模式渲染，字段不一定都在 */
+  if(cpfModMode==='settings'){
+    CPF.ceiling=cpfNum(gv('cpfCeil'),8000)||8000;
+    CPF_ACCTS.forEach(([k])=>{const el=document.getElementById('cpfOpenS_'+k);if(el)CPF.open[k]=cpfNum(el.value,0);});
+    closeCpfMod();saveCpf();buildCpfPage();toast('CPF 设置已存');return;
+  }
+  const month=(gv('cpfMonth')||'').slice(0,7);
+  if(!/^\d{4}-\d{2}$/.test(month)){toast('先选月份','err');return;}
+  const gross=cpfNum(gv('cpfGross'),0);
+  const oa=cpfNum(gv('cpfE_oa'),0),sa=cpfNum(gv('cpfE_sa'),0),ma=cpfNum(gv('cpfE_ma'),0);
+  if(oa+sa+ma<=0){toast('填工资总额，或手动填各账户','err');return;}
+  const before=CPF.entries.slice();
+  if(cpfModMode==='edit'&&cpfEditId){const e=CPF.entries.find(x=>x.id===cpfEditId);if(e){e.month=month;e.gross=gross;e.oa=oa;e.sa=sa;e.ma=ma;}}
+  else{CPF.entries.push({id:'cpf'+Math.random().toString(36).slice(2,9),month,gross,oa,sa,ma,ts:Date.now()});}
+  CPF.entries.sort((a,b)=>a.month<b.month?1:a.month>b.month?-1:0);
+  CPF.on=true;closeCpfMod();buildCpfPage();
+  saveCpf().then(ok=>{if(!ok){CPF.entries=before;buildCpfPage();toast('没同步上去，已还原','err');}});
+  toast(cpfModMode==='edit'?'改好了':'记好了 · CPF 往上加了');
+};
+
 document.getElementById('openBud').onclick=()=>{budRender();budPage.classList.add('show');budPage.scrollTop=0;syncPageOpen();};
 document.getElementById('budBack').onclick=()=>{budPage.classList.remove('show');syncPageOpen();};
 /* v11.36 预算仪表盘：设了上限的分类，一眼看完本月花到哪、谁快爆。只在打开预算页时算，O(当月)，不上热路径 */

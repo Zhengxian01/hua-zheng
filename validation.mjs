@@ -2523,6 +2523,25 @@ async function suiteEdit() {
       await pg.evaluate(() => { try { closeEdit(); } catch (e) {} }); await dismiss();
     } catch (e) { bad('内联加分类 抛错', String(e.message).slice(0, 80)); }
 
+    // 2e) v11.40 CPF 公积金：期初余额 + 每月供款（工资总额→按比例自动拆）→ 余额/上限对，存进 /api/settings 的 prefs.cpf
+    try {
+      settings.length = 0;
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 50000, sa: 20000, ma: 15000 }, band: '35及以下', ceiling: 8000 }); CPF.on = true; });
+      const split = await pg.evaluate(() => cpfSplit(6000));   // ≤35 → OA23% SA6% MA8%
+      (Math.abs(split.oa - 1380) < 0.01 && Math.abs(split.sa - 360) < 0.01 && Math.abs(split.ma - 480) < 0.01) ? ok('CPF 工资 6000 按 23/6/8 自动拆 = OA1380 / SA360 / MA480') : bad('CPF 自动拆比例错', JSON.stringify(split));
+      const capped = await pg.evaluate(() => cpfSplit(10000));  // 超上限 8000 → 只算 8000×37%=2960
+      (capped.capped && Math.abs(capped.total - 2960) < 0.02) ? ok('CPF 工资超上限只算到 8000（本月共 2960）') : bad('CPF 工资上限没生效', JSON.stringify(capped));
+      await pg.evaluate(() => { CPF.entries.push({ id: 't1', month: '2026-09', gross: 6000, oa: 1380, sa: 360, ma: 480, ts: 1 }); });
+      const tot = await pg.evaluate(() => cpfTotal());
+      (Math.abs(tot - 87220) < 0.01) ? ok('CPF 总额 = 期初 85000 + 供款 2220 = 87220（余额=期初+每月供款）') : bad('CPF 余额算错', String(tot));
+      await pg.evaluate(() => saveCpf()); await pg.waitForTimeout(300);
+      const saved = settings.find(s => s && s.cpf && Array.isArray(s.cpf.entries) && s.cpf.entries.length);
+      saved ? ok('CPF 存进 /api/settings 的 prefs.cpf（换手机也跟着走）', `entries=${saved.cpf.entries.length}`) : bad('CPF 没存到 /api/settings', JSON.stringify(settings.slice(-1)).slice(0, 120));
+      await pg.evaluate(() => buildCpfCard());
+      const card = await pg.evaluate(() => document.getElementById('cpfCard').textContent);
+      card.includes('87,220') ? ok('总览 CPF 卡显示总额 87,220') : bad('CPF 卡总额不对', card.replace(/\s+/g, ' ').slice(0, 60));
+    } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
+
     // 3) 设置：改数值颜色 → 存
     settings.length = 0;
     await pg.locator('#nav3').tap(); await pg.waitForTimeout(500); await dismiss();
