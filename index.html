@@ -1236,7 +1236,9 @@ body.theme-journal .cpfcard{background:#FBF7EF;border-color:#E4DCCF}
 .cpfcard .cc-sub{margin-top:7px;display:flex;gap:14px;flex-wrap:wrap}
 .cpfcard .cc-seg{font-size:11px;color:var(--muted);font-weight:600}
 .cpfcard .cc-seg b{color:var(--ink);font-weight:800}
-.cpfcard .cc-setup{font-size:12.5px;color:var(--brand);font-weight:700;margin-top:2px}
+.cpfcard .cc-setup{font-size:12px;color:var(--ink-2,var(--muted));font-weight:600;margin-top:8px;line-height:1.5;
+  border:1px dashed var(--brand);border-radius:12px;padding:9px 12px;background:rgba(11,166,120,.06)}
+.cpfcard .cc-setup b{color:var(--brand);font-weight:800}
 .cpf-setbtn{width:52px;border:0;background:none;color:var(--muted);font-size:18px;font-family:inherit;cursor:pointer}
 /* 全屏页里 */
 #cpfBody{padding-bottom:40px}
@@ -1257,8 +1259,9 @@ body.theme-journal .cpf-acct{background:#FBF7EF;border-color:#E4DCCF}
 .cpf-acct .abar{height:3px;border-radius:2px;margin-top:8px;background:currentColor;opacity:.9}
 .cpf-sec-h{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 10px}
 .cpf-sec-h .t{font-size:13.5px;font-weight:800;color:var(--ink)}
-.cpf-add{border:0;background:var(--brand);color:#fff;font-family:inherit;font-size:12.5px;font-weight:800;border-radius:100px;padding:7px 14px;cursor:pointer}
-.cpf-add:active{transform:scale(.96)}
+/* v11.41 CPF 按钮统一：透明底 + 品牌色边框 + 品牌色字（不要实心绿）；按下淡淡填一点 */
+.cpf-add{border:1.5px solid var(--brand);background:transparent;color:var(--brand);font-family:inherit;font-size:12.5px;font-weight:800;border-radius:100px;padding:7px 15px;cursor:pointer;transition:.12s}
+.cpf-add:active{transform:scale(.96);background:rgba(11,166,120,.12)}
 .cpf-mrow{display:flex;align-items:center;gap:10px;padding:12px 13px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:8px}
 body.phototheme .cpf-mrow{background:rgba(12,16,22,.42);border-color:rgba(255,255,255,.08)}
 body.theme-journal .cpf-mrow{background:#FBF7EF;border-color:#E4DCCF}
@@ -1288,6 +1291,12 @@ body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,2
 .cpf-splitprev b{color:#0BA678;font-weight:800}
 .cpf-cap{color:#E7A33E;font-weight:700}
 .cpf-del-all{width:100%;margin-top:16px;border:1px solid rgba(200,70,60,.3);background:transparent;color:#C8463C;border-radius:13px;padding:11px;font-weight:700;font-size:12.5px;font-family:inherit;cursor:pointer}
+/* v11.41 CPF 弹窗的「保存」也改成描边（不要实心绿），跟卡片按钮同一套 */
+#cpfMod .econfirm{background:transparent;border:1.5px solid var(--brand);color:var(--brand)}
+#cpfMod .econfirm:active{background:rgba(11,166,120,.12)}
+.cpf-statrow{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 6px}
+.cpf-stat{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:100px;padding:7px 13px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
+.cpf-stat.on{border-color:var(--brand);color:var(--brand);background:rgba(11,166,120,.08)}
 
 /* ===== v3.0 hero 多币种 ===== */
 /* v9.72 记住分类开关 */
@@ -2895,13 +2904,16 @@ const INC_DEF={ salary:{i:'💰',n:'工资',c:'#0BA678',subs:[]}, bonus:{i:'🧧
   invest:{i:'📈',n:'理财',c:'#12B5A6',subs:[]}, incother:{i:'➕',n:'其他',c:'#6EA88A',subs:[]} };
 const FALLBACK={i:'✦',n:'其他',c:'#94A0AE',subs:[]};
 let CAT=clone(CAT_DEF), INC=clone(INC_DEF);
-/* ===== v11.40 CPF 公积金：全部存在 prefs.cpf（跟主题/预算同一条 /api/settings，换手机也跟着走）。
+/* ===== v11.41 CPF 公积金：全部存在 prefs.cpf（跟主题/预算同一条 /api/settings，换手机也跟着走）。
    余额 = 期初(open) + 所有月供(entries) 之和 —— 单一真相，随时可改可删。
-   每月供款：填工资总额 → 按【年龄段比例】自动拆进 OA/SA/MA，工资超过上限只算到上限。 */
-const CPF_BANDS={   // 各账户占「当月计入 CPF 的工资」的百分比（雇员+雇主合计，≤55 的官方分配比例）
-  '35及以下':{oa:23,sa:6,ma:8},   '35–45':{oa:21,sa:7,ma:9},
-  '45–50':{oa:19,sa:8,ma:10},     '50–55':{oa:15,sa:11.5,ma:10.5}};
-function defaultCpf(){return {on:false,open:{oa:0,sa:0,ma:0},band:'35及以下',rate:{oa:23,sa:6,ma:8},ceiling:8000,entries:[]};}
+   每月供款：填工资总额(gross) → 按【年龄 + 身份/PR 年资】自动拆进 OA/SA/MA，工资超上限只算到上限。
+   ⚠️ 比例随年龄/PR 年资/官方调整而变，这里用公开的 ≤55 分配表估算；PR 头两年各账户官方另有细表，
+      所以每笔都能【手动微调】，也请对着你的 CPF 月结单核一下。 */
+const CPF_ALLOC=[   // [年龄上限, {oa,sa,ma}]：各账户占工资的%（公民/PR满3年，≤55 全额）
+  [35,{oa:23,sa:6,ma:8}],[45,{oa:21,sa:7,ma:9}],[50,{oa:19,sa:8,ma:10}],[55,{oa:15,sa:11.5,ma:10.5}],[999,{oa:12,sa:3.5,ma:10.5}]];
+const CPF_STATUS={citizen:{n:'公民 / PR 满3年',total:37},pr2:{n:'PR 第2年',total:24},pr1:{n:'PR 第1年',total:9}};
+function cpfAllocFor(age){const a=(age==null||!isFinite(age))?30:age;for(const[cap,al]of CPF_ALLOC)if(a<=cap)return al;return CPF_ALLOC[CPF_ALLOC.length-1][1];}
+function defaultCpf(){return {on:false,open:{oa:0,sa:0,ma:0},status:'citizen',prStart:'',birthYear:0,ceiling:8000,entries:[]};}
 let CPF=defaultCpf();
 function cpfNum(v,d){const x=parseFloat(v);return isFinite(x)&&x>=0?x:d;}
 function normCpf(c){
@@ -2909,9 +2921,9 @@ function normCpf(c){
   const n=defaultCpf();
   n.on=!!c.on;
   if(c.open)n.open={oa:cpfNum(c.open.oa,0),sa:cpfNum(c.open.sa,0),ma:cpfNum(c.open.ma,0)};
-  if(c.band&&CPF_BANDS[c.band])n.band=c.band;
-  if(c.rate)n.rate={oa:cpfNum(c.rate.oa,23),sa:cpfNum(c.rate.sa,6),ma:cpfNum(c.rate.ma,8)};
-  else if(CPF_BANDS[n.band])n.rate={...CPF_BANDS[n.band]};
+  if(c.status&&CPF_STATUS[c.status])n.status=c.status;
+  if(typeof c.prStart==='string'&&/^\d{4}-\d{2}$/.test(c.prStart))n.prStart=c.prStart;
+  n.birthYear=Math.round(cpfNum(c.birthYear,0))||0;
   n.ceiling=cpfNum(c.ceiling,8000)||8000;
   if(Array.isArray(c.entries))n.entries=c.entries.filter(e=>e&&e.month).map(e=>({
     id:e.id||('cpf'+Math.random().toString(36).slice(2,9)),
@@ -2924,11 +2936,31 @@ function normCpf(c){
 function cpfBal(){const b={oa:CPF.open.oa,sa:CPF.open.sa,ma:CPF.open.ma};CPF.entries.forEach(e=>{b.oa+=e.oa;b.sa+=e.sa;b.ma+=e.ma;});return b;}
 function cpfTotal(){const b=cpfBal();return b.oa+b.sa+b.ma;}
 function cpfActive(){return CPF.on||CPF.entries.length>0||(CPF.open.oa+CPF.open.sa+CPF.open.ma)>0;}
-function cpfSplit(gross){   // 工资总额 → 各账户当月供款（工资超过上限只算到上限）
-  const g=Math.max(cpfNum(gross,0),0),w=Math.min(g,CPF.ceiling),r=CPF.rate;
+/* PR 年资：拿 PR 的年月 → 到某供款月是第几年（1/2/3+）。没填当满3年（全额）。 */
+function cpfPrYear(monthStr){
+  if(CPF.status==='citizen')return 3;
+  if(!CPF.prStart)return CPF.status==='pr1'?1:CPF.status==='pr2'?2:3;
+  const [sy,sm]=CPF.prStart.split('-').map(Number),[my,mm]=(monthStr||'').split('-').map(Number);
+  if(!my)return 3;
+  const months=(my-sy)*12+(mm-sm);
+  return months<12?1:months<24?2:3;
+}
+/* 某供款月的各账户【占工资%】：年龄段分配 × (该月总费率 / 全额37)。 */
+function cpfRatesFor(monthStr){
+  const yr=parseInt((monthStr||'').slice(0,4),10)||new Date().getFullYear();
+  const age=CPF.birthYear?(yr-CPF.birthYear):null;
+  const al=cpfAllocFor(age),full=al.oa+al.sa+al.ma;
+  const py=cpfPrYear(monthStr);
+  const total=(CPF.status==='citizen'||py>=3)?37:(py===2?24:9);
+  const k=total/full,rd=x=>Math.round(x*100)/100;
+  return {oa:rd(al.oa*k),sa:rd(al.sa*k),ma:rd(al.ma*k),total,prYear:py,age};
+}
+function cpfCurMonth(){return (todayKey&&todayKey()||new Date().toISOString()).slice(0,7);}
+function cpfSplit(gross,monthStr){   // 工资总额 → 各账户当月供款（工资超上限只算到上限）
+  const g=Math.max(cpfNum(gross,0),0),w=Math.min(g,CPF.ceiling),r=cpfRatesFor(monthStr||cpfCurMonth());
   const rd=x=>Math.round(x*100)/100;
   const oa=rd(w*r.oa/100),sa=rd(w*r.sa/100),ma=rd(w*r.ma/100);
-  return {oa,sa,ma,total:rd(oa+sa+ma),capped:g>CPF.ceiling};
+  return {oa,sa,ma,total:rd(oa+sa+ma),capped:g>CPF.ceiling,rate:r};
 }
 function clone(o){return JSON.parse(JSON.stringify(o));}
 /* 拿某个 key 的分类定义；分类被删掉了也不会炸，回退到「其他」 */
@@ -8083,17 +8115,17 @@ const CPF_ACCTS=[['oa','OA','普通账户 · 可买房','#0BA678'],['sa','SA','�
 function buildCpfCard(){
   const el=document.getElementById('cpfCard');if(!el)return;
   if(!cpfActive()){
-    el.innerHTML=`<div class="cc-top"><span class="cc-cap">🏦 CPF 公积金</span><span class="cc-go">设置 ›</span></div>
-      <div class="cc-setup">点一下，填现在的 CPF 余额 → 之后每月工资进来记一笔</div>`;
+    el.innerHTML=`<div class="cc-top"><span class="cc-cap">🏦 CPF 公积金</span><span class="cc-go">开始 ›</span></div>
+      <div class="cc-setup">存钱买房从这开始 —— 点一下，填<b>年龄 / 身份</b>和现在的 <b>CPF 余额</b>，之后每月工资进来记一笔。</div>`;
     return;
   }
   const b=cpfBal();
   el.innerHTML=`<div class="cc-top"><span class="cc-cap">🏦 CPF 公积金 · 总额</span><span class="cc-go">明细 ›</span></div>
-    <div class="cc-amt"><span class="s">S$</span>${cpfFmt(b.oa+b.sa+b.ma)}</div>
+    <div class="cc-amt"><span class="s">S$</span>${cpfFmt0(b.oa+b.sa+b.ma)}</div>
     <div class="cc-sub">
-      <span class="cc-seg">OA <b>${cpfFmt(b.oa)}</b></span>
-      <span class="cc-seg">SA <b>${cpfFmt(b.sa)}</b></span>
-      <span class="cc-seg">MA <b>${cpfFmt(b.ma)}</b></span>
+      <span class="cc-seg" style="color:#0BA678">OA <b>${cpfFmt0(b.oa)}</b></span>
+      <span class="cc-seg" style="color:#7C6FF0">SA <b>${cpfFmt0(b.sa)}</b></span>
+      <span class="cc-seg" style="color:#12B5A6">MA <b>${cpfFmt0(b.ma)}</b></span>
     </div>`;
 }
 document.getElementById('cpfCard').addEventListener('click',openCpf);
@@ -8104,16 +8136,26 @@ async function saveCpf(){CPF.on=true;idbSet('prefs',{...curPrefs(),bgver:BGVER})
 
 function buildCpfPage(){
   const body=document.getElementById('cpfBody');
-  if(!cpfActive()){   // 第一次：引导填现有余额
+  if(!cpfActive()){   // 第一次：填资料（年龄/身份 → 比例）+ 现有余额
     body.innerHTML=`<div class="cpf-setup">
-        <div class="st">先填现在的 CPF 余额</div>
-        <div class="sd">打开你的 CPF app / 月结单，把三个账户现在的余额填进来当起点。之后每个月工资进来，记一笔就会自动往上加。</div>
-        ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n}<small>${d}</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfOpen_${k}" placeholder="0.00"></div>`).join('')}
-        <button class="cpf-add" style="width:100%;padding:12px;margin-top:6px" id="cpfSetupSave">保存，开始追踪</button>
-        <div class="cpf-note" style="margin-top:10px">不想现在填？可以全部留空直接保存，之后每月记的都会累计。</div>
+        <div class="st">你的资料（决定工资怎么拆）</div>
+        <div class="sd">CPF 比例看你的<b>年龄</b>和<b>身份</b>——PR 头两年费率比较低。填了才拆得准（之后每笔还能手动微调）。</div>
+        <div class="cpf-inrow"><label>出生年份<small>算年龄</small></label><input class="cpf-in" type="number" inputmode="numeric" id="cpfBirth" placeholder="例：1995"></div>
+        <div class="cpf-note" style="margin:2px 0 6px;font-weight:700;color:var(--ink)">身份</div>
+        <div class="cpf-statrow" id="cpfSetupStat">${Object.entries(CPF_STATUS).map(([k,v])=>`<button class="cpf-stat${k==='citizen'?' on':''}" data-stat="${k}">${esc(v.n)}</button>`).join('')}</div>
+        <div class="cpf-inrow" id="cpfSetupPrRow" hidden><label>拿 PR 年月<small>算第几年</small></label><input class="cpf-in" type="month" id="cpfPrStart"></div>
+        <div class="st" style="margin-top:16px">现在的 CPF 余额</div>
+        <div class="sd">打开 CPF app / 月结单，把三个账户现在的余额填进来当起点。全留空也行，之后每月记的都会累计。</div>
+        ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n}<small>${d.split(' · ')[0]}</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfOpen_${k}" placeholder="0.00"></div>`).join('')}
+        <button class="cpf-add" style="width:100%;padding:12px;margin-top:8px" id="cpfSetupSave">保存，开始追踪</button>
       </div>`;
+    const stat=document.getElementById('cpfSetupStat');
+    stat.addEventListener('click',ev=>{const b=ev.target.closest('[data-stat]');if(!b)return;[...stat.children].forEach(x=>x.classList.toggle('on',x===b));document.getElementById('cpfSetupPrRow').hidden=(b.dataset.stat==='citizen');});
     return;
   }
+  const now=cpfCurMonth(),rt=cpfRatesFor(now);
+  const idn=CPF.status==='citizen'?'公民/PR满3年':(cpfPrYear(now)===1?'PR 第1年':cpfPrYear(now)===2?'PR 第2年':'PR 满3年');
+  const ageTxt=CPF.birthYear?`${(+now.slice(0,4))-CPF.birthYear} 岁`:'年龄未填';
   const b=cpfBal(),tot=b.oa+b.sa+b.ma;
   const yr=(todayKey()||'').slice(0,4);
   const yrIn=CPF.entries.filter(e=>e.month.slice(0,4)===yr).reduce((s,e)=>s+e.oa+e.sa+e.ma,0);
@@ -8133,14 +8175,19 @@ function buildCpfPage(){
     <div class="cpf-tot"><div class="k">CPF 总额</div><div class="v"><span class="s">S$</span>${cpfFmt(tot)}</div>
       <div class="g">今年供款 <b>+S$${cpfFmt(yrIn)}</b> · 期初 S$${cpfFmt(CPF.open.oa+CPF.open.sa+CPF.open.ma)}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
+    <div class="cpf-note" style="text-align:center;margin-top:10px">${idn} · ${ageTxt} · 每 S$100 工资 → OA ${rt.oa} / SA ${rt.sa} / MA ${rt.ma}　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--brand);font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></div>
     ${entriesHTML}`;
 }
 document.getElementById('cpfBody').addEventListener('click',e=>{
   if(e.target.closest('#cpfSetupSave')){
+    const by=document.getElementById('cpfBirth');if(by)CPF.birthYear=Math.round(cpfNum(by.value,0))||0;
+    const st=document.querySelector('#cpfSetupStat .cpf-stat.on');if(st)CPF.status=st.dataset.stat;
+    const ps=document.getElementById('cpfPrStart');if(ps&&CPF.status!=='citizen'&&/^\d{4}-\d{2}$/.test(ps.value||''))CPF.prStart=ps.value;
     CPF_ACCTS.forEach(([k])=>{const el=document.getElementById('cpfOpen_'+k);if(el)CPF.open[k]=cpfNum(el.value,0);});
     CPF.on=true;saveCpf();buildCpfPage();toast('好了，开始追踪 CPF');return;
   }
+  if(e.target.closest('#cpfEditProfile')){openCpfMod('settings');return;}
   if(e.target.closest('#cpfAddBtn')){openCpfMod('month');return;}
   const del=e.target.closest('[data-cpfdel]');
   if(del){cpfDelEntry(del.dataset.cpfdel);return;}
@@ -8163,51 +8210,61 @@ function openCpfMod(mode,id){
   cpfModMode=mode;cpfEditId=id||null;
   const title=document.getElementById('cpfModTitle'),body=document.getElementById('cpfModBody');
   if(mode==='settings'){
-    title.textContent='CPF 设置';
+    title.textContent='CPF 资料 / 设置';
     body.innerHTML=`
-      <div class="cpf-note" style="margin-bottom:6px">年龄段（决定工资怎么拆进三个账户）</div>
-      <div class="cpf-bands" id="cpfBands">${Object.keys(CPF_BANDS).map(bn=>`<button class="cpf-band${bn===CPF.band?' on':''}" data-band="${esc(bn)}">${esc(bn)}</button>`).join('')}</div>
+      <div class="cpf-inrow"><label>出生年份<small>算年龄 → 比例</small></label><input class="cpf-in" type="number" inputmode="numeric" id="cpfBirthS" value="${CPF.birthYear||''}" placeholder="例：1995"></div>
+      <div class="cpf-note" style="margin:8px 0 6px;font-weight:700;color:var(--ink)">身份</div>
+      <div class="cpf-statrow" id="cpfStat">${Object.entries(CPF_STATUS).map(([k,v])=>`<button class="cpf-stat${k===CPF.status?' on':''}" data-stat="${k}">${esc(v.n)}</button>`).join('')}</div>
+      <div class="cpf-inrow" id="cpfPrRow" ${CPF.status==='citizen'?'hidden':''}><label>拿 PR 年月<small>算第几年</small></label><input class="cpf-in" type="month" id="cpfPrStartS" value="${CPF.prStart||''}"></div>
       <div class="cpf-splitprev" id="cpfRatePrev"></div>
       <div class="cpf-inrow" style="margin-top:12px"><label>工资上限<small>超过只算到这</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfCeil" value="${CPF.ceiling}"></div>
-      <div class="cpf-note" style="margin:10px 0 6px;font-weight:700;color:var(--ink)">期初余额（第一次填的起点，可改）</div>
+      <div class="cpf-note" style="margin:10px 0 6px;font-weight:700;color:var(--ink)">期初余额（起点，可改）</div>
       ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n}<small>${d.split(' · ')[0]}</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfOpenS_${k}" value="${CPF.open[k]||''}" placeholder="0.00"></div>`).join('')}
+      <div class="cpf-note" style="margin-top:6px">比例按官方 ≤55 分配表估算；PR 头两年各账户官方另有细表，请对着你的 CPF 月结单核一下，每笔记账都能手动微调。</div>
       <button class="cpf-del-all" id="cpfResetBtn">清空所有 CPF 记录</button>`;
+    const applyStat=()=>{const st=document.querySelector('#cpfStat .cpf-stat.on');CPF.status=st?st.dataset.stat:'citizen';CPF.birthYear=Math.round(cpfNum(document.getElementById('cpfBirthS').value,0))||0;const ps=document.getElementById('cpfPrStartS');if(ps&&/^\d{4}-\d{2}$/.test(ps.value||''))CPF.prStart=ps.value;document.getElementById('cpfPrRow').hidden=(CPF.status==='citizen');cpfRenderRatePrev();};
+    document.getElementById('cpfStat').addEventListener('click',ev=>{const b=ev.target.closest('[data-stat]');if(!b)return;[...ev.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));applyStat();});
+    document.getElementById('cpfBirthS').addEventListener('input',applyStat);
+    document.getElementById('cpfPrStartS').addEventListener('input',applyStat);
     cpfRenderRatePrev();
-    document.getElementById('cpfBands').addEventListener('click',ev=>{const bn=ev.target.closest('[data-band]');if(!bn)return;CPF.band=bn.dataset.band;CPF.rate={...CPF_BANDS[CPF.band]};[...ev.currentTarget.children].forEach(x=>x.classList.toggle('on',x.dataset.band===CPF.band));cpfRenderRatePrev();});
-    document.getElementById('cpfResetBtn').onclick=async()=>{const yes=await askConfirm('清空所有 CPF 记录？\n期初余额 + 每月供款全部删掉，回到没设置的状态。','清空');if(!yes)return;CPF=defaultCpf();saveCpf();closeCpfMod();buildCpfPage();buildCpfCard();toast('CPF 记录已清空');};
+    document.getElementById('cpfResetBtn').onclick=async()=>{const yes=await askConfirm('清空所有 CPF 记录？\n资料 + 期初余额 + 每月供款全部删掉，回到没设置的状态。','清空');if(!yes)return;CPF=defaultCpf();saveCpf();closeCpfMod();buildCpfPage();buildCpfCard();toast('CPF 记录已清空');};
   } else {
     const isEdit=mode==='edit';
     const e=isEdit?CPF.entries.find(x=>x.id===id):null;
-    const m=e?e.month:(todayKey()||'2026-01').slice(0,7);
+    const m=e?e.month:cpfCurMonth();
     title.textContent=isEdit?'改这笔 CPF':'记这个月 CPF';
     body.innerHTML=`
       <div class="cpf-inrow"><label>月份</label><input class="cpf-in" type="month" id="cpfMonth" value="${m}"></div>
       <div class="cpf-inrow"><label>工资总额<small>Gross（税前）</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfGross" value="${e&&e.gross?e.gross:''}" placeholder="例：6000"></div>
-      <div class="cpf-splitprev" id="cpfPrev">填工资 → 按你的年龄段自动拆</div>
+      <div class="cpf-splitprev" id="cpfPrev">填工资 → 按你的年龄 / 身份自动拆</div>
       <div class="cpf-note" style="margin-top:8px"><button type="button" id="cpfAdvT" style="border:0;background:none;color:var(--brand);font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;padding:0">手动微调各账户 ▾</button></div>
       <div id="cpfAdv" hidden style="margin-top:6px">
         ${CPF_ACCTS.map(([k,n])=>`<div class="cpf-inrow"><label>${n} 进账</label><input class="cpf-in" type="number" inputmode="decimal" id="cpfE_${k}" value="${e?e[k]:''}"></div>`).join('')}
       </div>`;
-    const gross=document.getElementById('cpfGross');
-    const recalc=()=>{const sp=cpfSplit(gross.value);CPF_ACCTS.forEach(([k])=>{const f=document.getElementById('cpfE_'+k);if(f)f.value=sp[k]?sp[k]:'';});
-      document.getElementById('cpfPrev').innerHTML=(+gross.value>0)?`OA <b>+${cpfFmt(sp.oa)}</b> · SA <b>+${cpfFmt(sp.sa)}</b> · MA <b>+${cpfFmt(sp.ma)}</b><br>本月共进 <b>+S$${cpfFmt(sp.total)}</b>${sp.capped?` <span class="cpf-cap">· 工资超上限，只算到 S$${cpfFmt(CPF.ceiling)}</span>`:''}`:'填工资 → 按你的年龄段自动拆';};
-    gross.addEventListener('input',recalc);
+    const gross=document.getElementById('cpfGross'),monthEl=document.getElementById('cpfMonth');
+    const recalc=()=>{const sp=cpfSplit(gross.value,monthEl.value);CPF_ACCTS.forEach(([k])=>{const f=document.getElementById('cpfE_'+k);if(f)f.value=sp[k]?sp[k]:'';});
+      const idn=sp.rate.prYear<3&&CPF.status!=='citizen'?`（PR 第${sp.rate.prYear}年 · 费率 ${sp.rate.total}%）`:'';
+      document.getElementById('cpfPrev').innerHTML=(+gross.value>0)?`OA <b>+${cpfFmt(sp.oa)}</b> · SA <b>+${cpfFmt(sp.sa)}</b> · MA <b>+${cpfFmt(sp.ma)}</b><br>本月共进 <b>+S$${cpfFmt(sp.total)}</b> ${idn}${sp.capped?` <span class="cpf-cap">· 工资超上限，只算到 S$${cpfFmt(CPF.ceiling)}</span>`:''}`:'填工资 → 按你的年龄 / 身份自动拆';};
+    gross.addEventListener('input',recalc);monthEl.addEventListener('change',recalc);
     if(!isEdit&&gross.value)recalc();
-    if(isEdit&&e){const sp=cpfSplit(e.gross);document.getElementById('cpfPrev').innerHTML=`OA <b>+${cpfFmt(e.oa)}</b> · SA <b>+${cpfFmt(e.sa)}</b> · MA <b>+${cpfFmt(e.ma)}</b>`;}
+    if(isEdit&&e){document.getElementById('cpfPrev').innerHTML=`OA <b>+${cpfFmt(e.oa)}</b> · SA <b>+${cpfFmt(e.sa)}</b> · MA <b>+${cpfFmt(e.ma)}</b>`;}
     document.getElementById('cpfAdvT').onclick=()=>{const a=document.getElementById('cpfAdv');a.hidden=!a.hidden;};
   }
   cpfScrim.classList.add('show');cpfMod.classList.add('show');
 }
-function cpfRenderRatePrev(){const el=document.getElementById('cpfRatePrev');if(el)el.innerHTML=`每 S$100 工资 → OA <b>${CPF.rate.oa}</b> · SA <b>${CPF.rate.sa}</b> · MA <b>${CPF.rate.ma}</b>（合计 ${CPF.rate.oa+CPF.rate.sa+CPF.rate.ma}%）`;}
+function cpfRenderRatePrev(){const el=document.getElementById('cpfRatePrev');if(!el)return;const r=cpfRatesFor(cpfCurMonth());const py=(CPF.status!=='citizen'&&r.prYear<3)?` · PR 第${r.prYear}年 ${r.total}%`:'';el.innerHTML=`每 S$100 工资 → OA <b>${r.oa}</b> · SA <b>${r.sa}</b> · MA <b>${r.ma}</b>（合计 ${cpfFmt(r.oa+r.sa+r.ma)}%${py}）`;}
 function closeCpfMod(){cpfScrim.classList.remove('show');cpfMod.classList.remove('show');}
 document.getElementById('cpfModCancel').onclick=closeCpfMod;
 cpfScrim.onclick=closeCpfMod;
 document.getElementById('cpfModSave').onclick=()=>{
   const gv=id=>{const el=document.getElementById(id);return el?el.value:'';};   /* 判空取值：弹窗按模式渲染，字段不一定都在 */
   if(cpfModMode==='settings'){
+    CPF.birthYear=Math.round(cpfNum(gv('cpfBirthS'),0))||0;
+    const st=document.querySelector('#cpfStat .cpf-stat.on');if(st)CPF.status=st.dataset.stat;
+    if(CPF.status==='citizen')CPF.prStart='';else if(/^\d{4}-\d{2}$/.test(gv('cpfPrStartS')||''))CPF.prStart=gv('cpfPrStartS');
     CPF.ceiling=cpfNum(gv('cpfCeil'),8000)||8000;
     CPF_ACCTS.forEach(([k])=>{const el=document.getElementById('cpfOpenS_'+k);if(el)CPF.open[k]=cpfNum(el.value,0);});
-    closeCpfMod();saveCpf();buildCpfPage();toast('CPF 设置已存');return;
+    closeCpfMod();saveCpf();buildCpfPage();toast('CPF 资料已存');return;
   }
   const month=(gv('cpfMonth')||'').slice(0,7);
   if(!/^\d{4}-\d{2}$/.test(month)){toast('先选月份','err');return;}

@@ -2526,10 +2526,13 @@ async function suiteEdit() {
     // 2e) v11.40 CPF 公积金：期初余额 + 每月供款（工资总额→按比例自动拆）→ 余额/上限对，存进 /api/settings 的 prefs.cpf
     try {
       settings.length = 0;
-      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 50000, sa: 20000, ma: 15000 }, band: '35及以下', ceiling: 8000 }); CPF.on = true; });
-      const split = await pg.evaluate(() => cpfSplit(6000));   // ≤35 → OA23% SA6% MA8%
-      (Math.abs(split.oa - 1380) < 0.01 && Math.abs(split.sa - 360) < 0.01 && Math.abs(split.ma - 480) < 0.01) ? ok('CPF 工资 6000 按 23/6/8 自动拆 = OA1380 / SA360 / MA480') : bad('CPF 自动拆比例错', JSON.stringify(split));
-      const capped = await pg.evaluate(() => cpfSplit(10000));  // 超上限 8000 → 只算 8000×37%=2960
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 50000, sa: 20000, ma: 15000 }, status: 'citizen', birthYear: 1996, ceiling: 8000 }); CPF.on = true; });
+      const split = await pg.evaluate(() => cpfSplit(6000, '2026-09'));   // 公民 ≤35 → OA23% SA6% MA8%
+      (Math.abs(split.oa - 1380) < 0.01 && Math.abs(split.sa - 360) < 0.01 && Math.abs(split.ma - 480) < 0.01) ? ok('CPF 公民≤35 工资 6000 按 23/6/8 拆 = OA1380 / SA360 / MA480') : bad('CPF 自动拆比例错', JSON.stringify(split));
+      // PR 第1年（拿 PR 2026-06，供款 2026-09 → 3 个月 → 第1年）总费率 9% → 540
+      const pr1 = await pg.evaluate(() => { CPF.status = 'pr1'; CPF.prStart = '2026-06'; const s = cpfSplit(6000, '2026-09'); CPF.status = 'citizen'; CPF.prStart = ''; return s; });
+      (pr1.rate.prYear === 1 && Math.abs(pr1.total - 540) < 0.02) ? ok('CPF PR 第1年 工资 6000 只算 9% = 540（PR 头两年费率低，问对了 PR 年资）') : bad('CPF PR 年资费率错', JSON.stringify(pr1));
+      const capped = await pg.evaluate(() => cpfSplit(10000, '2026-09'));  // 超上限 8000 → 只算 8000×37%=2960
       (capped.capped && Math.abs(capped.total - 2960) < 0.02) ? ok('CPF 工资超上限只算到 8000（本月共 2960）') : bad('CPF 工资上限没生效', JSON.stringify(capped));
       await pg.evaluate(() => { CPF.entries.push({ id: 't1', month: '2026-09', gross: 6000, oa: 1380, sa: 360, ma: 480, ts: 1 }); });
       const tot = await pg.evaluate(() => cpfTotal());
