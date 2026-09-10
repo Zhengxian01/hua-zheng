@@ -2555,6 +2555,16 @@ async function suiteEdit() {
       await pg.evaluate(() => buildCpfCard());
       const card = await pg.evaluate(() => document.getElementById('cpfCard').textContent);
       card.includes('87,220') ? ok('总览 CPF 卡显示总额 87,220') : bad('CPF 卡总额不对', card.replace(/\s+/g, ' ').slice(0, 60));
+      // 真的走弹窗存一笔大额（gross 6000 → OA 1380）：防「千分位逗号进 number 输入框变空→存成0」那类坑。只开弹窗、不开整页，免得盖住后面的测试
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1996 }); CPF.on = true; openCpfMod('month'); });
+      await pg.waitForTimeout(150);
+      await pg.evaluate(() => { const gm = document.querySelector('#cpfWageMode [data-wm="gross"]'); if (gm) gm.click(); });   // 钉死「基本工资」模式，别被本月工资进账带成到手
+      await pg.evaluate(() => { const g = document.getElementById('cpfGross'); g.value = '6000'; g.dispatchEvent(new Event('input', { bubbles: true })); }); await pg.waitForTimeout(150);
+      const advOA = await pg.evaluate(() => document.getElementById('cpfE_oa').value);
+      await pg.evaluate(() => document.getElementById('cpfModSave').click()); await pg.waitForTimeout(250);
+      const saved1 = await pg.evaluate(() => { const e = CPF.entries.find(x => x.month === cpfCurMonth()); return e ? { oa: e.oa, sa: e.sa, ma: e.ma } : null; });
+      (advOA && Math.abs(parseFloat(advOA) - 1380) < 0.01 && saved1 && Math.abs(saved1.oa - 1380) < 0.01) ? ok('走弹窗存大额：OA 1380 进了 number 输入框也存进去了（没被千分位逗号坑成 0）', JSON.stringify(saved1)) : bad('弹窗存的 OA 不对（可能逗号进 number 框变空存成0）', `adv=${advOA} saved=${JSON.stringify(saved1)}`);
+      await pg.evaluate(() => { try { closeCpfMod(); } catch (e) {} }); await dismiss();
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 
     // 3) 设置：改数值颜色 → 存
