@@ -2666,6 +2666,13 @@ async function suiteEdit() {
       // 原文可查：读完永远能展开「看读到的原文」（跟读支出那样，看得到 OCR 到底认到啥）
       const rawSeen = await pg.evaluate(() => !!document.querySelector('#cpfRcShotStatus .cpf-raw summary'));
       rawSeen ? ok('CPF 截图：读完能展开「看读到的原文」（OCR 原文摊给你看）') : bad('CPF 截图没给看原文');
+      // 一键「就用截图这个数·对账」：读完直接一按就对账到截图的值，不用手动改、不用滚下去找保存
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 1000, sa: 200, ma: 300 } }); CPF.on = true; openCpfMod('recon'); window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.84' } }), terminate: async () => { } }) }; }); await pg.waitForTimeout(120);
+      await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
+      const useShown = await pg.evaluate(() => !!document.getElementById('cpfRcUse'));
+      await pg.evaluate(() => document.getElementById('cpfRcUse').click()); await pg.waitForTimeout(250);
+      const useRes = await pg.evaluate(() => { const b = cpfBal(); return { total: Math.round((b.oa + b.sa + b.ma) * 100) / 100, oa: Math.round(b.oa * 100) / 100, closed: !document.getElementById('cpfMod').classList.contains('show'), adj: !!CPF.entries.find(x => x.kind === 'adjust') }; });
+      (useShown && Math.abs(useRes.total - 2222.23) < 0.01 && Math.abs(useRes.oa - 1372.79) < 0.01 && useRes.closed && useRes.adj) ? ok('CPF 截图一键对账：读完按「就用截图这个数」→ 直接对到截图值 2222.23、关弹窗（不用手动改）', JSON.stringify({ total: useRes.total })) : bad('CPF 截图一键对账没生效', JSON.stringify({ useShown, ...useRes }));
       await pg.evaluate(() => { try { delete window.Tesseract; closeCpfMod(); } catch (e) { } }); await dismiss();
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 

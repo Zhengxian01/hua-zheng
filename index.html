@@ -1337,6 +1337,8 @@ body.phototheme .cpf-tally.ok{color:#3DDCA6}
 body.phototheme .cpf-tally.bad{color:#FF7A70}
 body.phototheme .cpf-tally.warn{color:#F0B65A}
 .cpf-inf{display:inline-block;margin-left:4px;padding:1px 6px;border-radius:6px;font-size:9.5px;font-weight:800;background:rgba(18,185,129,.16);color:#0E9E6E;vertical-align:middle}
+.cpf-recon-use{display:block;width:100%;margin-top:9px;padding:11px;border:0;border-radius:12px;background:#12b981;color:#fff;font-family:inherit;font-weight:800;font-size:13.5px;cursor:pointer}
+.cpf-recon-use:active{background:#0E9E6E}
 .cpf-raw{margin-top:7px;font-weight:600}
 .cpf-raw summary{font-size:11px;color:#3B82F6;font-weight:800;cursor:pointer;list-style:revert}
 .cpf-raw pre,.cpf-raw-open pre{margin:6px 0 0;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:9px;font-size:10.5px;line-height:1.5;color:var(--muted);white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
@@ -8510,7 +8512,11 @@ function openCpfMod(mode,id){
             }
           }else tally=`<div class="cpf-tally warn">缺的账户没读到${r.total==null?'、也没读到总额，没法帮你推 → 手动填缺的':' → 手动填一下缺的'}</div>`;
         }
-        shotStatus(`${head}${tally}${rawBox}`);
+        /* 读到了就给一个一键按钮：直接拿截图读到的数去对账，不用你手动改、也不用滚下去找保存 */
+        const useBtn=got.length?`<button type="button" class="cpf-recon-use" id="cpfRcUse">✅ 就用截图这个数 · 对账 →</button>`:'';
+        shotStatus(`${head}${tally}${useBtn}${rawBox}`);
+        const ub=document.getElementById('cpfRcUse');
+        if(ub)ub.onclick=()=>document.getElementById('cpfModSave').click();   // = 按下面的「保存」，拿现在框里（截图填的）数去对账
       }catch(e){
         shotStatus(e.message==='busy'?'还在读上一张…':'😕 读不到（引擎没载到 / 离线）· 直接手动填下面三个数就行');
       }finally{btn.disabled=false;}
