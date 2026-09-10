@@ -1308,6 +1308,7 @@ body.phototheme .cpf-tag.t-int{color:#F0B65A}
 .cpf-mrow .mtot.gain{color:#12b981}
 .cpf-mrow .mtot.loss{color:#D6463C}
 .cpf-mrow .mdel{border:0;background:none;color:var(--muted);font-size:15px;font-family:inherit;padding:2px 4px;cursor:pointer}
+.cpf-mrow .mlink{font-size:13px;padding:2px 4px;opacity:.75;cursor:pointer}
 .cpf-mrow-top{background:#E8F0FE;border-color:#BBD3FB}
 body.phototheme .cpf-mrow-top{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.34)}
 body.theme-journal .cpf-mrow-top{background:#EEF4FD;border-color:#C7DBF7}
@@ -3023,6 +3024,8 @@ function normCpf(c){
       id:e.id||('cpf'+Math.random().toString(36).slice(2,9)),
       month:String(e.month).slice(0,7),
       kind:k,note:(typeof e.note==='string'?e.note.slice(0,40):''),
+      srcId:(k==='salary'&&e.srcId!=null)?String(e.srcId):null,   // 从主列表哪笔工资自动来的（删工资→删这条）
+      auto:k==='salary'?!!e.auto:false,
       gross:cpfNum(e.gross,0),bonus:cpfNum(e.bonus,0),oa:num(e.oa,0),sa:num(e.sa,0),ma:num(e.ma,0),
       ts:e.ts||Date.now()};})
     .sort((a,b)=>a.month<b.month?1:a.month>b.month?-1:0);   // 新月在前
@@ -3134,6 +3137,29 @@ function cpfSalaryIncome(monthStr){
   let sum=0;DATA.forEach(r=>{if(isInc(r)&&r.category==='salary'&&isoDay(r.ts).slice(0,7)===monthStr)sum+=sgdOf(r);});
   return Math.round(sum*100)/100;
 }
+/* v11.52 工资 ↔ CPF 全自动联动：主列表里每笔「工资」收入 → CPF 自动建/更一条对应供款（到手倒推基本→按年龄身份拆），
+   用那笔工资的 id（srcId）链起来、月份对齐工资那天。删/改主列表那笔工资 → 这条自动删/更（跟 email 联动一个道理）。
+   只在 CPF 已启用时动；只碰 srcId 那种「自动条」，手动记的（记这个月/存一笔/对账/利息）一律不碰。返回有没有改动。 */
+function cpfSyncFromSalary(){
+  if(!cpfActive())return false;
+  const sal={};DATA.forEach(r=>{if(isInc(r)&&r.category==='salary'){const net=Math.round(sgdOf(r)*100)/100;if(net>0)sal[String(r.id)]={net,month:isoDay(r.ts).slice(0,7),ts:new Date(r.ts).getTime()||Date.now()};}});
+  let changed=false;
+  const kept=CPF.entries.filter(e=>{if(e.kind==='salary'&&e.auto&&e.srcId){if(!sal[e.srcId]){changed=true;return false;}}return true;});   // 源没了 → 删自动条
+  if(changed)CPF.entries=kept;
+  for(const id in sal){
+    const s=sal[id],gross=cpfGrossFromNet(s.net,s.month),sp=cpfSplit(gross,s.month);
+    const oa=sp.oa,sa=sp.sa,ma=sp.ma;
+    let e=CPF.entries.find(x=>x.kind==='salary'&&x.srcId===id);
+    if(!e){CPF.entries.push({id:'cpf'+Math.random().toString(36).slice(2,9),srcId:id,auto:true,month:s.month,kind:'salary',note:'',gross,bonus:0,oa,sa,ma,ts:s.ts});changed=true;}
+    else if(e.month!==s.month||Math.abs(e.gross-gross)>0.005||Math.abs(e.oa-oa)>0.005||Math.abs(e.sa-sa)>0.005||Math.abs(e.ma-ma)>0.005){
+      e.month=s.month;e.gross=gross;e.oa=oa;e.sa=sa;e.ma=ma;e.ts=s.ts;changed=true;   // 金额/月份改了 → 跟着更
+    }
+  }
+  if(changed)CPF.entries.sort((a,b)=>a.month<b.month?1:a.month>b.month?-1:0);
+  return changed;
+}
+/* 主列表工资有增删改后叫一次：同步 + 只在真的变了才存/重画（不上渲染热路径） */
+function cpfSyncSalaryAndSave(){try{if(cpfSyncFromSalary()){buildCpfCard();idbSet('prefs',{...curPrefs(),bgver:BGVER});if(LIVE)apiSaveSettings(curPrefs());}}catch(e){}}
 function clone(o){return JSON.parse(JSON.stringify(o));}
 /* 拿某个 key 的分类定义；分类被删掉了也不会炸，回退到「其他」 */
 function catDef(k,type){const set=(type==='income'?INC:CAT);return set[k]||FALLBACK;}
@@ -5027,6 +5053,7 @@ document.getElementById('emConfirm').onclick=()=>{
   if(!sameMonth(r.ts)){viewMonth=sgMonthDate(r.ts);buildAll();}
   else{removeItem(r.id);insertItem(r);updateHeader();buildCalendar();buildDonut();buildCats();buildMonthBars();buildTrend();buildInsights();buildByCard();applyDView();}
   if(dayOpen())buildDayPage(openDayKey);
+  cpfSyncSalaryAndSave();   /* v11.52 改了工资（金额/月份/分类进出工资）→ 联动的 CPF 那条跟着建/更/删 */
 
   /* 3) 后台写库；orig_merchant 让 worker 知道拿哪个 key 去记 */
   apiUpdate(r.id,{amount:amt,currency:emCur,category:emCat,sub:fsub,merchant:note,
@@ -5056,6 +5083,7 @@ function doDelete(id,after){
   DATA=DATA.filter(x=>String(x.id)!==String(id));MUT++;   /* v9.94 竞态守卫，见 load() */
   removeItem(id);                 /* 这一步最便宜，先做 → 手感是即时的 */
   apiDelete(id);                  /* 不等网络 */
+  cpfSyncSalaryAndSave();         /* v11.52 删的是工资 → 跟它联动的 CPF 那条也自动删 */
   IB_AT=0; IB_MCACHE={};          /* v10.0 删账时 worker 会连它的来源邮件一起删 → 作废收件箱快取，下次一进收件箱就重拉、那封当场不见（不再有「最坏 90 秒」） */
   scheduleRebuild(after);         /* 重的丢下一帧 */
 }
@@ -5922,6 +5950,7 @@ document.getElementById('save').onclick=async()=>{
     apiAdd(payload).then(res=>{
       if(!res){DATA=DATA.filter(x=>x!==payload);removeItem(tmpId);updateHeader();buildCalendar();buildDonut();buildCats();buildMonthBars();buildTrend();if(dayOpen())buildDayPage(openDayKey);toast('没存上，已撤回','err');return;}
       const realId=res.id||tmpId;if(realId!==tmpId){payload.id=realId;document.querySelectorAll('.item[data-id="'+tmpId+'"]').forEach(el=>el.dataset.id=realId);}
+      cpfSyncSalaryAndSave();   /* v11.52 记的是工资 → CPF 自动建一条联动供款（拿到真 id 再链） */
     });
 };
 
@@ -8376,15 +8405,17 @@ function buildCpfPage(){
       <div class="av">${cpfFmt(v)}</div><div class="abar" style="width:${Math.max(pct,4)}%"></div></div>`;
   }).join('');
   const entriesHTML=CPF.entries.length?CPF.entries.map(e=>{
-    const isAdj=e.kind==='adjust',isTop=e.kind==='topup',isInt=e.kind==='interest';
+    const isAdj=e.kind==='adjust',isTop=e.kind==='topup',isInt=e.kind==='interest',isAutoSal=e.kind==='salary'&&e.auto;
     const cls=isTop?' cpf-mrow-top':isAdj?' cpf-mrow-adj':isInt?' cpf-mrow-int':'';
     /* 每种记录给一个小标签 chip，取代原来塞在月份前面的 emoji，一眼分得清 */
     const tag=isTop?'<span class="cpf-tag t-top">💰 存入</span>'
       :isAdj?'<span class="cpf-tag t-adj">🎯 对账</span>'
-      :isInt?'<span class="cpf-tag t-int">📈 利息</span>':'<span class="cpf-tag t-sal">工资</span>';
+      :isInt?'<span class="cpf-tag t-int">📈 利息</span>'
+      :isAutoSal?'<span class="cpf-tag t-sal">工资 · 🔗自动</span>':'<span class="cpf-tag t-sal">工资</span>';
     const sub=isTop?`自己存入${e.note?' · '+esc(e.note):''}`
       :isAdj?`跟 CPF app 对账${e.note?' · '+esc(e.note):''}`
       :isInt?`${esc((e.note||'年度利息').replace('（自动·估）','').trim())} · 按官方利率自动入账`
+      :isAutoSal?`跟主列表的工资联动 · 到手 S$${cpfFmt(e.gross)}`
       :e.gross?`工资 S$${cpfFmt(e.gross)}${e.gross>CPF.ceiling?' <span class="cpf-cap">(顶)</span>':''}${e.bonus?' · 奖金 S$'+cpfFmt(e.bonus):''}`:'';
     const seg=k=>isAdj?cpfFmtSigned(e[k]):cpfFmt(e[k]);
     const t=e.oa+e.sa+e.ma;
@@ -8392,7 +8423,7 @@ function buildCpfPage(){
       <div class="mcell"><div class="mm">${e.month}${tag}</div>${sub?`<div class="mg">${sub}</div>`:''}</div>
       <div class="msplit"><span class="mseg">OA <b>${seg('oa')}</b></span><span class="mseg">SA <b>${seg('sa')}</b></span><span class="mseg">MA <b>${seg('ma')}</b></span></div>
       <div class="mtot${isInt?' gain':''}${isAdj&&t<-0.005?' loss':isAdj?' gain':''}">${isAdj?cpfFmtSigned(t):'+'+cpfFmt(t)}</div>
-      <button class="mdel" data-cpfdel="${e.id}" aria-label="删除">✕</button>
+      ${isAutoSal?'<span class="mlink" title="跟工资联动，去明细删那笔工资">🔗</span>':`<button class="mdel" data-cpfdel="${e.id}" aria-label="删除">✕</button>`}
     </div>`;}).join(''):`<div class="cpf-empty">还没记过月供款。<br>每月工资进来，点右上「＋ 记这个月」，填工资总额就自动拆进三个账户。</div>`;
   body.innerHTML=`
     <div class="cpf-tot"><div class="k">CPF 总额</div><div class="v"><span class="s">S$</span>${cpfFmt(tot)}</div>
@@ -8427,8 +8458,11 @@ document.getElementById('cpfBody').addEventListener('click',e=>{
   if(e.target.closest('#cpfTopupBtn')){openCpfMod('topup');return;}
   const del=e.target.closest('[data-cpfdel]');
   if(del){cpfDelEntry(del.dataset.cpfdel);return;}
+  if(e.target.closest('.mlink')){toast('这笔跟主列表的工资联动 · 去「明细」删那笔工资，这里会一起删');return;}
   const row=e.target.closest('.cpf-mrow');
-  if(row&&row.dataset.eid){const en=CPF.entries.find(x=>x.id===row.dataset.eid);if(en&&(en.kind==='adjust'||en.kind==='interest'))return;openCpfMod(en&&en.kind==='topup'?'topupedit':'edit',row.dataset.eid);}   /* 对账/利息那笔不进编辑器，不对就 ✕ 删掉 */
+  if(row&&row.dataset.eid){const en=CPF.entries.find(x=>x.id===row.dataset.eid);if(en&&(en.kind==='adjust'||en.kind==='interest'))return;
+    if(en&&en.kind==='salary'&&en.auto){toast('这笔工资是跟主列表联动的 · 去「明细」改那笔工资就会自动跟着变');return;}   // 自动条不进编辑器
+    openCpfMod(en&&en.kind==='topup'?'topupedit':'edit',row.dataset.eid);}   /* 对账/利息那笔不进编辑器，不对就 ✕ 删掉 */
 });
 async function cpfDelEntry(id){
   const e=CPF.entries.find(x=>x.id===id);if(!e)return;
@@ -9880,6 +9914,7 @@ function primeBg(){
   snapPaint();                                 /* 不 await：快照有就秒上，没有也不耽误 */
   await Promise.all([loadTheme(), loadFx()]);
   await load(dataP,true);
+  cpfSyncSalaryAndSave();   /* v11.52 开机对齐一次：主列表的工资 ↔ CPF 自动供款（新增/改/删都补上） */
   await runRecurring();
   openDeepLinkDay();                           /* v10.8 修：点通知、app 完全关着那条路（见函式注释） */
   _ricSafe(()=>loadRest(),1500);               /* v10.1 背景补齐其余历史：等当月画面 + 照片先就位，再默默把旧月份拉回来 */

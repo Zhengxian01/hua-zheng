@@ -2635,6 +2635,16 @@ async function suiteEdit() {
       (adjCol.length === 2 && adjCol[0].txt === '−8.20' && /loss/.test(adjCol[0].cls) && /OA −12.50/.test(adjCol[0].segs) && /SA \+3.20/.test(adjCol[0].segs) && adjCol[1].txt === '+65.00' && /gain/.test(adjCol[1].cls)) ? ok('CPF 对账：每户带正负号（OA−12.50/SA+3.20…）· 净扣 −8.20 标红 · 净加 +65 标绿', JSON.stringify(adjCol.map(a => a.txt))) : bad('CPF 对账加扣显示/配色不对', JSON.stringify(adjCol));
       const parsedJunk = await pg.evaluate(() => cpfParseCpfText('hello no numbers'));
       (parsedJunk.oa === null && parsedJunk.sa === null && parsedJunk.ma === null) ? ok('CPF 截图解析：读不到数字 → 三个都 null（不乱填）') : bad('CPF 截图垃圾输入没挡住', JSON.stringify(parsedJunk));
+      // 2p) v11.52 工资 ↔ CPF 全自动联动：主列表工资收入 → 自动建 srcId 联动供款；改/删/换分类 → 跟着更/删；手动条不碰
+      const linkCreate = await pg.evaluate(() => {
+        CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1994, entries: [{ id: 'm1', month: '2026-07', kind: 'salary', gross: 4400, oa: 1012, sa: 264, ma: 352, ts: 1 }] }); CPF.on = true;
+        const keep = DATA.slice(); DATA = [{ id: 555, ts: '2026-09-01T10:00:00+08:00', amount: 4100, currency: 'SGD', type: 'income', category: 'salary', merchant: 'Sal' }];
+        cpfSyncFromSalary(); const e = CPF.entries.find(x => x.kind === 'salary' && x.auto); window.__keepDATA = keep;
+        return e ? { srcId: e.srcId, month: e.month, gross: Math.round(e.gross), total: Math.round((e.oa + e.sa + e.ma) * 100) / 100, manualUntouched: !!CPF.entries.find(x => x.id === 'm1' && !x.auto) } : null;
+      });
+      (linkCreate && linkCreate.srcId === '555' && linkCreate.month === '2026-09' && linkCreate.gross === 5125 && Math.abs(linkCreate.total - 1896.25) < 0.5 && linkCreate.manualUntouched) ? ok('CPF 工资联动：主列表工资(到手4100)→自动建供款（srcId555·月2026-09·倒推基本5125）· 手动条不碰', JSON.stringify(linkCreate)) : bad('CPF 工资联动没建对', JSON.stringify(linkCreate));
+      const linkDel = await pg.evaluate(() => { DATA = DATA.filter(x => String(x.id) !== '555'); const ch = cpfSyncFromSalary(); DATA = window.__keepDATA || []; return { ch, autoLeft: CPF.entries.filter(x => x.kind === 'salary' && x.auto).length, manualLeft: CPF.entries.filter(x => x.id === 'm1').length }; });
+      (linkDel.ch && linkDel.autoLeft === 0 && linkDel.manualLeft === 1) ? ok('CPF 工资联动：主列表删掉那笔工资 → 联动的自动供款也删（手动那条留着）') : bad('CPF 工资联动删不掉/误删手动', JSON.stringify(linkDel));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
       const orch = await pg.evaluate(async () => {
         let terminated = false, gotBlob = false;
