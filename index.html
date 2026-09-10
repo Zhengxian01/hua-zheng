@@ -1249,13 +1249,13 @@ body.theme-journal .herocpf{border-top-color:#E4DCCF}
 .cpf-tot .g{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:4px}
 .cpf-tot .g b{color:#0BA678}
 .cpf-accts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin:14px 0 4px}
-.cpf-acct{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px 11px;position:relative;overflow:hidden}
+.cpf-acct{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px 9px;position:relative;overflow:hidden}
 body.phototheme .cpf-acct{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1)}
 body.theme-journal .cpf-acct{background:#FBF7EF;border-color:#E4DCCF}
 .cpf-acct .an{font-size:11px;font-weight:800;letter-spacing:.3px}
 .cpf-acct .ad{font-size:9.5px;color:var(--muted);font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cpf-acct .av{font-size:16px;font-weight:800;color:var(--ink);margin-top:8px;letter-spacing:-.4px;white-space:nowrap}
-.cpf-acct .av .s{font-size:10.5px;color:var(--muted);font-weight:700;margin-right:1px}
+.cpf-acct .av{font-size:12.5px;font-weight:800;color:var(--ink);margin-top:8px;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cpf-acct .av::before{content:'S$';font-size:9px;color:var(--muted);font-weight:700;margin-right:2px;letter-spacing:0}
 .cpf-acct .abar{height:3px;border-radius:2px;margin-top:8px;background:currentColor;opacity:.9}
 .cpf-sec-h{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 10px}
 .cpf-sec-h .t{font-size:13.5px;font-weight:800;color:var(--ink)}
@@ -8186,7 +8186,7 @@ function buildCpfPage(){
   const acctsHTML=CPF_ACCTS.map(([k,n,d,c])=>{
     const v=b[k],pct=tot>0?Math.round(v/tot*100):0;
     return `<div class="cpf-acct" style="color:${c}"><div class="an">${n}</div><div class="ad">${d.split(' · ')[0]}</div>
-      <div class="av"><span class="s">S$</span>${cpfFmt0(v)}</div><div class="abar" style="width:${Math.max(pct,4)}%"></div></div>`;
+      <div class="av">${cpfFmt(v)}</div><div class="abar" style="width:${Math.max(pct,4)}%"></div></div>`;
   }).join('');
   const entriesHTML=CPF.entries.length?CPF.entries.map(e=>`
     <div class="cpf-mrow" data-eid="${e.id}">
@@ -8197,7 +8197,7 @@ function buildCpfPage(){
     </div>`).join(''):`<div class="cpf-empty">还没记过月供款。<br>每月工资进来，点右上「＋ 记这个月」，填工资总额就自动拆进三个账户。</div>`;
   body.innerHTML=`
     <div class="cpf-tot"><div class="k">CPF 总额</div><div class="v"><span class="s">S$</span>${cpfFmt(tot)}</div>
-      <div class="g">今年供款 <b>+S$${cpfFmt(yrIn)}</b> · 期初 S$${cpfFmt(CPF.open.oa+CPF.open.sa+CPF.open.ma)}</div></div>
+      <div class="g">${CPF.entries.length?`今年记录供款 <b>+S$${cpfFmt(yrIn)}</b> · `:''}期初余额 S$${cpfFmt(CPF.open.oa+CPF.open.sa+CPF.open.ma)}${CPF.entries.length?'':' · 还没记月供（记了会往上加）'}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
     <div class="cpf-note" style="text-align:center;margin-top:10px">${idn} · ${ageTxt} · 每 S$100 工资 → OA ${rt.oa} / SA ${rt.sa} / MA ${rt.ma}　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></div>
