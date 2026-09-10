@@ -2592,16 +2592,23 @@ async function suiteEdit() {
       // 2h) v11.48 隐藏前要确认（不直接藏）：点开关先弹 askConfirm，取消 → 不藏
       const hconf = await pg.evaluate(async () => { CPF.hidden = false; const p = document.getElementById('cpfToggleRow').onclick(); await new Promise(r => setTimeout(r, 60)); const shown = document.getElementById('okmod').classList.contains('show'); document.getElementById('okNo').click(); await p; return { shown, hidden: CPF.hidden }; });
       (hconf.shown && hconf.hidden === false) ? ok('CPF 隐藏前先确认，点「取消」→ 卡不藏（不直接隐藏）') : bad('CPF 隐藏没先确认', JSON.stringify(hconf));
-      // 2i) v11.48 CPF 利息估算：OA 按 oa%、SA/MA 按各自%，额外 +1% 只加首 $6万合计（OA≤$2万），55+ 首$3万+2%
-      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 80000, sa: 40000, ma: 25000 }, status: 'citizen', birthYear: 1990, rate: { oa: 2.5, sa: 4, ma: 4, extra: true } }); CPF.on = true; });
-      const iu = await pg.evaluate(() => cpfInterest());   // base=2000+1600+1000=4600 · extra=min(20000+40000+25000,60000)=60000*1%=600 → 5200
-      (Math.abs(iu.base - 4600) < 0.01 && Math.abs(iu.extra - 600) < 0.01 && Math.abs(iu.annual - 5200) < 0.01) ? ok('CPF 利息（<55）：base 4600 + 额外 600（首$6万+1%，OA≤$2万）= 一年 ≈ 5200') : bad('CPF 利息（<55）算错', JSON.stringify(iu));
-      const i55 = await pg.evaluate(() => { CPF.birthYear = 1960; const r = cpfInterest(); CPF.birthYear = 1990; return r; });   // 55+ extra=30000*2%+30000*1%=900
-      Math.abs(i55.extra - 900) < 0.01 ? ok('CPF 利息（55+）：额外 = 首$3万×2% + 次$3万×1% = 900') : bad('CPF 55+ 额外利息算错', JSON.stringify(i55));
-      const ioff = await pg.evaluate(() => { CPF.rate.extra = false; const r = cpfInterest(); CPF.rate.extra = true; return r; });
-      Math.abs(ioff.extra) < 0.01 ? ok('CPF 关掉额外利息 → extra=0（只算基础利率）') : bad('CPF 额外利息关不掉', JSON.stringify(ioff));
-      const irate = await pg.evaluate(() => { CPF.rate = { oa: 3, sa: 4.05, ma: 4.05, extra: true }; return { r: curPrefs().cpf.rate, ann: cpfInterest().annual }; });
-      (irate.r.sa === 4.05 && irate.r.oa === 3) ? ok('CPF 手动改利率（OA3 / SA4.05）跟着 prefs.cpf 存、利息跟着重算', JSON.stringify(irate.r)) : bad('CPF 改利率没存进 curPrefs', JSON.stringify(irate));
+      // 2i) v11.49 跟 CPF app 对账（reconcile）：填三个账户真实余额 → 补一笔 kind:'adjust' 差额，总额变成你填的
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 80000, sa: 40000, ma: 25000 } }); CPF.on = true; openCpfMod('recon'); });
+      await pg.waitForTimeout(150);
+      // 预填就是当前余额（80000/40000/25000）→ 把 SA 改成 41200（+1200 利息），OA 改成 82000（+2000）
+      await pg.evaluate(() => { const o = document.getElementById('cpfRc_oa'); o.value = '82000'; o.dispatchEvent(new Event('input', { bubbles: true })); const s = document.getElementById('cpfRc_sa'); s.value = '41200'; s.dispatchEvent(new Event('input', { bubbles: true })); }); await pg.waitForTimeout(120);
+      await pg.evaluate(() => document.getElementById('cpfModSave').click()); await pg.waitForTimeout(250);
+      const adj = await pg.evaluate(() => { const e = CPF.entries.find(x => x.kind === 'adjust'); const b = cpfBal(); return e ? { oa: e.oa, sa: e.sa, ma: e.ma, note: e.note, total: b.oa + b.sa + b.ma } : null; });
+      (adj && Math.abs(adj.oa - 2000) < 0.01 && Math.abs(adj.sa - 1200) < 0.01 && adj.ma === 0 && Math.abs(adj.total - 148200) < 0.01) ? ok('CPF 对账：填真实余额 → 补差额 OA+2000/SA+1200（利息），总额=你填的 148200', JSON.stringify(adj)) : bad('CPF 对账补差额错', JSON.stringify(adj));
+      // 差额可以是负的（之前记多了）：把 OA 从 82000 改成 81500 → adjust OA 应为 −500
+      await pg.evaluate(() => openCpfMod('recon')); await pg.waitForTimeout(120);
+      await pg.evaluate(() => { const o = document.getElementById('cpfRc_oa'); o.value = '81500'; o.dispatchEvent(new Event('input', { bubbles: true })); }); await pg.waitForTimeout(100);
+      await pg.evaluate(() => document.getElementById('cpfModSave').click()); await pg.waitForTimeout(200);
+      const negadj = await pg.evaluate(() => { const neg = CPF.entries.filter(x => x.kind === 'adjust').find(x => x.oa < 0); const b = cpfBal(); return { d: neg ? neg.oa : null, oaBal: b.oa }; });
+      (negadj.d != null && Math.abs(negadj.d + 500) < 0.01 && Math.abs(negadj.oaBal - 81500) < 0.01) ? ok('CPF 对账差额可为负：OA 记多了 → 补 −500，余额回到 81500') : bad('CPF 对账负差额错', JSON.stringify(negadj));
+      // 对账那笔存进 prefs.cpf、且 normCpf 回读负数不被夹成 0
+      const rsave = await pg.evaluate(() => { const c = curPrefs().cpf; const rr = normCpf(c).entries.find(x => x.kind === 'adjust' && x.oa < 0); return rr ? rr.oa : 999; });
+      Math.abs(rsave + 500) < 0.01 ? ok('CPF 对账差额（负数）存进 prefs.cpf、normCpf 回读不被夹成 0') : bad('CPF 对账负差额没存对/被夹', String(rsave));
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 
     // 3) 设置：改数值颜色 → 存
