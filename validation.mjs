@@ -2565,6 +2565,30 @@ async function suiteEdit() {
       const saved1 = await pg.evaluate(() => { const e = CPF.entries.find(x => x.month === cpfCurMonth()); return e ? { oa: e.oa, sa: e.sa, ma: e.ma } : null; });
       (advOA && Math.abs(parseFloat(advOA) - 1380) < 0.01 && saved1 && Math.abs(saved1.oa - 1380) < 0.01) ? ok('走弹窗存大额：OA 1380 进了 number 输入框也存进去了（没被千分位逗号坑成 0）', JSON.stringify(saved1)) : bad('弹窗存的 OA 不对（可能逗号进 number 框变空存成0）', `adv=${advOA} saved=${JSON.stringify(saved1)}`);
       await pg.evaluate(() => { try { closeCpfMod(); } catch (e) {} }); await dismiss();
+      // 2f) v11.47 自己存钱进 CPF（voluntary top-up）：选单个账户 or 全部按比例分 → 存成 kind:'topup' 一笔
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1996 }); CPF.on = true; openCpfMod('topup'); });
+      await pg.waitForTimeout(150);
+      await pg.evaluate(() => document.querySelector('#cpfTWhich [data-tw="sa"]').click());
+      await pg.evaluate(() => { const a = document.getElementById('cpfTAmt'); a.value = '5000'; a.dispatchEvent(new Event('input', { bubbles: true })); }); await pg.waitForTimeout(120);
+      await pg.evaluate(() => { const nn = document.getElementById('cpfTNote'); nn.value = '现金充值 SA'; nn.dispatchEvent(new Event('input', { bubbles: true })); });
+      await pg.evaluate(() => document.getElementById('cpfModSave').click()); await pg.waitForTimeout(250);
+      const tup = await pg.evaluate(() => { const e = CPF.entries.find(x => x.kind === 'topup'); return e ? { oa: e.oa, sa: e.sa, ma: e.ma, note: e.note, gross: e.gross } : null; });
+      (tup && tup.sa === 5000 && tup.oa === 0 && tup.ma === 0 && tup.gross === 0 && tup.note === '现金充值 SA') ? ok('CPF 自己存 5000 进 SA：只加 SA 5000、记成 topup（不当工资）', JSON.stringify(tup)) : bad('CPF 自己存一笔存错', JSON.stringify(tup));
+      // 全部按比例分（公民≤35 = 23/6/8 → 3700 = OA2300/SA600/MA800）
+      await pg.evaluate(() => openCpfMod('topup')); await pg.waitForTimeout(120);
+      await pg.evaluate(() => document.querySelector('#cpfTWhich [data-tw="split"]').click());
+      await pg.evaluate(() => { const a = document.getElementById('cpfTAmt'); a.value = '3700'; a.dispatchEvent(new Event('input', { bubbles: true })); }); await pg.waitForTimeout(120);
+      const tsplit = await pg.evaluate(() => JSON.parse(document.getElementById('cpfTAmt').dataset.split || '{}'));
+      (Math.abs(tsplit.oa - 2300) < 0.01 && Math.abs(tsplit.sa - 600) < 0.01 && Math.abs(tsplit.ma - 800) < 0.01) ? ok('CPF 自己存「全部」按 23/6/8 分：3700 = OA2300/SA600/MA800') : bad('CPF 自己存全部分错', JSON.stringify(tsplit));
+      await pg.evaluate(() => { try { closeCpfMod(); } catch (e) {} }); await dismiss();
+      // 2g) v11.47 没 PR 的人可以隐藏 CPF 卡（设置里再打开）：CPF.hidden 一切换，总览整条 el.hidden，且随 prefs.cpf 同步存
+      const hz = await pg.evaluate(() => { CPF.hidden = true; buildCpfCard(); const el = document.getElementById('cpfCard'); return { hidden: CPF.hidden, elHidden: !!el.hidden, empty: el.innerHTML === '' }; });
+      (hz.hidden && hz.elHidden && hz.empty) ? ok('CPF 隐藏后总览整条不显示（el.hidden + 清空）') : bad('CPF 隐藏没生效', JSON.stringify(hz));
+      const sz = await pg.evaluate(() => { CPF.hidden = false; buildCpfCard(); const el = document.getElementById('cpfCard'); return { hidden: CPF.hidden, elHidden: !!el.hidden, has: el.innerHTML.length > 0 }; });
+      (!sz.hidden && !sz.elHidden && sz.has) ? ok('CPF 再打开 → 总览又显示回来') : bad('CPF 显示回来没生效', JSON.stringify(sz));
+      const hpersist = await pg.evaluate(() => { CPF.hidden = true; return curPrefs().cpf.hidden === true; });
+      hpersist ? ok('CPF hidden 跟着 prefs.cpf 存（换手机也记得隐藏了）') : bad('CPF hidden 没进 curPrefs');
+      await pg.evaluate(() => { CPF.hidden = false; });
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 
     // 3) 设置：改数值颜色 → 存
