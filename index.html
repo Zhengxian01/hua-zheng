@@ -2989,6 +2989,18 @@ function normCpf(c){
 function cpfBal(){const b={oa:CPF.open.oa,sa:CPF.open.sa,ma:CPF.open.ma};CPF.entries.forEach(e=>{b.oa+=e.oa;b.sa+=e.sa;b.ma+=e.ma;});return b;}
 function cpfTotal(){const b=cpfBal();return b.oa+b.sa+b.ma;}
 function cpfActive(){return CPF.on||CPF.entries.length>0||(CPF.open.oa+CPF.open.sa+CPF.open.ma)>0;}
+/* 估「去年利息」各账户大概多少：官方利率 OA 2.5% · SA/MA 4%，额外 +1% 只加首 $6万合计
+   （OA 最多算 $2万，顺序 OA→SA→MA）；55 岁起首 $3万 +2%。只当对账时的【建议起点】，
+   用现在余额估、跟实际会有出入，所以填完还要对着 CPF app 改。 */
+function cpfEstInterest(){
+  const b=cpfBal(),base={oa:b.oa*0.025,sa:b.sa*0.04,ma:b.ma*0.04},extra={oa:0,sa:0,ma:0};
+  const yr=new Date().getFullYear(),age=CPF.birthYear?yr-CPF.birthYear:30;
+  let filled=0;
+  const take=(k,amt)=>{let left=Math.min(amt,60000-filled);while(left>0.005){const seg=Math.min(left,(filled<30000?30000:60000)-filled);extra[k]+=seg*((age>=55&&filled<30000)?0.02:0.01);filled+=seg;left-=seg;}};
+  take('oa',Math.min(b.oa,20000));take('sa',b.sa);take('ma',b.ma);
+  const rd=x=>Math.round(x*100)/100;
+  return {oa:rd(base.oa+extra.oa),sa:rd(base.sa+extra.sa),ma:rd(base.ma+extra.ma)};
+}
 /* PR 年资：拿 PR 的年月 → 到某供款月是第几年（1/2/3+），会随月份自己往上升。
    公民 / PR 满3年 / 说是 PR 但没填年月 → 一律当满3年（全额）。 */
 function cpfPrYear(monthStr){
@@ -8350,11 +8362,18 @@ function openCpfMod(mode,id){
     const isJan=cpfCurMonth().slice(5,7)==='01';
     body.innerHTML=`
       <div class="cpf-note" style="margin-bottom:10px">打开你的 <b>CPF app</b>，把三个账户<b>现在的余额</b>照抄进来。我算出差多少（多半是刚入的<b>利息</b>），补一笔，之后这里的总额就跟 CPF app <b>一模一样</b>。</div>
+      <button type="button" class="cpf-add" id="cpfRcEst" style="width:100%;padding:9px;margin-bottom:10px">💡 帮我按官方利率估「去年利息」先填</button>
       <div class="cpf-inrow"><label>对账月份<small>记在哪个月</small></label><input class="cpf-in" type="month" id="cpfRcMonth" value="${cpfCurMonth()}"></div>
       ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n} 现在余额<small>照 CPF app</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfRc_${k}" value="${cur[k]?Math.round(cur[k]*100)/100:''}" placeholder="0.00"></div>`).join('')}
       <div class="cpf-inrow"><label>备注<small>可留空</small></label><input class="cpf-in" type="text" id="cpfRcNote" value="${isJan?'去年利息':''}" placeholder="例：2025 利息 / 手动校准" maxlength="40"></div>
       <div class="cpf-splitprev" id="cpfRcPrev">照 CPF app 填三个账户</div>`;
     const gvv=id=>{const el=document.getElementById(id);return el?el.value:'';};
+    document.getElementById('cpfRcEst').onclick=()=>{   // 按官方利率估利息 → 填进「现在余额」= 现有 + 估的利息，之后使用者对着 CPF app 改
+      const est=cpfEstInterest();
+      CPF_ACCTS.forEach(([k])=>{document.getElementById('cpfRc_'+k).value=Math.round((cur[k]+est[k])*100)/100;});
+      rcalc();
+      document.getElementById('cpfRcPrev').innerHTML+=`<br><span style="color:var(--muted)">💡 按 OA2.5% / SA4% / MA4% + 首$6万加1% 估的：OA <b>+${cpfFmt(est.oa)}</b> · SA <b>+${cpfFmt(est.sa)}</b> · MA <b>+${cpfFmt(est.ma)}</b> —— 跟 CPF app 核一下，不对就改上面</span>`;
+    };
     const rcalc=()=>{
       const dO=cpfNumS(gvv('cpfRc_oa'),cur.oa)-cur.oa,dS=cpfNumS(gvv('cpfRc_sa'),cur.sa)-cur.sa,dM=cpfNumS(gvv('cpfRc_ma'),cur.ma)-cur.ma,dT=dO+dS+dM;
       const el=document.getElementById('cpfRcPrev');
@@ -8363,6 +8382,7 @@ function openCpfMod(mode,id){
     };
     CPF_ACCTS.forEach(([k])=>document.getElementById('cpfRc_'+k).addEventListener('input',rcalc));
     rcalc();
+    if(isJan)document.getElementById('cpfRcEst').click();   // 1 月：先帮你按利率估好利息填上，你对着 CPF app 改
   } else if(mode==='topup'||mode==='topupedit'){
     const isEdit=mode==='topupedit';
     const e=isEdit?CPF.entries.find(x=>x.id===id):null;

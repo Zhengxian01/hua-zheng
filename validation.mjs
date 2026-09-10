@@ -2609,6 +2609,17 @@ async function suiteEdit() {
       // 对账那笔存进 prefs.cpf、且 normCpf 回读负数不被夹成 0
       const rsave = await pg.evaluate(() => { const c = curPrefs().cpf; const rr = normCpf(c).entries.find(x => x.kind === 'adjust' && x.oa < 0); return rr ? rr.oa : 999; });
       Math.abs(rsave + 500) < 0.01 ? ok('CPF 对账差额（负数）存进 prefs.cpf、normCpf 回读不被夹成 0') : bad('CPF 对账负差额没存对/被夹', String(rsave));
+      // 2j) v11.50 对账时「帮我估去年利息」按钮：按官方利率预填，使用者对着 CPF app 改（自动 + 可改）
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 81012, sa: 40264, ma: 25352 }, birthYear: 1994 }); CPF.on = true; });
+      // OA 81012*2.5%=2025.30 + 额外(min(81012,20000)=20000)*1%=200 = 2225.30
+      // SA 40264*4%=1610.56 + 额外(60000-20000=40000, 全给SA)*1%=400 = 2010.56 · MA 25352*4%=1014.08（额外池已满）
+      const est = await pg.evaluate(() => cpfEstInterest());
+      (Math.abs(est.oa - 2225.30) < 0.01 && Math.abs(est.sa - 2010.56) < 0.01 && Math.abs(est.ma - 1014.08) < 0.01) ? ok('CPF 估去年利息：OA 2225.30 / SA 2010.56 / MA 1014.08（2.5/4/4% + 首$6万加1%，OA≤$2万）', JSON.stringify(est)) : bad('CPF 估利息算错', JSON.stringify(est));
+      await pg.evaluate(() => openCpfMod('recon')); await pg.waitForTimeout(120);
+      await pg.evaluate(() => document.getElementById('cpfRcEst').click()); await pg.waitForTimeout(120);
+      const pf = await pg.evaluate(() => ({ oa: +document.getElementById('cpfRc_oa').value, sa: +document.getElementById('cpfRc_sa').value }));
+      (Math.abs(pf.oa - 83237.30) < 0.01 && Math.abs(pf.sa - 42274.56) < 0.01) ? ok('CPF 按钮：估利息填进「现在余额」= 现有+估的（OA 83237.30 / SA 42274.56），可再手改') : bad('CPF 估利息没填进对账框', JSON.stringify(pf));
+      await pg.evaluate(() => { try { closeCpfMod(); } catch (e) {} }); await dismiss();
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 
     // 3) 设置：改数值颜色 → 存
