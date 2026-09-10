@@ -4842,7 +4842,10 @@ function rowActions(root,after){
     if(del){const it=del.closest('.item');const id=del.dataset.del;
       const r=DATA.find(x=>String(x.id)===String(id));
       const desc=r?`${catDef(catKey(r),r.type).n}${r.sub?'·'+r.sub:''}${r.merchant?' · '+r.merchant:''}\n${isInc(r)?'+':'-'}${curSym(r.currency)}${fmt(r.amount)}　${isoDay(r.ts)}`:'';
-      askConfirm('确定删除这笔记录？\n\n'+desc,'删除').then(ok=>{
+      /* v11.52 工资联动了 CPF → 删工资会连带删 CPF 那条供款，先讲清楚（防手滑） */
+      let cpfWarn='';
+      if(r&&isInc(r)&&r.category==='salary'){const ce=CPF.entries.find(x=>x.kind==='salary'&&x.auto&&x.srcId===String(id));if(ce)cpfWarn=`\n\n⚠️ 这是工资 · CPF 里联动那条供款（+S$${cpfFmt(ce.oa+ce.sa+ce.ma)}）也会一起删`;}
+      askConfirm('确定删除这笔记录？\n\n'+desc+cpfWarn,'删除').then(ok=>{
         if(ok){doDelete(id,after);}else closeRow(it);
       });
       return;}

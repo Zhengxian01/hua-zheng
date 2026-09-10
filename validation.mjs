@@ -2645,6 +2645,19 @@ async function suiteEdit() {
       (linkCreate && linkCreate.srcId === '555' && linkCreate.month === '2026-09' && linkCreate.gross === 5125 && Math.abs(linkCreate.total - 1896.25) < 0.5 && linkCreate.manualUntouched) ? ok('CPF 工资联动：主列表工资(到手4100)→自动建供款（srcId555·月2026-09·倒推基本5125）· 手动条不碰', JSON.stringify(linkCreate)) : bad('CPF 工资联动没建对', JSON.stringify(linkCreate));
       const linkDel = await pg.evaluate(() => { DATA = DATA.filter(x => String(x.id) !== '555'); const ch = cpfSyncFromSalary(); DATA = window.__keepDATA || []; return { ch, autoLeft: CPF.entries.filter(x => x.kind === 'salary' && x.auto).length, manualLeft: CPF.entries.filter(x => x.id === 'm1').length }; });
       (linkDel.ch && linkDel.autoLeft === 0 && linkDel.manualLeft === 1) ? ok('CPF 工资联动：主列表删掉那笔工资 → 联动的自动供款也删（手动那条留着）') : bad('CPF 工资联动删不掉/误删手动', JSON.stringify(linkDel));
+      // 2q) v11.52 防手滑：删主列表的工资 → 删除确认里警告「CPF 联动那条也会一起删」；删普通支出不警告
+      const delWarn = await pg.evaluate(async () => {
+        CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1994 }); CPF.on = true;
+        const keep = DATA.slice(), vm = viewMonth; const m = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 7);
+        DATA = [{ id: 777, ts: m + '-05T10:00:00+08:00', amount: 4100, currency: 'SGD', type: 'income', category: 'salary', merchant: 'Sal' }, { id: 778, ts: m + '-06T10:00:00+08:00', amount: 12.5, currency: 'SGD', type: 'expense', category: 'food', merchant: 'Kopi' }];
+        cpfSyncFromSalary(); viewMonth = sgMonthDate(DATA[0].ts); buildAll(); await new Promise(r => setTimeout(r, 60));
+        const msgs = []; const orig = window.askConfirm; window.askConfirm = (mm) => { msgs.push(mm); return Promise.resolve(false); };
+        const sEl = document.querySelector('#feed [data-del="777"]'), fEl = document.querySelector('#feed [data-del="778"]');
+        const found = !!(sEl && fEl); if (sEl) sEl.click(); await new Promise(r => setTimeout(r, 40)); if (fEl) fEl.click(); await new Promise(r => setTimeout(r, 40));
+        window.askConfirm = orig; DATA = keep; viewMonth = vm; buildAll();
+        return { found, salWarn: /CPF 里联动/.test(msgs[0] || ''), foodWarn: /CPF 里联动/.test(msgs[1] || '') };
+      });
+      (delWarn.found && delWarn.salWarn && !delWarn.foodWarn) ? ok('CPF 防手滑：删工资的确认里警告「CPF 联动那条也会删」· 删普通支出不警告') : bad('CPF 删工资没警告/误警告', JSON.stringify(delWarn));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
       const orch = await pg.evaluate(async () => {
         let terminated = false, gotBlob = false;
