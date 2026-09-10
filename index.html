@@ -432,6 +432,21 @@ body.theme-journal .ptr.ready .ptr-spin{background:#256B5E;color:#fff}
   font-weight:800;padding:0 18px;border-radius:12px;cursor:pointer}
 .icsgo:active{background:var(--emerald-dark)}
 .icsgo:disabled{opacity:.5}
+/* v11.44 订阅侦测条：重设计——名字/金额一行、周期在下、忽略是右边一颗小胶囊（旧的 .gdbtn width:100% 把名字挤没了） */
+.subitem{display:flex;align-items:flex-start;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+body.phototheme .subitem{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1)}
+body.theme-journal .subitem{background:#FBF7EF;border-color:#E4DCCF}
+.subitem .si-l{flex:1;min-width:0}
+.subitem .si-hd{display:flex;align-items:center;gap:8px}
+.subitem .si-dot{width:9px;height:9px;border-radius:3px;flex:none}
+.subitem .si-nm{font-size:15px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.subitem .si-amt{font-size:15px;font-weight:800;color:var(--ink);white-space:nowrap}
+.subitem .si-amt small{font-size:11px;color:var(--muted);font-weight:600}
+.subitem .si-meta{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:5px}
+.subitem .si-note{font-size:11px;font-weight:700;margin-top:6px;color:var(--muted)}
+.subitem .si-warn{font-size:11px;color:#E7A33E;font-weight:800;margin-top:5px}
+.subitem .si-ign{flex:0 0 auto;align-self:center;border:1px solid var(--line);background:transparent;color:var(--muted);font-family:inherit;font-size:12px;font-weight:800;border-radius:100px;padding:8px 15px;cursor:pointer;transition:.12s}
+.subitem .si-ign:active{transform:scale(.95);background:rgba(140,140,150,.16)}
 .icsf{display:flex;align-items:center;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line)}
 .icsf:last-child{border-bottom:0}
 .icsf .dot{width:10px;height:10px;border-radius:3px;flex:none}
@@ -8196,7 +8211,9 @@ function buildCpfPage(){
     </div>`).join(''):`<div class="cpf-empty">还没记过月供款。<br>每月工资进来，点右上「＋ 记这个月」，填工资总额就自动拆进三个账户。</div>`;
   body.innerHTML=`
     <div class="cpf-tot"><div class="k">CPF 总额</div><div class="v"><span class="s">S$</span>${cpfFmt(tot)}</div>
-      <div class="g">${CPF.entries.length?`累计已记供款 <b>+S$${cpfFmt(recSum)}</b>（${CPF.entries.length}个月）· `:''}期初余额 S$${cpfFmt(CPF.open.oa+CPF.open.sa+CPF.open.ma)}${CPF.entries.length?'':' · 还没记月供（记了会往上加）'}</div></div>
+      <div class="g">${CPF.entries.length
+        ?`最近一笔 <b>+S$${cpfFmt(CPF.entries[0].oa+CPF.entries[0].sa+CPF.entries[0].ma)}</b>（${CPF.entries[0].month}）· 累计已记 <b>+S$${cpfFmt(recSum)}</b>（${CPF.entries.length}个月）`
+        :`这是你填的起点余额 · 每月工资进来记一笔，就往上加 📈`}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
     <div class="cpf-note" style="text-align:center;margin-top:10px">${idn} · ${ageTxt} · 每 S$100 工资 → OA ${rt.oa} / SA ${rt.sa} / MA ${rt.ma}　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></div>
@@ -8458,19 +8475,20 @@ function subRender(){
   const monthly=subs.reduce((s,x)=>s+x.amount*(perM[x.pd]||1),0);
   let h=`<div class="section-h"><span class="h">侦测到 ${subs.length} 个定期扣款</span></div>`;
   h+=`<div class="glance" style="margin:0 0 12px"><div class="gl"><span class="k">每月订阅约</span><span class="val">S$${fmt(monthly)}</span></div></div>`;
-  h+='<div class="setcard" style="padding:2px 14px">';
   h+=subs.map(x=>{
     const dot=x.emailed?'#39C07C':'#8A9099';
-    let sub=`<i>S$${fmt(x.amount)} · ${x.period} · 下次约 ${x.nextDay.slice(5)} · ${x.n} 次</i>`;
-    if(x.priceUp)sub+=`<i class="err">⚠️ 涨价：S$${fmt(x.priceUp.from)} → S$${fmt(x.priceUp.to)}</i>`;
-    sub+= x.emailed
-      ? `<i class="warn">✅ 银行邮件已自动记账（不会重复）</i>`
-      : `<i>✍️ 手动/现金记的 —— 想让它自动记，可到「定期账单」手动加一条</i>`;
-    return `<div class="icsf"><span class="dot" style="background:${dot}"></span>`+
-      `<span class="nm"><b>${esc(x.name)}</b>${sub}</span>`+
-      `<button class="gdbtn" style="flex:0 0 auto;padding:6px 12px;font-size:12px" data-subig="${esc(x.key)}">忽略</button></div>`;
+    const note=x.emailed?'✅ 银行邮件自动记账（不会重复）':'✍️ 手动/现金记的 · 想自动记可去「定期账单」加一条';
+    return `<div class="subitem">
+      <div class="si-l">
+        <div class="si-hd"><span class="si-dot" style="background:${dot}"></span><span class="si-nm">${esc(x.name)}</span><span class="si-amt">S$${fmt(x.amount)}<small> /${x.period.replace('每','')}</small></span></div>
+        <div class="si-meta">${x.period} · 下次约 ${x.nextDay.slice(5)} · 已扣 ${x.n} 次</div>
+        <div class="si-note">${note}</div>
+        ${x.priceUp?`<div class="si-warn">⚠️ 涨价：S$${fmt(x.priceUp.from)} → S$${fmt(x.priceUp.to)}</div>`:''}
+      </div>
+      <button class="si-ign" data-subig="${esc(x.key)}">忽略</button>
+    </div>`;
   }).join('');
-  h+='</div><div class="gdhint" style="margin:10px 2px">「忽略」= 告诉它这不是订阅、别再列出来。<b>本页永远不会新增任何一笔交易。</b></div>';
+  h+='<div class="gdhint" style="margin:10px 2px">「忽略」= 告诉它这不是订阅、别再列出来。<b>本页永远不会新增任何一笔交易。</b></div>';
   el.innerHTML=h;
 }
 document.getElementById('openSubs').onclick=()=>{subPage.classList.add('show');subPage.scrollTop=0;syncPageOpen();
