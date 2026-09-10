@@ -2625,6 +2625,11 @@ async function suiteEdit() {
       notBoot ? ok('CPF OCR 引擎不在开机路径（typeof Tesseract=undefined，按下截图才载）') : bad('OCR 引擎开机就载了（违反按需）');
       const parsed = await pg.evaluate(() => cpfParseCpfText('DASHBOARD Total Amount $2,222.23\nOA Ordinary Account $1,372.79\nSA Special Account $362.60\nMA MediSave Account $486.84'));
       (parsed.oa === 1372.79 && Math.abs(parsed.sa - 362.60) < 0.005 && parsed.ma === 486.84 && Math.abs(parsed.total - 2222.23) < 0.005) ? ok('CPF 截图解析：从 OCR 文字挑出 OA1372.79 / SA362.60 / MA486.84 / 总2222.23', JSON.stringify(parsed)) : bad('CPF 截图解析错', JSON.stringify(parsed));
+      // v11.51 解析器就近配对（名字/金额被 OCR 拆开、倒序也认得 → 少漏读）
+      const pSplit = await pg.evaluate(() => cpfParseCpfText('Total Amount $2,222.23 OA Ordinary $1,372.79 Account SA Special $362.60 Account MA MediSave $486.84 Account'));
+      (pSplit.oa === 1372.79 && Math.abs(pSplit.sa - 362.60) < 0.005 && pSplit.ma === 486.84) ? ok('CPF 解析：名字和金额被 OCR 拆开也就近配对得上（OA 不再漏）', JSON.stringify(pSplit)) : bad('CPF 解析拆开配不上', JSON.stringify(pSplit));
+      const pRev = await pg.evaluate(() => cpfParseCpfText('Total $2,222.23 $1,372.79 Ordinary Account $362.60 Special Account $486.84 MediSave Account'));
+      (pRev.oa === 1372.79 && Math.abs(pRev.sa - 362.60) < 0.005 && pRev.ma === 486.84) ? ok('CPF 解析：金额被 OCR 排到名字前面也认得（右对齐倒序）', JSON.stringify(pRev)) : bad('CPF 解析倒序配不上', JSON.stringify(pRev));
       const parsedJunk = await pg.evaluate(() => cpfParseCpfText('hello no numbers'));
       (parsedJunk.oa === null && parsedJunk.sa === null && parsedJunk.ma === null) ? ok('CPF 截图解析：读不到数字 → 三个都 null（不乱填）') : bad('CPF 截图垃圾输入没挡住', JSON.stringify(parsedJunk));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析

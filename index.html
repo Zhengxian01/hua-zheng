@@ -3019,14 +3019,34 @@ function cpfEstInterest(){
 function cpfParseCpfText(raw){
   if(!raw)return{oa:null,sa:null,ma:null,total:null};
   const flat=String(raw).replace(/\s+/g,' ');
-  const near=keys=>{for(const k of keys){const m=flat.match(new RegExp(k+'[^0-9]{0,40}([0-9][0-9,]*\\.[0-9]{2})','i'));if(m)return parseFloat(m[1].replace(/,/g,''));}return null;};
-  return {
-    oa:near(['ordinary\\s*acc','ordinary','\\bOA\\b']),
-    sa:near(['special\\s*acc','special','\\bSA\\b']),
-    ma:near(['medisave','medi\\s*save','\\bMA\\b']),
-    total:near(['total\\s*amount','\\btotal\\b'])};
+  const monies=[...flat.matchAll(/[0-9][0-9,]*\.[0-9]{2}/g)].map(m=>({v:parseFloat(m[0].replace(/,/g,'')),i:m.index}));
+  const used=new Set();
+  /* 找离这个账户名【最近】的一个还没被占用的金额（前后都看，70 字内）——
+     CPF app 名字分两行、金额甩右边，OCR 顺序常乱，就近配对比「名字后面40字」稳。 */
+  const near=keys=>{for(const k of keys){const re=new RegExp(k,'ig');let m;while((m=re.exec(flat))){const pos=m.index+m[0].length/2;let best=null,bd=1e9,bi=-1;monies.forEach((mo,idx)=>{if(used.has(idx))return;const d=Math.abs(mo.i-pos);if(d<bd&&d<70){bd=d;best=mo.v;bi=idx;}});if(best!=null){used.add(bi);return best;}}}return null;};
+  const total=near(['total\\s*amount','\\btotal\\b']);   // 先认总额，占掉它那个数，别被账户抢走
+  const oa=near(['ordinary','\\bOA\\b']);
+  const sa=near(['special','\\bSA\\b']);
+  const ma=near(['medisave','medi\\s*save','\\bMA\\b']);
+  return {oa,sa,ma,total};
 }
-/* 读一张 CPF 截图 → {oa,sa,ma,total}。图片【只在内存里读、读完就丢，绝不存】。
+/* 读之前先把图「洗干净」：放大到长边~1600 + 转灰阶 + 提黑白对比 → OCR 认得更准。
+   全在内存 canvas 里做（不落地），洗不动就退回用原图。 */
+async function cpfPrepImage(file){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('img'));im.src=url;});
+    const long=Math.max(img.width,img.height)||1,scale=Math.max(1,Math.min(2.5,1600/long));
+    const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+    const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+    const cx=cv.getContext('2d');cx.drawImage(img,0,0,w,h);
+    const d=cx.getImageData(0,0,w,h),p=d.data;
+    for(let i=0;i<p.length;i+=4){const g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];const v=g>=150?255:(g<=110?0:(g-110)*255/40);p[i]=p[i+1]=p[i+2]=v;}   // 灰阶 + 拉对比（浅→白、深→黑）
+    cx.putImageData(d,0,0);
+    return cv;
+  }finally{URL.revokeObjectURL(url);}   // 图不留
+}
+/* 读一张 CPF 截图 → {oa,sa,ma,total,text}。图片【只在内存里读、读完就丢，绝不存】。
    OCR 跑在 tesseract 自己的 web worker 里（不卡主画面），跑完 terminate 释放内存。 */
 let cpfOcrBusy=false;
 async function cpfReadScreenshot(file,onStatus){
@@ -3036,8 +3056,9 @@ async function cpfReadScreenshot(file,onStatus){
     onStatus&&onStatus('载引擎…（第一次要下载，之后就快）');
     const T=await loadTesseract();
     onStatus&&onStatus('读图中…（在后台跑，不卡）');
+    let src=file;try{src=await cpfPrepImage(file);}catch(e){}   // 洗图；洗不动就用原图
     worker=await T.createWorker('eng');
-    const {data}=await worker.recognize(file);   // file 是内存里的 Blob，不落地
+    const {data}=await worker.recognize(src);   // src 是内存里的 canvas/Blob，不落地
     const txt=data&&data.text||'';
     return {...cpfParseCpfText(txt),text:txt};   // 连原文一起带回去，好让使用者看到到底读到啥
   }finally{
