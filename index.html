@@ -751,8 +751,8 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 /* v8.1 从两个（支出/收入）变三个（+事项）→ padding 收窄，不然撑爆 add-top */
 .ie{display:flex;gap:3px;background:var(--faint);border-radius:10px;padding:3px}
 .ie button{background:none;border:none;font-family:inherit;font-weight:700;font-size:13.5px;color:var(--muted);padding:7px 13px;border-radius:8px;cursor:pointer;white-space:nowrap}
-.ie button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.ie button.on[data-t="income"]{color:var(--emerald)}
+.ie button.on{background:var(--card);color:var(--brand);box-shadow:0 1px 3px rgba(0,0,0,.1)}   /* 选中一律蓝色（支出/收入/事项一致） */
+.ie button.on[data-t="income"]{color:var(--brand)}
 .ie button.on[data-t="event"]{color:var(--brand)}
 /* ⚠️ v8.6：以前是 justify-content:flex-end → SGD/USD/RM 全被推到药丸右边，没置中。
    取消(44px) 和 币种(44px) 左右等宽 → 中间那排「支出|收入|事项」才会真的在正中间。 */
