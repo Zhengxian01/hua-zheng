@@ -8284,7 +8284,7 @@ function buildCpfPage(){
     <div class="cpf-int" id="cpfIntBox">
       <div class="ci-top"><span class="ci-cap">📈 一年大约生利息</span><span class="ci-amt">≈ S$${cpfFmt0(it.annual)}<small>/年</small></span></div>
       <div class="ci-sub">每月大约 <b>+S$${cpfFmt0(it.monthly)}</b> · 利率 OA <b>${cpfPctTxt(CPF.rate.oa)}</b> / SA <b>${cpfPctTxt(CPF.rate.sa)}</b> / MA <b>${cpfPctTxt(CPF.rate.ma)}</b>${CPF.rate.extra?` · 首 S$6万 <b>+1%</b>${age>=55?'（55+ 首$3万+2%）':''}`:''}</div>
-      <div class="ci-note">这是估的（利息按最低余额逐月算、年底才入账）· 利率会调 <button type="button" id="cpfIntEdit">改利率 ›</button></div>
+      <div class="ci-note">估个大概（官方每月按<b>最低余额</b>算 · 隔年 <b>1 月 1 号</b>才真的入你账户）· 跟月结单会差几块 · 利率会调 <button type="button" id="cpfIntEdit">改利率 ›</button></div>
     </div>
     <div class="cpf-note" style="text-align:center;margin-top:10px;line-height:1.7">${idn} · ${ageTxt} · 你出 <b>${rt.emp}%</b> + 公司出 <b>${rt.empr}%</b> = 工资的 <b>${rt.total}%</b> 进 CPF<br>这 ${rt.total}% 里：OA <b>${shO}%</b> · SA <b>${shS}%</b> · MA <b>${shM}%</b>　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><span style="display:flex;gap:8px"><button class="cpf-add" id="cpfTopupBtn" style="padding:7px 12px">💰 存一笔</button><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></span></div>
