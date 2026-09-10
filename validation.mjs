@@ -2638,6 +2638,18 @@ async function suiteEdit() {
       (orch.r.oa === 9001.23 && orch.terminated && orch.gotBlob) ? ok('CPF OCR 编排：内存 Blob 进 OCR → 解析出余额 → 用完 terminate 释放内存', JSON.stringify(orch.r)) : bad('CPF OCR 编排/释放错', JSON.stringify(orch));
       const failGrace = await pg.evaluate(async () => { window.Tesseract = { createWorker: async () => { throw new Error('network'); } }; let msg = 'ok'; try { await cpfReadScreenshot(new Blob(['x']), () => {}); } catch (e) { msg = 'threw'; } delete window.Tesseract; return msg; });
       failGrace === 'threw' ? ok('CPF OCR 引擎载不到 → 抛错被接住（UI 退回手打，不崩）') : bad('CPF OCR 失败没退路', failGrace);
+      // 2L) v11.50 截图读完的「对账灯」：三个加起来 = 截图总额 → 青(ok)；对不上 → 红(bad) + 差多少
+      const PNGBUF = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cf00000201010064a06f420000000049454e44ae426082', 'hex');
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 } }); CPF.on = true; openCpfMod('recon'); }); await pg.waitForTimeout(120);
+      await pg.evaluate(() => { window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.84' } }), terminate: async () => { } }) }; });
+      await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
+      const tOk = await pg.evaluate(() => { const el = document.querySelector('#cpfRcShotStatus .cpf-tally'); return el ? el.className : null; });
+      tOk === 'cpf-tally ok' ? ok('CPF 截图对账灯：三个加起来 = 截图总额 → 青灯(ok，读对了)') : bad('tally 对上没亮青灯', String(tOk));
+      await pg.evaluate(() => { window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.00' } }), terminate: async () => { } }) }; });
+      await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
+      const tBad = await pg.evaluate(() => { const el = document.querySelector('#cpfRcShotStatus .cpf-tally'); return { cls: el ? el.className : null, diff: el ? /0\.84/.test(el.textContent) : false }; });
+      (tBad.cls === 'cpf-tally bad' && tBad.diff) ? ok('CPF 截图对账灯：对不上 → 红灯(bad) + 显示差 S$0.84（哪个数字读歪看得出）') : bad('tally 对不上没亮红灯/没显示差额', JSON.stringify(tBad));
+      await pg.evaluate(() => { try { delete window.Tesseract; closeCpfMod(); } catch (e) { } }); await dismiss();
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 
     // 3) 设置：改数值颜色 → 存

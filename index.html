@@ -1315,6 +1315,14 @@ body.phototheme .cpf-int-remind{background:rgba(16,185,129,.2);border-color:rgba
 .cpf-int .ci-sub b{color:var(--ink);font-weight:800}
 .cpf-int .ci-note{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5}
 .cpf-int .ci-note b{color:var(--ink);font-weight:800}
+.cpf-tally{margin-top:7px;padding:9px 11px;border-radius:11px;font-size:12px;font-weight:800;line-height:1.55}
+.cpf-tally b{font-weight:900}
+.cpf-tally.ok{background:rgba(18,185,129,.14);border:1px solid rgba(18,185,129,.5);color:#0E9E6E}
+.cpf-tally.bad{background:rgba(214,70,60,.12);border:1px solid rgba(214,70,60,.55);color:#D6463C}
+.cpf-tally.warn{background:rgba(231,163,62,.13);border:1px solid rgba(231,163,62,.5);color:#B87A18}
+body.phototheme .cpf-tally.ok{color:#3DDCA6}
+body.phototheme .cpf-tally.bad{color:#FF7A70}
+body.phototheme .cpf-tally.warn{color:#F0B65A}
 .cpf-empty{text-align:center;color:var(--muted);font-size:12.5px;padding:22px 10px;line-height:1.7}
 .cpf-setup{background:var(--card);border:1px dashed var(--line);border-radius:16px;padding:16px}
 body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,255,255,.18)}
@@ -8430,9 +8438,15 @@ function openCpfMod(mode,id){
         rcalc();
         if(!got.length){shotStatus('😕 这张没读到 OA/SA/MA · 换张清楚点的截图，或手动填下面');}
         else{
-          const sum=CPF_ACCTS.reduce((s,[k])=>s+(r[k]||0),0);
-          const warn=(r.total!=null&&Math.abs(sum-r.total)>1)?`<br><span style="color:#E7A33E">⚠️ 三个加起来 S$${cpfFmt(sum)} 跟截图总额 S$${cpfFmt(r.total)} 对不上，核一下</span>`:'';
-          shotStatus(`✅ 读到：${got.join(' · ')}（${((performance.now()-t0)/1000).toFixed(1)}秒）· <b>跟 CPF app 核一下</b>再存${warn}`);
+          const sum=CPF_ACCTS.reduce((s,[k])=>s+(r[k]||0),0),sec=((performance.now()-t0)/1000).toFixed(1);
+          let tally;   // 读到的三个加起来，跟截图上的「总额」对不对得上 → 对上=读对了(青)，对不上=有数字读歪(红)
+          if(got.length===3&&r.total!=null){
+            const diff=Math.round((sum-r.total)*100)/100;
+            tally=Math.abs(diff)<0.01
+              ? `<div class="cpf-tally ok">✓ 三个加起来 = 截图总额 <b>S$${cpfFmt(r.total)}</b> · 对得上，读对了</div>`
+              : `<div class="cpf-tally bad">✗ 对不上 · 差 <b>S$${cpfFmt(Math.abs(diff))}</b><br>三个加起来 <b>S$${cpfFmt(sum)}</b>，截图总额 <b>S$${cpfFmt(r.total)}</b> · 有个数字读歪了，核一下再改</div>`;
+          }else tally=`<div class="cpf-tally warn">${got.length<3?'只读到 '+got.length+' 个账户 · ':''}${r.total==null?'截图没读到总额 · ':''}自己跟 CPF app 核一下</div>`;
+          shotStatus(`✅ 读到：${got.join(' · ')}（${sec}秒）${tally}`);
         }
       }catch(e){
         shotStatus(e.message==='busy'?'还在读上一张…':'😕 读不到（引擎没载到 / 离线）· 直接手动填下面三个数就行');
