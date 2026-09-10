@@ -1306,6 +1306,7 @@ body.phototheme .cpf-tag.t-int{color:#F0B65A}
 .cpf-mrow .mseg b{color:var(--ink);font-weight:800}
 .cpf-mrow .mtot{font-size:14px;font-weight:800;color:#3B82F6;min-width:64px;text-align:right}
 .cpf-mrow .mtot.gain{color:#12b981}
+.cpf-mrow .mtot.loss{color:#D6463C}
 .cpf-mrow .mdel{border:0;background:none;color:var(--muted);font-size:15px;font-family:inherit;padding:2px 4px;cursor:pointer}
 .cpf-mrow-top{background:#E8F0FE;border-color:#BBD3FB}
 body.phototheme .cpf-mrow-top{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.34)}
@@ -8377,7 +8378,7 @@ function buildCpfPage(){
     return `<div class="cpf-mrow${cls}" data-eid="${e.id}">
       <div class="mcell"><div class="mm">${e.month}${tag}</div>${sub?`<div class="mg">${sub}</div>`:''}</div>
       <div class="msplit"><span class="mseg">OA <b>${seg('oa')}</b></span><span class="mseg">SA <b>${seg('sa')}</b></span><span class="mseg">MA <b>${seg('ma')}</b></span></div>
-      <div class="mtot${isInt?' gain':''}">${isAdj?cpfFmtSigned(t):'+'+cpfFmt(t)}</div>
+      <div class="mtot${isInt?' gain':''}${isAdj&&t<-0.005?' loss':isAdj?' gain':''}">${isAdj?cpfFmtSigned(t):'+'+cpfFmt(t)}</div>
       <button class="mdel" data-cpfdel="${e.id}" aria-label="删除">✕</button>
     </div>`;}).join(''):`<div class="cpf-empty">还没记过月供款。<br>每月工资进来，点右上「＋ 记这个月」，填工资总额就自动拆进三个账户。</div>`;
   body.innerHTML=`

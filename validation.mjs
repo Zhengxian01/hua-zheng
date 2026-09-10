@@ -2629,6 +2629,10 @@ async function suiteEdit() {
       (Math.abs(intShow.total - 3940.75) < 0.01 && intShow.rows === 2 && intShow.intRow && intShow.tag && intShow.gain && /2026 利息/.test(intShow.txt) && /48\.05/.test(intShow.txt)) ? ok('CPF 利息：进总额 3940.75 + 明细里「📈 利息」那行（标签 chip + 绿色金额）显示对', JSON.stringify({ total: intShow.total, rows: intShow.rows })) : bad('CPF 利息没显示成明细行', JSON.stringify(intShow));
       const intSaved = await pg.evaluate(() => { const c = curPrefs().cpf; const e = normCpf(c).entries.find(x => x.kind === 'interest'); return e ? { oa: e.oa, note: e.note } : null; });
       (intSaved && intSaved.oa === 48.05 && intSaved.note === '2026 利息') ? ok('CPF 利息记录跟着 prefs.cpf 存（服务端加的换手机也在）', JSON.stringify(intSaved)) : bad('CPF 利息记录没存好', JSON.stringify(intSaved));
+      // 2o) v11.51 对账明细：加钱/扣钱都显示（每户带正负号），净扣红、净加绿
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 1000, sa: 500, ma: 300 }, entries: [{ id: 'a1', month: '2026-12', kind: 'adjust', oa: -12.5, sa: 3.2, ma: 1.1, ts: 4 }, { id: 'a2', month: '2026-11', kind: 'adjust', oa: 50, sa: 10, ma: 5, ts: 3 }] }); CPF.on = true; buildCpfPage(); });
+      const adjCol = await pg.evaluate(() => [...document.querySelectorAll('#cpfBody .cpf-mrow-adj')].map(x => { const t = x.querySelector('.mtot'), segs = x.querySelector('.msplit').textContent.replace(/\s+/g, ' ').trim(); return { txt: t.textContent.trim(), cls: t.className, segs }; }));
+      (adjCol.length === 2 && adjCol[0].txt === '−8.20' && /loss/.test(adjCol[0].cls) && /OA −12.50/.test(adjCol[0].segs) && /SA \+3.20/.test(adjCol[0].segs) && adjCol[1].txt === '+65.00' && /gain/.test(adjCol[1].cls)) ? ok('CPF 对账：每户带正负号（OA−12.50/SA+3.20…）· 净扣 −8.20 标红 · 净加 +65 标绿', JSON.stringify(adjCol.map(a => a.txt))) : bad('CPF 对账加扣显示/配色不对', JSON.stringify(adjCol));
       const parsedJunk = await pg.evaluate(() => cpfParseCpfText('hello no numbers'));
       (parsedJunk.oa === null && parsedJunk.sa === null && parsedJunk.ma === null) ? ok('CPF 截图解析：读不到数字 → 三个都 null（不乱填）') : bad('CPF 截图垃圾输入没挡住', JSON.stringify(parsedJunk));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
