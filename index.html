@@ -1330,15 +1330,20 @@ body.phototheme .cpf-int-remind{background:rgba(16,185,129,.2);border-color:rgba
 .cpf-int .ci-note b{color:var(--ink);font-weight:800}
 .cpf-tally{margin-top:7px;padding:9px 11px;border-radius:11px;font-size:12px;font-weight:800;line-height:1.55}
 .cpf-tally b{font-weight:900}
-.cpf-tally.ok{background:rgba(18,185,129,.14);border:1px solid rgba(18,185,129,.5);color:#0E9E6E}
+.cpf-tally.ok{background:rgba(46,158,61,.12);border:1px solid rgba(46,158,61,.5);color:#2E9E3D}
 .cpf-tally.bad{background:rgba(214,70,60,.12);border:1px solid rgba(214,70,60,.55);color:#D6463C}
 .cpf-tally.warn{background:rgba(231,163,62,.13);border:1px solid rgba(231,163,62,.5);color:#B87A18}
-body.phototheme .cpf-tally.ok{color:#3DDCA6}
+body.phototheme .cpf-tally.ok{color:#5FC46B}
 body.phototheme .cpf-tally.bad{color:#FF7A70}
 body.phototheme .cpf-tally.warn{color:#F0B65A}
 .cpf-inf{display:inline-block;margin-left:4px;padding:1px 6px;border-radius:6px;font-size:9.5px;font-weight:800;background:rgba(18,185,129,.16);color:#0E9E6E;vertical-align:middle}
-.cpf-recon-use{display:block;width:100%;margin-top:9px;padding:11px;border:1.6px solid #3B82F6;border-radius:12px;background:rgba(59,130,246,.14);color:#3B82F6;font-family:inherit;font-weight:800;font-size:13.5px;cursor:pointer}
-.cpf-recon-use:active{background:rgba(59,130,246,.26)}
+.cpf-recon-use{display:block;width:100%;margin-top:9px;padding:11px;border:1.6px solid;border-radius:12px;background:transparent;font-family:inherit;font-weight:800;font-size:13.5px;cursor:pointer}
+.cpf-recon-use.ok{border-color:#2E9E3D;background:rgba(46,158,61,.12);color:#2E9E3D}
+.cpf-recon-use.bad{border-color:#D6463C;background:rgba(214,70,60,.1);color:#D6463C}
+.cpf-recon-use.warn{border-color:#E7A33E;background:rgba(231,163,62,.12);color:#B87A18}
+.cpf-recon-use:active{filter:brightness(.94)}
+body.phototheme .cpf-recon-use.ok{border-color:#5FC46B;color:#7BD487}
+body.phototheme .cpf-recon-use.warn{color:#F0B65A}
 .cpf-raw{margin-top:7px;font-weight:600}
 .cpf-raw summary{font-size:11px;color:#3B82F6;font-weight:800;cursor:pointer;list-style:revert}
 .cpf-raw pre,.cpf-raw-open pre{margin:6px 0 0;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:9px;font-size:10.5px;line-height:1.5;color:var(--muted);white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
@@ -1353,9 +1358,9 @@ body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,2
 .cpf-inrow label small{display:block;font-size:9.5px;color:var(--muted);font-weight:600}
 .cpf-infield{flex:1;min-width:0}
 .cpf-rc-read{font-size:10.5px;font-weight:800;margin-top:4px;padding-left:3px;line-height:1.4}
-.cpf-rc-read.same{color:#0E9E6E}
+.cpf-rc-read.same{color:#2E9E3D}
 .cpf-rc-read.diff{color:#D6463C}
-body.phototheme .cpf-rc-read.same{color:#3DDCA6}
+body.phototheme .cpf-rc-read.same{color:#5FC46B}
 body.phototheme .cpf-rc-read.diff{color:#FF7A70}
 .cpf-in{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:11px;padding:10px 12px;font-size:15px;font-family:inherit;font-weight:700;width:100%;box-sizing:border-box;-moz-appearance:textfield}
 .cpf-in::-webkit-outer-spin-button,.cpf-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -8508,7 +8513,7 @@ function openCpfMod(mode,id){
         const totTxt=r.total!=null?` · 截图总额 <b>S$${cpfFmt(r.total)}</b>`:' · 没读到总额';
         const rawBox=raw?`<details class="cpf-raw"><summary>看读到的原文（OCR 到底认到啥）</summary><pre>${raw}</pre></details>`:'';
         const label=({k,n})=>`${n} <b>${cpfFmt(r[k])}</b>${k===inferred?'<span class="cpf-inf">总额算的</span>':''}`;
-        let head,tally='';
+        let head,tally='',tState='ok';   // tState：数目对=ok(绿)/对不上=bad(红)/读不全=warn(黄) → 一键按钮跟着变色
         if(!got.length){head=`😕 这张一个账户都没读到（${sec}秒）· 换张清楚点、只框住三个账户那块的截图，或手动填下面`;}
         else{
           const sum=CPF_ACCTS.reduce((s,[k])=>s+(r[k]||0),0);
@@ -8516,19 +8521,22 @@ function openCpfMod(mode,id){
           if(got.length===3&&r.total!=null){
             const diff=Math.round((sum-r.total)*100)/100;
             if(Math.abs(diff)<0.01){
+              tState='ok';
               tally=inferred
                 ? `<div class="cpf-tally ok">✓ <b>${CPF_ACCTS.find(([k])=>k===inferred)[1]}</b> 没直接读到 → 用「总额 − 另外两个」补出 <b>S$${cpfFmt(r[inferred])}</b> · 三个加起来 = 总额，对上了</div>`
                 : `<div class="cpf-tally ok">✓ 三个加起来 = 截图总额 <b>S$${cpfFmt(r.total)}</b> · 对得上，读对了</div>`;
             }else{
+              tState='bad';
               /* 三个都读到、但加起来≠总额 → 数学上认不出是哪个读歪（差额均摊在三个上都成立），
                  老实说这点：把三个 vs 总额摆出来、原文直接展开，让你一眼比。 */
               tally=`<div class="cpf-tally bad">✗ 对不上：三个加起来 <b>S$${cpfFmt(sum)}</b>，截图总额 <b>S$${cpfFmt(r.total)}</b> · 差 <b>S$${cpfFmt(Math.abs(diff))}</b><br>👇 三个都读到了、认不出哪个数字歪，看下面原文核一下（总额 S$${cpfFmt(r.total)} 是准的），改了再存
                 <div class="cpf-raw-open">${raw?`<pre>${raw}</pre>`:''}</div></div>`;
             }
-          }else tally=`<div class="cpf-tally warn">缺的账户没读到${r.total==null?'、也没读到总额，没法帮你推 → 手动填缺的':' → 手动填一下缺的'}</div>`;
+          }else{tState='warn';tally=`<div class="cpf-tally warn">缺的账户没读到${r.total==null?'、也没读到总额，没法帮你推 → 手动填缺的':' → 手动填一下缺的'}</div>`;}
         }
-        /* 读到了就给一个一键按钮：直接拿截图读到的数去对账，不用你手动改、也不用滚下去找保存 */
-        const useBtn=got.length?`<button type="button" class="cpf-recon-use" id="cpfRcUse">✅ 就用截图这个数 · 对账 →</button>`:'';
+        /* 读到了就给一个一键按钮：直接拿截图读到的数去对账。按对错变色：对=绿、不上=红（红也能按，硬用截图的数） */
+        const useLabel=tState==='bad'?'⚠️ 有对不上 · 还是用截图这个数对账 →':'✅ 就用截图这个数 · 对账 →';
+        const useBtn=got.length?`<button type="button" class="cpf-recon-use ${tState}" id="cpfRcUse">${useLabel}</button>`:'';
         shotStatus(`${head}${tally}${useBtn}${rawBox}`);
         const ub=document.getElementById('cpfRcUse');
         if(ub)ub.onclick=()=>document.getElementById('cpfModSave').click();   // = 按下面的「保存」，拿现在框里（截图填的）数去对账
