@@ -8226,7 +8226,7 @@ function buildCpfPage(){
         ?`最近一笔 <b>+S$${cpfFmt(CPF.entries[0].oa+CPF.entries[0].sa+CPF.entries[0].ma)}</b>（${CPF.entries[0].month}）· 累计已记 <b>+S$${cpfFmt(recSum)}</b>（${CPF.entries.length}个月）`
         :`这是你填的起点余额 · 每月工资进来记一笔，就往上加 📈`}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
-    <div class="cpf-note" style="text-align:center;margin-top:10px;line-height:1.7">${idn} · ${ageTxt} · 工资的 <b>${rt.total}%</b> 进 CPF（你 ${rt.emp}% + 公司 ${rt.empr}%）<br>每 S$100 工资 → OA <b>S$${cpfFmt(rt.oa)}</b> · SA <b>S$${cpfFmt(rt.sa)}</b> · MA <b>S$${cpfFmt(rt.ma)}</b>　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
+    <div class="cpf-note" style="text-align:center;margin-top:10px;line-height:1.7">${idn} · ${ageTxt} · 工资的 <b>${rt.total}%</b> 进 CPF（你 ${rt.emp}% + 公司 ${rt.empr}%）<br>分配：OA <b>${rt.oa}%</b> · SA <b>${rt.sa}%</b> · MA <b>${rt.ma}%</b>　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></div>
     ${entriesHTML}`;
 }
@@ -8338,7 +8338,7 @@ function openCpfMod(mode,id){
   }
   cpfScrim.classList.add('show');cpfMod.classList.add('show');
 }
-function cpfRenderRatePrev(){const el=document.getElementById('cpfRatePrev');if(!el)return;const r=cpfRatesFor(cpfCurMonth());const py=(CPF.status!=='citizen'&&r.prYear<3)?` · PR 第${r.prYear}年 ${r.total}%`:'';el.innerHTML=`每 S$100 工资 → OA <b>${r.oa}</b> · SA <b>${r.sa}</b> · MA <b>${r.ma}</b>（合计 ${cpfFmt(r.oa+r.sa+r.ma)}%${py}）`;}
+function cpfRenderRatePrev(){const el=document.getElementById('cpfRatePrev');if(!el)return;const r=cpfRatesFor(cpfCurMonth());const py=(CPF.status!=='citizen'&&r.prYear<3)?` · PR 第${r.prYear}年`:'';el.innerHTML=`工资的 <b>${r.total}%</b> 进 CPF（你 ${r.emp}% + 公司 ${r.empr}%${py}）<br>分配到：OA <b>${r.oa}%</b> · SA <b>${r.sa}%</b> · MA <b>${r.ma}%</b>`;}
 function closeCpfMod(){cpfScrim.classList.remove('show');cpfMod.classList.remove('show');}
 document.getElementById('cpfModCancel').onclick=closeCpfMod;
 cpfScrim.onclick=closeCpfMod;
