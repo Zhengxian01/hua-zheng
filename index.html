@@ -1337,8 +1337,8 @@ body.phototheme .cpf-tally.ok{color:#3DDCA6}
 body.phototheme .cpf-tally.bad{color:#FF7A70}
 body.phototheme .cpf-tally.warn{color:#F0B65A}
 .cpf-inf{display:inline-block;margin-left:4px;padding:1px 6px;border-radius:6px;font-size:9.5px;font-weight:800;background:rgba(18,185,129,.16);color:#0E9E6E;vertical-align:middle}
-.cpf-recon-use{display:block;width:100%;margin-top:9px;padding:11px;border:0;border-radius:12px;background:#12b981;color:#fff;font-family:inherit;font-weight:800;font-size:13.5px;cursor:pointer}
-.cpf-recon-use:active{background:#0E9E6E}
+.cpf-recon-use{display:block;width:100%;margin-top:9px;padding:11px;border:1.6px solid #3B82F6;border-radius:12px;background:rgba(59,130,246,.14);color:#3B82F6;font-family:inherit;font-weight:800;font-size:13.5px;cursor:pointer}
+.cpf-recon-use:active{background:rgba(59,130,246,.26)}
 .cpf-raw{margin-top:7px;font-weight:600}
 .cpf-raw summary{font-size:11px;color:#3B82F6;font-weight:800;cursor:pointer;list-style:revert}
 .cpf-raw pre,.cpf-raw-open pre{margin:6px 0 0;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:9px;font-size:10.5px;line-height:1.5;color:var(--muted);white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
@@ -1351,6 +1351,12 @@ body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,2
 .cpf-inrow{display:flex;align-items:center;gap:10px;margin-bottom:9px}
 .cpf-inrow label{font-size:12px;font-weight:800;width:104px;color:var(--ink)}
 .cpf-inrow label small{display:block;font-size:9.5px;color:var(--muted);font-weight:600}
+.cpf-infield{flex:1;min-width:0}
+.cpf-rc-read{font-size:10.5px;font-weight:800;margin-top:4px;padding-left:3px;line-height:1.4}
+.cpf-rc-read.same{color:#0E9E6E}
+.cpf-rc-read.diff{color:#D6463C}
+body.phototheme .cpf-rc-read.same{color:#3DDCA6}
+body.phototheme .cpf-rc-read.diff{color:#FF7A70}
 .cpf-in{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:11px;padding:10px 12px;font-size:15px;font-family:inherit;font-weight:700;width:100%;box-sizing:border-box;-moz-appearance:textfield}
 .cpf-in::-webkit-outer-spin-button,.cpf-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .cpf-in:focus{outline:none;border-color:var(--brand)}
@@ -8464,7 +8470,7 @@ function openCpfMod(mode,id){
       <div class="cpf-note" id="cpfRcShotStatus" hidden style="margin-bottom:8px;color:var(--ink);font-weight:700"></div>
       <div class="cpf-note" style="margin-bottom:8px">没截图也行 —— 直接把三个数字打进下面。</div>
       <div class="cpf-inrow"><label>对账月份<small>默认这个月 · 不用改</small></label><input class="cpf-in" type="month" id="cpfRcMonth" value="${cpfCurMonth()}"></div>
-      ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n} 现在余额<small>照 CPF app</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfRc_${k}" value="${cur[k]?Math.round(cur[k]*100)/100:''}" placeholder="0.00"></div>`).join('')}
+      ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n} 现在余额<small>照 CPF app</small></label><div class="cpf-infield"><input class="cpf-in" type="number" inputmode="decimal" id="cpfRc_${k}" value="${cur[k]?Math.round(cur[k]*100)/100:''}" placeholder="0.00"><div class="cpf-rc-read" id="cpfRcRead_${k}" hidden></div></div></div>`).join('')}
       <div class="cpf-inrow"><label>备注<small>可留空</small></label><input class="cpf-in" type="text" id="cpfRcNote" value="${isJan?'去年利息':''}" placeholder="例：2025 利息 / 手动校准" maxlength="40"></div>
       <div class="cpf-splitprev" id="cpfRcPrev">照 CPF app 填三个账户</div>`;
     const gvv=id=>{const el=document.getElementById(id);return el?el.value:'';};
@@ -8488,6 +8494,15 @@ function openCpfMod(mode,id){
         }
         const got=[];CPF_ACCTS.forEach(([k,n])=>{if(r[k]!=null){document.getElementById('cpfRc_'+k).value=r[k];got.push({k,n});}});
         rcalc();
+        /* 每个账户格子下面放一个小号码 = 截图读到的值，方便你一格一格对着 CPF app 比、看哪个错。
+           跟格子里的数一样 → 绿；你把格子改动了 → 红（提醒这格跟截图不同）。 */
+        CPF_ACCTS.forEach(([k])=>{
+          const cap=document.getElementById('cpfRcRead_'+k),fld=document.getElementById('cpfRc_'+k);if(!cap||!fld)return;
+          if(r[k]==null){cap.hidden=true;fld.oninput=null;return;}
+          cap.hidden=false;cap.dataset.read=r[k];
+          const upd=()=>{const rd=+cap.dataset.read,cv=cpfNumS(fld.value,NaN),same=isFinite(cv)&&Math.abs(cv-rd)<0.005;cap.className='cpf-rc-read '+(same?'same':'diff');cap.innerHTML=`📷 截图读到 <b>S$${cpfFmt(rd)}</b>${same?'':' · 你改动了'}`;};
+          fld.oninput=upd;upd();
+        });
         /* 「看原文」：把 OCR 到底读到什么原样给你看（跟读支出那样） */
         const raw=(r.text||'').replace(/[<>&]/g,' ').replace(/[ \t]{2,}/g,' ').replace(/\n{2,}/g,'\n').trim().slice(0,700);
         const totTxt=r.total!=null?` · 截图总额 <b>S$${cpfFmt(r.total)}</b>`:' · 没读到总额';
