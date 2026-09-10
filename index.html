@@ -2952,16 +2952,26 @@ function cpfRatesFor(monthStr){
   const age=CPF.birthYear?(yr-CPF.birthYear):null;
   const al=cpfAllocFor(age),full=al.oa+al.sa+al.ma;
   const py=cpfPrYear(monthStr);   // 1/2/3（公民或满3年=3）
-  const total=py>=3?37:(py===2?24:9);   // PR 第1年 9% · 第2年 24% · 满3年/公民 37%
+  const total=py>=3?37:(py===2?24:9);   // 合计（雇员+雇主）：PR 第1年 9% · 第2年 24% · 满3年/公民 37%
+  const emp=py>=3?20:(py===2?15:5);     // 雇员出（从工资扣掉的那份）：20 / 15 / 5
+  const empr=total-emp;                 // 雇主出（公司额外加的）：17 / 9 / 4
   const k=total/full,rd=x=>Math.round(x*100)/100;
-  return {oa:rd(al.oa*k),sa:rd(al.sa*k),ma:rd(al.ma*k),total,prYear:py,age};
+  return {oa:rd(al.oa*k),sa:rd(al.sa*k),ma:rd(al.ma*k),total,emp,empr,prYear:py,age};
 }
 function cpfCurMonth(){return (todayKey&&todayKey()||new Date().toISOString()).slice(0,7);}
-function cpfSplit(gross,monthStr){   // 工资总额 → 各账户当月供款（工资超上限只算到上限）
+/* 到手工资（银行进账，已扣雇员 CPF）→ 倒推基本工资(gross)：net = basic − min(basic,上限)×雇员% */
+function cpfGrossFromNet(net,monthStr){
+  const n=Math.max(cpfNum(net,0),0),e=cpfRatesFor(monthStr||cpfCurMonth()).emp/100,ceil=CPF.ceiling;
+  if(!e)return n;
+  let basic=n/(1-e);                       // 先假设基本 ≤ 上限
+  if(basic>ceil)basic=n+ceil*e;            // 超过上限：雇员只扣到上限那部分
+  return Math.round(basic*100)/100;
+}
+function cpfSplit(gross,monthStr){   // 基本工资(gross) → 各账户当月供款（工资超上限只算到上限）
   const g=Math.max(cpfNum(gross,0),0),w=Math.min(g,CPF.ceiling),r=cpfRatesFor(monthStr||cpfCurMonth());
   const rd=x=>Math.round(x*100)/100;
   const oa=rd(w*r.oa/100),sa=rd(w*r.sa/100),ma=rd(w*r.ma/100);
-  return {oa,sa,ma,total:rd(oa+sa+ma),capped:g>CPF.ceiling,rate:r};
+  return {oa,sa,ma,total:rd(oa+sa+ma),empAmt:rd(w*r.emp/100),emprAmt:rd(w*r.empr/100),gross:g,capped:g>CPF.ceiling,rate:r};
 }
 function clone(o){return JSON.parse(JSON.stringify(o));}
 /* 拿某个 key 的分类定义；分类被删掉了也不会炸，回退到「其他」 */
@@ -8236,16 +8246,34 @@ function openCpfMod(mode,id){
     title.textContent=isEdit?'改这笔 CPF':'记这个月 CPF';
     body.innerHTML=`
       <div class="cpf-inrow"><label>月份</label><input class="cpf-in" type="month" id="cpfMonth" value="${m}"></div>
-      <div class="cpf-inrow"><label>工资总额<small>Gross（税前）</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfGross" value="${e&&e.gross?e.gross:''}" placeholder="例：6000"></div>
+      <div class="cpf-note" style="margin-bottom:5px">我填的是哪个数？</div>
+      <div class="cpf-statrow" id="cpfWageMode">
+        <button class="cpf-stat on" data-wm="gross">基本工资<small style="display:block;font-size:9px;opacity:.7">税前 / payslip</small></button>
+        <button class="cpf-stat" data-wm="net">到手工资<small style="display:block;font-size:9px;opacity:.7">银行进账 · 已扣 CPF</small></button>
+      </div>
+      <div class="cpf-inrow"><label id="cpfWageLbl">基本工资<small>税前 Gross</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfGross" value="${e&&e.gross?e.gross:''}" placeholder="例：4400"></div>
       <div class="cpf-splitprev" id="cpfPrev">填工资 → 按你的年龄 / 身份自动拆</div>
       <div class="cpf-note" style="margin-top:8px"><button type="button" id="cpfAdvT" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;padding:0">手动微调各账户 ▾</button></div>
       <div id="cpfAdv" hidden style="margin-top:6px">
         ${CPF_ACCTS.map(([k,n])=>`<div class="cpf-inrow"><label>${n} 进账</label><input class="cpf-in" type="number" inputmode="decimal" id="cpfE_${k}" value="${e?e[k]:''}"></div>`).join('')}
       </div>`;
     const gross=document.getElementById('cpfGross'),monthEl=document.getElementById('cpfMonth');
-    const recalc=()=>{const sp=cpfSplit(gross.value,monthEl.value);CPF_ACCTS.forEach(([k])=>{const f=document.getElementById('cpfE_'+k);if(f)f.value=sp[k]?sp[k]:'';});
-      const idn=sp.rate.prYear<3&&CPF.status!=='citizen'?`（PR 第${sp.rate.prYear}年 · 费率 ${sp.rate.total}%）`:'';
-      document.getElementById('cpfPrev').innerHTML=(+gross.value>0)?`OA <b>+${cpfFmt(sp.oa)}</b> · SA <b>+${cpfFmt(sp.sa)}</b> · MA <b>+${cpfFmt(sp.ma)}</b><br>本月共进 <b>+S$${cpfFmt(sp.total)}</b> ${idn}${sp.capped?` <span class="cpf-cap">· 工资超上限，只算到 S$${cpfFmt(CPF.ceiling)}</span>`:''}`:'填工资 → 按你的年龄 / 身份自动拆';};
+    let wageNet=false;   // false=填基本工资(gross)；true=填到手(net)，先倒推基本
+    const recalc=()=>{
+      const raw=cpfNum(gross.value,0);
+      const basic=wageNet?cpfGrossFromNet(raw,monthEl.value):raw;   // 到手 → 倒推基本
+      gross.dataset.basic=basic;   // 存的是基本工资，不是到手
+      const sp=cpfSplit(basic,monthEl.value);
+      CPF_ACCTS.forEach(([k])=>{const f=document.getElementById('cpfE_'+k);if(f)f.value=sp[k]?sp[k]:'';});
+      const idn=sp.rate.prYear<3&&CPF.status!=='citizen'?`PR 第${sp.rate.prYear}年 · `:'';
+      if(raw>0){
+        const back=wageNet?`到手 S$${cpfFmt(raw)} → <b>基本工资 S$${cpfFmt(basic)}</b>（倒推）<br>`:'';
+        document.getElementById('cpfPrev').innerHTML=`${back}你出(雇员 ${sp.rate.emp}%) <b>S$${cpfFmt(sp.empAmt)}</b> · 公司出(雇主 ${sp.rate.empr}%) <b>S$${cpfFmt(sp.emprAmt)}</b><br>共进 CPF <b>+S$${cpfFmt(sp.total)}</b> → OA <b>${cpfFmt(sp.oa)}</b>/SA <b>${cpfFmt(sp.sa)}</b>/MA <b>${cpfFmt(sp.ma)}</b><br><span style="color:var(--muted)">${idn}合计 ${sp.rate.total}%${sp.capped?` · 工资超上限，只算到 S$${cpfFmt(CPF.ceiling)}`:''}</span>`;
+      }else document.getElementById('cpfPrev').innerHTML='填工资 → 按你的年龄 / 身份自动拆';
+    };
+    document.getElementById('cpfWageMode').addEventListener('click',ev=>{const b=ev.target.closest('[data-wm]');if(!b)return;wageNet=(b.dataset.wm==='net');[...ev.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));
+      document.getElementById('cpfWageLbl').innerHTML=wageNet?'到手工资<small>银行进账</small>':'基本工资<small>税前 Gross</small>';
+      gross.placeholder=wageNet?'例：4100':'例：4400';recalc();});
     gross.addEventListener('input',recalc);monthEl.addEventListener('change',recalc);
     if(!isEdit&&gross.value)recalc();
     if(isEdit&&e){document.getElementById('cpfPrev').innerHTML=`OA <b>+${cpfFmt(e.oa)}</b> · SA <b>+${cpfFmt(e.sa)}</b> · MA <b>+${cpfFmt(e.ma)}</b>`;}
@@ -8269,7 +8297,8 @@ document.getElementById('cpfModSave').onclick=()=>{
   }
   const month=(gv('cpfMonth')||'').slice(0,7);
   if(!/^\d{4}-\d{2}$/.test(month)){toast('先选月份','err');return;}
-  const gross=cpfNum(gv('cpfGross'),0);
+  const gel=document.getElementById('cpfGross');
+  const gross=cpfNum(gel&&gel.dataset.basic!=null?gel.dataset.basic:gv('cpfGross'),0);   /* 填到手时存倒推的基本工资 */
   const oa=cpfNum(gv('cpfE_oa'),0),sa=cpfNum(gv('cpfE_sa'),0),ma=cpfNum(gv('cpfE_ma'),0);
   if(oa+sa+ma<=0){toast('填工资总额，或手动填各账户','err');return;}
   const before=CPF.entries.slice();
