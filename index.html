@@ -3002,18 +3002,6 @@ function normCpf(c){
 function cpfBal(){const b={oa:CPF.open.oa,sa:CPF.open.sa,ma:CPF.open.ma};CPF.entries.forEach(e=>{b.oa+=e.oa;b.sa+=e.sa;b.ma+=e.ma;});return b;}
 function cpfTotal(){const b=cpfBal();return b.oa+b.sa+b.ma;}
 function cpfActive(){return CPF.on||CPF.entries.length>0||(CPF.open.oa+CPF.open.sa+CPF.open.ma)>0;}
-/* 估「去年利息」各账户大概多少：官方利率 OA 2.5% · SA/MA 4%，额外 +1% 只加首 $6万合计
-   （OA 最多算 $2万，顺序 OA→SA→MA）；55 岁起首 $3万 +2%。只当对账时的【建议起点】，
-   用现在余额估、跟实际会有出入，所以填完还要对着 CPF app 改。 */
-function cpfEstInterest(){
-  const b=cpfBal(),base={oa:b.oa*0.025,sa:b.sa*0.04,ma:b.ma*0.04},extra={oa:0,sa:0,ma:0};
-  const yr=new Date().getFullYear(),age=CPF.birthYear?yr-CPF.birthYear:30;
-  let filled=0;
-  const take=(k,amt)=>{let left=Math.min(amt,60000-filled);while(left>0.005){const seg=Math.min(left,(filled<30000?30000:60000)-filled);extra[k]+=seg*((age>=55&&filled<30000)?0.02:0.01);filled+=seg;left-=seg;}};
-  take('oa',Math.min(b.oa,20000));take('sa',b.sa);take('ma',b.ma);
-  const rd=x=>Math.round(x*100)/100;
-  return {oa:rd(base.oa+extra.oa),sa:rd(base.sa+extra.sa),ma:rd(base.ma+extra.ma)};
-}
 /* 从 CPF 截图 OCR 出来的文字里，挑出 OA/SA/MA/Total 三个余额。纯字符串，不碰网络。
    靠账户名（Ordinary/Special/MediSave）或缩写（OA/SA/MA）后面最近的一个金额。 */
 function cpfParseCpfText(raw){
@@ -3023,11 +3011,13 @@ function cpfParseCpfText(raw){
   const used=new Set();
   /* 找离这个账户名【最近】的一个还没被占用的金额（前后都看，70 字内）——
      CPF app 名字分两行、金额甩右边，OCR 顺序常乱，就近配对比「名字后面40字」稳。 */
-  const near=keys=>{for(const k of keys){const re=new RegExp(k,'ig');let m;while((m=re.exec(flat))){const pos=m.index+m[0].length/2;let best=null,bd=1e9,bi=-1;monies.forEach((mo,idx)=>{if(used.has(idx))return;const d=Math.abs(mo.i-pos);if(d<bd&&d<70){bd=d;best=mo.v;bi=idx;}});if(best!=null){used.add(bi);return best;}}}return null;};
-  const total=near(['total\\s*amount','\\btotal\\b']);   // 先认总额，占掉它那个数，别被账户抢走
-  const oa=near(['ordinary','\\bOA\\b']);
-  const sa=near(['special','\\bSA\\b']);
-  const ma=near(['medisave','medi\\s*save','\\bMA\\b']);
+  const near=keys=>{for(const k of keys){const re=new RegExp(k,'ig');let m;while((m=re.exec(flat))){const pos=m.index+m[0].length/2;let best=null,bd=1e9,bi=-1;monies.forEach((mo,idx)=>{if(used.has(idx))return;const d=Math.abs(mo.i-pos);if(d<bd&&d<80){bd=d;best=mo.v;bi=idx;}});if(best!=null){used.add(bi);return best;}}}return null;};
+  /* 认账户用【部分词 + badge】：CPF app 里 OCR 常把 Ordinary 拆成 Ordi…rainary、
+     badge 的 O 认成数字 0（(0A)）；所以 ordi/speci/medi 这些残词 + 0A/OA/5A/SA/MA 都认。 */
+  const total=near(['total\\s*am','\\btotal\\b']);   // 先认总额，占掉它那个数，别被账户抢走
+  const oa=near(['ordi','\\(?[0o]a\\)?']);           // Ordi(nary) / badge (0A)(OA)
+  const sa=near(['speci','\\(?[5s]a\\)?']);          // Speci(al) / badge sa 5a
+  const ma=near(['medi','\\(?ma\\)?']);              // Medi(Save) / badge MA
   return {oa,sa,ma,total};
 }
 /* 读之前先把图「洗干净」：放大到长边~1600 + 转灰阶 + 提黑白对比 → OCR 认得更准。
@@ -8446,8 +8436,8 @@ function openCpfMod(mode,id){
       <input type="file" accept="image/*" id="cpfRcShotIn" hidden>
       <button type="button" class="cpf-add" id="cpfRcShot" style="width:100%;padding:9px;margin-bottom:8px">📷 从 CPF 截图读（自动填 · 图片不保存）</button>
       <div class="cpf-note" id="cpfRcShotStatus" hidden style="margin-bottom:8px;color:var(--ink);font-weight:700"></div>
-      <button type="button" class="cpf-add" id="cpfRcEst" style="width:100%;padding:9px;margin-bottom:10px">💡 帮我按官方利率估「去年利息」先填</button>
-      <div class="cpf-inrow"><label>对账月份<small>记在哪个月</small></label><input class="cpf-in" type="month" id="cpfRcMonth" value="${cpfCurMonth()}"></div>
+      <div class="cpf-note" style="margin-bottom:8px">没截图也行 —— 直接把三个数字打进下面。</div>
+      <div class="cpf-inrow"><label>对账月份<small>默认这个月 · 不用改</small></label><input class="cpf-in" type="month" id="cpfRcMonth" value="${cpfCurMonth()}"></div>
       ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n} 现在余额<small>照 CPF app</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfRc_${k}" value="${cur[k]?Math.round(cur[k]*100)/100:''}" placeholder="0.00"></div>`).join('')}
       <div class="cpf-inrow"><label>备注<small>可留空</small></label><input class="cpf-in" type="text" id="cpfRcNote" value="${isJan?'去年利息':''}" placeholder="例：2025 利息 / 手动校准" maxlength="40"></div>
       <div class="cpf-splitprev" id="cpfRcPrev">照 CPF app 填三个账户</div>`;
@@ -8501,12 +8491,6 @@ function openCpfMod(mode,id){
         shotStatus(e.message==='busy'?'还在读上一张…':'😕 读不到（引擎没载到 / 离线）· 直接手动填下面三个数就行');
       }finally{btn.disabled=false;}
     };
-    document.getElementById('cpfRcEst').onclick=()=>{   // 按官方利率估利息 → 填进「现在余额」= 现有 + 估的利息，之后使用者对着 CPF app 改
-      const est=cpfEstInterest();
-      CPF_ACCTS.forEach(([k])=>{document.getElementById('cpfRc_'+k).value=Math.round((cur[k]+est[k])*100)/100;});
-      rcalc();
-      document.getElementById('cpfRcPrev').innerHTML+=`<br><span style="color:var(--muted)">💡 按 OA2.5% / SA4% / MA4% + 首$6万加1% 估的：OA <b>+${cpfFmt(est.oa)}</b> · SA <b>+${cpfFmt(est.sa)}</b> · MA <b>+${cpfFmt(est.ma)}</b> —— 跟 CPF app 核一下，不对就改上面</span>`;
-    };
     const rcalc=()=>{
       const dO=cpfNumS(gvv('cpfRc_oa'),cur.oa)-cur.oa,dS=cpfNumS(gvv('cpfRc_sa'),cur.sa)-cur.sa,dM=cpfNumS(gvv('cpfRc_ma'),cur.ma)-cur.ma,dT=dO+dS+dM;
       const el=document.getElementById('cpfRcPrev');
@@ -8515,7 +8499,6 @@ function openCpfMod(mode,id){
     };
     CPF_ACCTS.forEach(([k])=>document.getElementById('cpfRc_'+k).addEventListener('input',rcalc));
     rcalc();
-    if(isJan)document.getElementById('cpfRcEst').click();   // 1 月：先帮你按利率估好利息填上，你对着 CPF app 改
   } else if(mode==='topup'||mode==='topupedit'){
     const isEdit=mode==='topupedit';
     const e=isEdit?CPF.entries.find(x=>x.id===id):null;

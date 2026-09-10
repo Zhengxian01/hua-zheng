@@ -2609,16 +2609,6 @@ async function suiteEdit() {
       // 对账那笔存进 prefs.cpf、且 normCpf 回读负数不被夹成 0
       const rsave = await pg.evaluate(() => { const c = curPrefs().cpf; const rr = normCpf(c).entries.find(x => x.kind === 'adjust' && x.oa < 0); return rr ? rr.oa : 999; });
       Math.abs(rsave + 500) < 0.01 ? ok('CPF 对账差额（负数）存进 prefs.cpf、normCpf 回读不被夹成 0') : bad('CPF 对账负差额没存对/被夹', String(rsave));
-      // 2j) v11.50 对账时「帮我估去年利息」按钮：按官方利率预填，使用者对着 CPF app 改（自动 + 可改）
-      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 81012, sa: 40264, ma: 25352 }, birthYear: 1994 }); CPF.on = true; });
-      // OA 81012*2.5%=2025.30 + 额外(min(81012,20000)=20000)*1%=200 = 2225.30
-      // SA 40264*4%=1610.56 + 额外(60000-20000=40000, 全给SA)*1%=400 = 2010.56 · MA 25352*4%=1014.08（额外池已满）
-      const est = await pg.evaluate(() => cpfEstInterest());
-      (Math.abs(est.oa - 2225.30) < 0.01 && Math.abs(est.sa - 2010.56) < 0.01 && Math.abs(est.ma - 1014.08) < 0.01) ? ok('CPF 估去年利息：OA 2225.30 / SA 2010.56 / MA 1014.08（2.5/4/4% + 首$6万加1%，OA≤$2万）', JSON.stringify(est)) : bad('CPF 估利息算错', JSON.stringify(est));
-      await pg.evaluate(() => openCpfMod('recon')); await pg.waitForTimeout(120);
-      await pg.evaluate(() => document.getElementById('cpfRcEst').click()); await pg.waitForTimeout(120);
-      const pf = await pg.evaluate(() => ({ oa: +document.getElementById('cpfRc_oa').value, sa: +document.getElementById('cpfRc_sa').value }));
-      (Math.abs(pf.oa - 83237.30) < 0.01 && Math.abs(pf.sa - 42274.56) < 0.01) ? ok('CPF 按钮：估利息填进「现在余额」= 现有+估的（OA 83237.30 / SA 42274.56），可再手改') : bad('CPF 估利息没填进对账框', JSON.stringify(pf));
       await pg.evaluate(() => { try { closeCpfMod(); } catch (e) {} }); await dismiss();
       // 2k) v11.50 CPF 截图 OCR：解析器 + 编排（图片只在内存、读完 terminate 释放、绝不保存）· OCR 引擎按需载不进开机
       const notBoot = await pg.evaluate(() => typeof window.Tesseract === 'undefined');   // 开机没载 OCR 引擎
@@ -2630,6 +2620,9 @@ async function suiteEdit() {
       (pSplit.oa === 1372.79 && Math.abs(pSplit.sa - 362.60) < 0.005 && pSplit.ma === 486.84) ? ok('CPF 解析：名字和金额被 OCR 拆开也就近配对得上（OA 不再漏）', JSON.stringify(pSplit)) : bad('CPF 解析拆开配不上', JSON.stringify(pSplit));
       const pRev = await pg.evaluate(() => cpfParseCpfText('Total $2,222.23 $1,372.79 Ordinary Account $362.60 Special Account $486.84 MediSave Account'));
       (pRev.oa === 1372.79 && Math.abs(pRev.sa - 362.60) < 0.005 && pRev.ma === 486.84) ? ok('CPF 解析：金额被 OCR 排到名字前面也认得（右对齐倒序）', JSON.stringify(pRev)) : bad('CPF 解析倒序配不上', JSON.stringify(pRev));
+      // v11.51 真机 OCR 原文（Ordinary 拆成 Ordi..rainary、badge 是零A「(0A)」）→ OA 也要直接读到，不靠推
+      const pReal = await pg.evaluate(() => cpfParseCpfText('Total Amount $2,222.23 As at 10 Sep 2026 Breakdown | Ordi (0A) rainary $1,372.79 Account Special sa "Pec $362.60 Account MA MediSave $486.84 Account Quick Access'));
+      (pReal.oa === 1372.79 && Math.abs(pReal.sa - 362.60) < 0.005 && pReal.ma === 486.84 && Math.abs(pReal.total - 2222.23) < 0.005) ? ok('CPF 解析：真机 OCR 原文（Ordi..rainary 拆词 + 零A「(0A)」badge）→ OA 直接读到 1372.79', JSON.stringify(pReal)) : bad('CPF 解析真机原文 OA 还是漏', JSON.stringify(pReal));
       const parsedJunk = await pg.evaluate(() => cpfParseCpfText('hello no numbers'));
       (parsedJunk.oa === null && parsedJunk.sa === null && parsedJunk.ma === null) ? ok('CPF 截图解析：读不到数字 → 三个都 null（不乱填）') : bad('CPF 截图垃圾输入没挡住', JSON.stringify(parsedJunk));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
