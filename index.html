@@ -3008,43 +3008,9 @@ function normCpf(c){
 function cpfBal(){const b={oa:CPF.open.oa,sa:CPF.open.sa,ma:CPF.open.ma};CPF.entries.forEach(e=>{b.oa+=e.oa;b.sa+=e.sa;b.ma+=e.ma;});return b;}
 function cpfTotal(){const b=cpfBal();return b.oa+b.sa+b.ma;}
 function cpfActive(){return CPF.on||CPF.entries.length>0||(CPF.open.oa+CPF.open.sa+CPF.open.ma)>0;}
-/* 按官方利率估一年各账户生多少利息：OA 2.5% · SA/MA 4%，额外 +1% 只加首 $6万合计
-   （OA 最多算 $2万，顺序 OA→SA→MA）；55 岁起首 $3万 +2%。自动补利息用这个算。 */
-function cpfEstInterest(){
-  const b=cpfBal(),base={oa:b.oa*0.025,sa:b.sa*0.04,ma:b.ma*0.04},extra={oa:0,sa:0,ma:0};
-  const yr=new Date().getFullYear(),age=CPF.birthYear?yr-CPF.birthYear:30;
-  let filled=0;
-  const take=(k,amt)=>{let left=Math.min(amt,60000-filled);while(left>0.005){const seg=Math.min(left,(filled<30000?30000:60000)-filled);extra[k]+=seg*((age>=55&&filled<30000)?0.02:0.01);filled+=seg;left-=seg;}};
-  take('oa',Math.min(b.oa,20000));take('sa',b.sa);take('ma',b.ma);
-  const rd=x=>Math.round(x*100)/100;
-  return {oa:rd(base.oa+extra.oa),sa:rd(base.sa+extra.sa),ma:rd(base.ma+extra.ma)};
-}
-/* 自动补利息（automation）：每年过完，那年利息在次年 1 月入。app 一开就看有没有该补的年份、
-   自动按官方利率补上，记成 kind:'interest' 一笔。首次（intCredited=0）认定当前余额已含到去年、
-   只从今往后补。改了状态返回 {credited:[...], total} 或 {init:true} 或 null。 */
-function cpfAutoInterest(){
-  if(!cpfActive())return null;
-  const nowY=new Date().getFullYear();
-  if(!CPF.intCredited){CPF.intCredited=nowY-1;return {init:true};}   // 老资料/刚建：当前余额已含到去年利息，别倒补
-  const due=[];for(let y=CPF.intCredited+1;y<nowY;y++)due.push(y);   // 每个已过完、利息该在次年1月入的年份（通常就1个）
-  if(!due.length)return null;
-  const credited=[];let total=0;
-  due.forEach(y=>{const est=cpfEstInterest();const t=est.oa+est.sa+est.ma;if(t<=0)return;
-    CPF.entries.push({id:'cpf'+Math.random().toString(36).slice(2,9),month:(y+1)+'-01',kind:'interest',note:y+' 利息（自动·估）',gross:0,bonus:0,oa:est.oa,sa:est.sa,ma:est.ma,ts:Date.now()});
-    credited.push(y);total+=t;});
-  CPF.intCredited=nowY-1;
-  CPF.entries.sort((a,b)=>a.month<b.month?1:a.month>b.month?-1:0);
-  return credited.length?{credited,total}:{init:true};   // 补了 → credited；只是把年份往前挪 → 当 init 静默存
-}
-/* 开机跑一次：该补就补、存起来、提醒你拍张截图对一下（照片=check）。只在 LIVE 时动，避免半载状态被存。 */
-let cpfIntChecked=false;
-function cpfMaybeAutoInterest(){
-  if(cpfIntChecked||!LIVE||!cpfActive())return;
-  cpfIntChecked=true;
-  const r=cpfAutoInterest();if(!r)return;
-  cpfPersist();
-  if(r.credited&&r.credited.length){buildCpfCard();toast('🎉 CPF '+r.credited.join('、')+' 利息自动加上了（估 +S$'+cpfFmt0(r.total)+'）· 拍张截图对一下更准');}
-}
+/* CPF 利息由【Cloudflare cron 服务端】每年自动补（见 worker.js scheduled ⑥）：
+   跨年后按官方利率把上一年利息加进 prefs.cpf，存进 D1 → app 一开就从 D1 拿到、直接显示在总额里。
+   前端这边不算利息，只负责显示那笔 kind:'interest' 记录。intCredited 是服务端的守卫，别在前端动它。 */
 /* 从 CPF 截图 OCR 出来的文字里，挑出 OA/SA/MA/Total 三个余额。纯字符串，不碰网络。
    靠账户名（Ordinary/Special/MediSave）或缩写（OA/SA/MA）后面最近的一个金额。 */
 function cpfParseCpfText(raw){
@@ -8392,7 +8358,7 @@ function buildCpfPage(){
     const head=isTop?'💰 '+e.month:isAdj?'🎯 '+e.month:isInt?'📈 '+e.month:e.month;
     const sub=isTop?`自己存入${e.note?' · '+esc(e.note):''}`
       :isAdj?`对账校准${e.note?' · '+esc(e.note):''}`
-      :isInt?`${e.note?esc(e.note):'利息（自动·估）'}`
+      :isInt?`${e.note?esc(e.note):'利息'} · 自动加`
       :e.gross?`工资 S$${cpfFmt(e.gross)}${e.gross>CPF.ceiling?' <span class="cpf-cap">(顶)</span>':''}${e.bonus?' · 奖金 S$'+cpfFmt(e.bonus):''}`:'';
     const seg=k=>isAdj?cpfFmtSigned(e[k]):cpfFmt(e[k]);
     const t=e.oa+e.sa+e.ma;
@@ -8411,11 +8377,11 @@ function buildCpfPage(){
     <div class="cpf-int${janRemind?' cpf-int-remind':''}" id="cpfReconBox">
       <div class="ci-top"><span class="ci-cap">📸 拍张 CPF 截图核对</span><button type="button" class="cpf-add" id="cpfReconBtn" style="padding:7px 14px">核对一下 ›</button></div>
       <div class="ci-sub">${lastInt
-        ?`已自动加 <b>${esc((lastInt.note||'利息').replace('（自动·估）','').trim())}</b> <b>+S$${cpfFmt0(lastInt.oa+lastInt.sa+lastInt.ma)}</b>（估）${lastAdj?` · 上次核对 ${lastAdj.month}`:''}`
-        :`每年利息我<b>自动</b>按官方利率加上（估）· 你不用管`}</div>
+        ?`已自动加 <b>${esc((lastInt.note||'利息').replace('（自动·估）','').trim())}</b> <b>+S$${cpfFmt0(lastInt.oa+lastInt.sa+lastInt.ma)}</b>${lastAdj?` · 上次核对 ${lastAdj.month}`:''}`
+        :`每年利息<b>自动</b>按官方利率加进总额 · 你不用管`}</div>
       <div class="ci-note">${janRemind
-        ?`🎉 新的一年 · 利息已自动加上（估的）· <b>拍张 CPF 截图核对一下</b>更准`
-        :`利息是估的，会跟实际差几块 · 拍张 CPF 截图（或手填），我把差额补到跟 CPF app <b>一模一样</b>`}</div>
+        ?`🎉 新的一年 · 利息已自动加进总额了 · <b>拍张 CPF 截图核对一下</b>就分毫不差`
+        :`想跟 CPF app 分毫不差？拍张截图（或手填），我把差额补齐 · 平时不用管`}</div>
     </div>
     <div class="cpf-note" style="text-align:center;margin-top:10px;line-height:1.7">${idn} · ${ageTxt} · 你出 <b>${rt.emp}%</b> + 公司出 <b>${rt.empr}%</b> = 工资的 <b>${rt.total}%</b> 进 CPF<br>这 ${rt.total}% 里：OA <b>${shO}%</b> · SA <b>${shS}%</b> · MA <b>${shM}%</b>　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><span style="display:flex;gap:8px"><button class="cpf-add" id="cpfTopupBtn" style="padding:7px 12px">💰 存一笔</button><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></span></div>
@@ -9876,7 +9842,6 @@ function primeBg(){
   snapPaint();                                 /* 不 await：快照有就秒上，没有也不耽误 */
   await Promise.all([loadTheme(), loadFx()]);
   await load(dataP,true);
-  cpfMaybeAutoInterest();   /* v11.51 每年 1 月自动按官方利率补上一年的 CPF 利息（照片留作 check） */
   await runRecurring();
   openDeepLinkDay();                           /* v10.8 修：点通知、app 完全关着那条路（见函式注释） */
   _ricSafe(()=>loadRest(),1500);               /* v10.1 背景补齐其余历史：等当月画面 + 照片先就位，再默默把旧月份拉回来 */

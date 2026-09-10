@@ -16,7 +16,7 @@
    （先留着旧值当 fallback，是为了让你「先部署、再设 secret」也不会整个 app 401 掉。） */
 const TOKEN_DEFAULT = "";
 const appToken = (env) => env.APP_TOKEN || TOKEN_DEFAULT;
-const WORKER_VER = "v10.34";   // 改这个档就顺手 +1，方便对版本
+const WORKER_VER = "v10.35";   // 改这个档就顺手 +1，方便对版本
 
 // 背景图上限（解码后字节）。前端 compressImage 目标 260KB，这里留一倍余量。
 const MAX_BG_BYTES = 600 * 1024;
@@ -1277,6 +1277,20 @@ export default {
         }
         if (n) console.log("backfilled inbox hashes:", n);
       } catch (e) { console.log("hash backfill FAILED:", e.message); }
+
+      /* ⑥ v11.51 CPF 利息：每年过完（跨年后）自动把上一年利息按官方利率加进 prefs.cpf。
+         守卫 = cpf.intCredited，跨年才真的写；跑在 Cloudflare，不用开 app。SGT 算年份。 */
+      try {
+        const sgtY = new Date(Date.now() + 8 * 3600000).getUTCFullYear();
+        const pr = await env.DB.prepare("SELECT v FROM app_settings WHERE k='theme_prefs'").first();
+        if (pr && pr.v) {
+          const prefs = JSON.parse(pr.v);
+          if (prefs && prefs.cpf && creditCpfInterest(prefs.cpf, sgtY)) {
+            await putSetting(env, "theme_prefs", JSON.stringify(prefs));
+            console.log("cron cpf interest: credited up to", sgtY - 1);
+          }
+        }
+      } catch (e) { console.log("cron cpf interest FAILED:", e.message); }
     })());
   },
 
@@ -2586,6 +2600,44 @@ async function putSetting(env, k, v) {
     `INSERT INTO app_settings (k, v, updated_at) VALUES (?, ?, datetime('now'))
      ON CONFLICT(k) DO UPDATE SET v=excluded.v, updated_at=datetime('now')`
   ).bind(k, v).run();
+}
+
+/* ════ CPF 利息：Cron 每年过完自动把上一年的利息加进 prefs.cpf ════
+   跟前端同一套官方利率算法（OA 2.5% · SA/MA 4% · 首 $6万合计 +1% · 55岁起首 $3万 +2%）。
+   守卫 = cpf.intCredited（已补到的最后一年）。跑在 Cloudflare，不用开 app。 */
+function cpfBalOf(cpf) {
+  const n = (x) => (isFinite(+x) ? +x : 0);
+  const o = cpf.open || {}, b = { oa: n(o.oa), sa: n(o.sa), ma: n(o.ma) };
+  (cpf.entries || []).forEach((e) => { b.oa += n(e.oa); b.sa += n(e.sa); b.ma += n(e.ma); });
+  return b;
+}
+function cpfEstInterestOf(cpf, nowY) {
+  const b = cpfBalOf(cpf), base = { oa: b.oa * 0.025, sa: b.sa * 0.04, ma: b.ma * 0.04 }, extra = { oa: 0, sa: 0, ma: 0 };
+  const age = cpf.birthYear ? nowY - cpf.birthYear : 30;
+  let filled = 0;
+  const take = (k, amt) => { let left = Math.min(amt, 60000 - filled); while (left > 0.005) { const seg = Math.min(left, (filled < 30000 ? 30000 : 60000) - filled); extra[k] += seg * ((age >= 55 && filled < 30000) ? 0.02 : 0.01); filled += seg; left -= seg; } };
+  take('oa', Math.min(b.oa, 20000)); take('sa', b.sa); take('ma', b.ma);
+  const rd = (x) => Math.round(x * 100) / 100;
+  return { oa: rd(base.oa + extra.oa), sa: rd(base.sa + extra.sa), ma: rd(base.ma + extra.ma) };
+}
+/* 就地改 cpf，返回有没有改动（改了就要写回 D1）。首次（intCredited 未设）只认定余额已含到去年、不倒补。 */
+function creditCpfInterest(cpf, nowY) {
+  if (!cpf || typeof cpf !== "object") return false;
+  const o = cpf.open || {};
+  const active = cpf.on || (Array.isArray(cpf.entries) && cpf.entries.length) || ((+o.oa || 0) + (+o.sa || 0) + (+o.ma || 0)) > 0;
+  if (!active) return false;
+  const ic = Math.round(+cpf.intCredited || 0);
+  if (!ic) { cpf.intCredited = nowY - 1; return true; }        // 首次/老资料：余额已含到去年，只记标记，不倒补
+  if (ic >= nowY - 1) return false;                            // 没有到期的年份
+  if (!Array.isArray(cpf.entries)) cpf.entries = [];
+  for (let yy = ic + 1; yy < nowY; yy++) {                     // 每个已过完的年份补一笔（通常就 1 个）
+    const est = cpfEstInterestOf(cpf, nowY);
+    if (est.oa + est.sa + est.ma <= 0) continue;
+    cpf.entries.push({ id: "cpf" + Math.random().toString(36).slice(2, 9), month: (yy + 1) + "-01", kind: "interest", note: yy + " 利息", gross: 0, bonus: 0, oa: est.oa, sa: est.sa, ma: est.ma, ts: Date.now() });
+  }
+  cpf.intCredited = nowY - 1;
+  cpf.entries.sort((a, b) => (a.month < b.month ? 1 : a.month > b.month ? -1 : 0));
+  return true;
 }
 
 /* ⚠️ 通用名黑名单（v4.2）

@@ -2623,15 +2623,12 @@ async function suiteEdit() {
       // v11.51 真机 OCR 原文（Ordinary 拆成 Ordi..rainary、badge 是零A「(0A)」）→ OA 也要直接读到，不靠推
       const pReal = await pg.evaluate(() => cpfParseCpfText('Total Amount $2,222.23 As at 10 Sep 2026 Breakdown | Ordi (0A) rainary $1,372.79 Account Special sa "Pec $362.60 Account MA MediSave $486.84 Account Quick Access'));
       (pReal.oa === 1372.79 && Math.abs(pReal.sa - 362.60) < 0.005 && pReal.ma === 486.84 && Math.abs(pReal.total - 2222.23) < 0.005) ? ok('CPF 解析：真机 OCR 原文（Ordi..rainary 拆词 + 零A「(0A)」badge）→ OA 直接读到 1372.79', JSON.stringify(pReal)) : bad('CPF 解析真机原文 OA 还是漏', JSON.stringify(pReal));
-      // 2n) v11.51 自动补利息（automation）：跨年开 app → 按官方利率自动加上一年利息，记成 interest 一笔，不重复、不倒补
-      // §G 时钟钉在 2026 → intCredited=2024 该补 2025：OA 1372.79×(2.5%+1%)=48.05 · 共 90.52
-      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 1372.79, sa: 362.60, ma: 486.84 }, birthYear: 1994, intCredited: 2024 }); CPF.on = true; });
-      const auto1 = await pg.evaluate(() => { const r = cpfAutoInterest(); const ie = CPF.entries.find(x => x.kind === 'interest'); return { credited: r && r.credited, intCredited: CPF.intCredited, oa: ie ? ie.oa : null, total: ie ? Math.round((ie.oa + ie.sa + ie.ma) * 100) / 100 : null, month: ie ? ie.month : null }; });
-      (auto1.credited && auto1.credited.includes(2025) && Math.abs(auto1.oa - 48.05) < 0.02 && Math.abs(auto1.total - 90.52) < 0.05 && auto1.intCredited === 2025 && auto1.month === '2026-01') ? ok('CPF 自动补利息：跨年→按官方利率自动加「2025 利息」+90.52（记 2026-01 · interest 一笔）', JSON.stringify(auto1)) : bad('CPF 自动补利息错', JSON.stringify(auto1));
-      const auto2 = await pg.evaluate(() => { cpfAutoInterest(); return CPF.entries.filter(x => x.kind === 'interest').length; });
-      auto2 === 1 ? ok('CPF 自动补利息：同年再开不重复补（intCredited 挡住）') : bad('CPF 利息重复补了', String(auto2));
-      const initc = await pg.evaluate(() => { CPF = normCpf({ open: { oa: 1000, sa: 0, ma: 0 } }); CPF.on = true; CPF.intCredited = 0; const r = cpfAutoInterest(); return { init: r && r.init, intCredited: CPF.intCredited, ints: CPF.entries.filter(x => x.kind === 'interest').length }; });
-      (initc.init && initc.intCredited === 2025 && initc.ints === 0) ? ok('CPF 首次/老资料（intCredited=0）→ 认定余额已含到去年，不倒补历史') : bad('CPF 初始化倒补了历史', JSON.stringify(initc));
+      // 2n) v11.51 CPF 利息记录（服务端 cron 加的 kind:'interest'）→ 前端要能算进总额 + 明细显示 📈 那行
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 1372.79, sa: 362.60, ma: 486.84 }, entries: [{ id: 'i1', month: '2027-01', kind: 'interest', note: '2026 利息', oa: 48.05, sa: 18.13, ma: 24.34, ts: 1 }] }); CPF.on = true; buildCpfPage(); });
+      const intShow = await pg.evaluate(() => { const b = cpfBal(); const row = document.querySelector('#cpfBody .cpf-mrow-int'); return { total: Math.round((b.oa + b.sa + b.ma) * 100) / 100, row: !!row, txt: row ? row.textContent.replace(/\s+/g, ' ').trim() : '' }; });
+      (Math.abs(intShow.total - 2312.75) < 0.01 && intShow.row && /2026 利息/.test(intShow.txt) && /48\.05/.test(intShow.txt)) ? ok('CPF 利息记录：算进总额 2312.75 + 明细 📈「2026 利息」那行显示对', JSON.stringify({ total: intShow.total })) : bad('CPF 利息记录没算进/没显示', JSON.stringify(intShow));
+      const intSaved = await pg.evaluate(() => { const c = curPrefs().cpf; const e = normCpf(c).entries.find(x => x.kind === 'interest'); return e ? { oa: e.oa, note: e.note, intCredited: normCpf(c).intCredited } : null; });
+      (intSaved && intSaved.oa === 48.05 && intSaved.note === '2026 利息') ? ok('CPF 利息记录跟着 prefs.cpf 存、intCredited 一起走（服务端加的换手机也在）', JSON.stringify(intSaved)) : bad('CPF 利息记录没存好', JSON.stringify(intSaved));
       const parsedJunk = await pg.evaluate(() => cpfParseCpfText('hello no numbers'));
       (parsedJunk.oa === null && parsedJunk.sa === null && parsedJunk.ma === null) ? ok('CPF 截图解析：读不到数字 → 三个都 null（不乱填）') : bad('CPF 截图垃圾输入没挡住', JSON.stringify(parsedJunk));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
