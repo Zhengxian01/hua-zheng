@@ -12,7 +12,7 @@
 <style>
 :root{
   --bg:#F4F5F3; --card:#FFFFFF; --ink:#181B1F; --ink-2:#3D444C; --muted:#8B929B; --faint:#EDEEEB;
-  --line:#EAECE8; --brand:#0BA678; --emerald:#0BA678; --emerald-dark:#087a58; --emerald-soft:#E4F6EF; --red:#DB5A54;
+  --line:#EAECE8; --brand:#3B82F6; --emerald:#3B82F6; --emerald-dark:#2563EB; --emerald-soft:#E8F0FE; --red:#DB5A54;
   --shadow:0 1px 2px rgba(20,30,25,.04),0 8px 24px rgba(20,30,25,.05);
   --shadow-lg:0 2px 8px rgba(20,30,25,.08),0 20px 48px rgba(20,30,25,.14);
 }
@@ -35,7 +35,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:20p
    ⚠️ ￥ 留着当兜底：万一 icon-192.png 掉了/还没载入，看到的还是原本那颗绿方块，
       不会变成一个空洞。载入成功 → .img → 字变透明、照片盖上去。 */
 .logo{width:34px;height:34px;border-radius:10px;background:var(--emerald);display:grid;place-items:center;
-  color:#fff;font-weight:800;font-size:17px;box-shadow:0 4px 12px rgba(11,166,120,.32);
+  color:#fff;font-weight:800;font-size:17px;box-shadow:0 4px 12px rgba(59,130,246,.32);
   background-size:cover;background-position:center;overflow:hidden}
 .logo.img{color:transparent;box-shadow:0 4px 12px rgba(0,0,0,.42)}
 .brand .t{font-weight:700;font-size:19px;letter-spacing:-.2px}
@@ -146,7 +146,7 @@ body.phototheme .cal-c.sel{background:rgba(255,255,255,.13)}
 .dsec[data-sec="cal"] .section-h{align-items:center}   /* 默认 baseline 会让药丸切换跟标题错位 */
 .calseg{position:relative;display:flex;background:var(--faint);border:1px solid var(--line);border-radius:100px;padding:3px}
 .calseg-ind{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:100px;background:var(--brand);
-  box-shadow:0 2px 8px rgba(11,166,120,.35);transition:transform .26s cubic-bezier(.32,.72,0,1);pointer-events:none}
+  box-shadow:0 2px 8px rgba(59,130,246,.35);transition:transform .26s cubic-bezier(.32,.72,0,1);pointer-events:none}
 .calseg[data-m="todo"] .calseg-ind{transform:translateX(100%)}
 .calseg button{position:relative;z-index:1;border:0;background:transparent;color:var(--muted);font-family:inherit;
   font-size:12px;font-weight:700;padding:0 16px;height:28px;line-height:28px;border-radius:100px;cursor:pointer;
@@ -392,7 +392,7 @@ body.theme-journal .ptr.ready .ptr-spin{background:#256B5E;color:#fff}
 /* v6.3 预算进度条 */
 /* v9.80 预算徽章（解法1）：名字右边的小药丸，三档色。小预算也清楚（文字不受长度挤压）。 */
 .budbadge{display:inline-block;font-size:10.5px;font-weight:700;padding:1.5px 8px;border-radius:99px;line-height:1.5;white-space:nowrap;font-variant-numeric:tabular-nums;vertical-align:middle}
-.budbadge.ok{background:rgba(11,166,120,.16);color:#12b981}
+.budbadge.ok{background:rgba(59,130,246,.16);color:#12b981}
 .budbadge.warn{background:rgba(231,163,62,.18);color:#E7A33E}
 .budbadge.over{background:rgba(219,90,84,.20);color:#F0665F}
 /* v6.3 预算设置行 */
@@ -419,7 +419,7 @@ body.theme-journal .ptr.ready .ptr-spin{background:#256B5E;color:#fff}
 .gdstat .gdd{font-size:12.5px;color:var(--muted);line-height:1.7}
 #gdActs{display:flex;flex-direction:column;gap:10px}
 .gdbtn{width:100%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:inherit;font-size:16px;font-weight:700;padding:14px;border-radius:14px;cursor:pointer}
-.gdbtn.primary{background:var(--emerald);color:#fff;border:none;box-shadow:0 4px 14px rgba(11,166,120,.35)}
+.gdbtn.primary{background:var(--emerald);color:#fff;border:none;box-shadow:0 4px 14px rgba(59,130,246,.35)}
 .gdbtn.primary:active{background:var(--emerald-dark)}
 .gdbtn.ghost{background:transparent;color:var(--muted);border-color:var(--line)}
 .gdbtn:disabled{opacity:.5}
@@ -477,7 +477,7 @@ body.theme-journal .subitem{background:#FBF7EF;border-color:#E4DCCF}
 .gcjoin{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
   background:var(--emerald);color:#fff;border:0;border-radius:14px;padding:15px;
   font-family:inherit;font-size:16px;font-weight:800;text-decoration:none;
-  box-shadow:0 4px 14px rgba(11,166,120,.35);margin-bottom:12px;cursor:pointer}
+  box-shadow:0 4px 14px rgba(59,130,246,.35);margin-bottom:12px;cursor:pointer}
 .gcjoin:active{background:var(--emerald-dark)}
 .gcro{font-size:12px;font-weight:600;color:var(--muted);background:var(--faint);
   border-radius:10px;padding:10px 12px;line-height:1.6;margin-bottom:12px}
@@ -516,7 +516,7 @@ body.theme-journal .subitem{background:#FBF7EF;border-color:#E4DCCF}
 /* v7.1 ＋：圆形实心键，不再是一个裸的字 */
 .dp-add{width:34px;height:34px;flex:0 0 auto;border:none;border-radius:50%;background:var(--emerald);color:#fff;
   font-size:20px;font-weight:400;font-family:inherit;line-height:1;display:grid;place-items:center;cursor:pointer;
-  box-shadow:0 3px 10px rgba(11,166,120,.4);transition:transform .12s,filter .12s;padding:0}
+  box-shadow:0 3px 10px rgba(59,130,246,.4);transition:transform .12s,filter .12s;padding:0}
 .dp-add:active{transform:scale(.9);filter:brightness(.92)}
 .dp-top .dp-back{width:52px}
 .dp-evcnt{font-size:11px;color:var(--muted);font-weight:600}
@@ -524,7 +524,7 @@ body.theme-journal .subitem{background:#FBF7EF;border-color:#E4DCCF}
    没有勾选框：这是记录本，不是待办清单。 */
 .tx.ev{display:flex;align-items:center;gap:12px;cursor:pointer}
 .evtm{flex:0 0 auto;min-width:52px;text-align:center;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;
-  color:var(--brand);background:rgba(11,166,120,.14);border-radius:8px;padding:6px 6px}
+  color:var(--brand);background:rgba(59,130,246,.14);border-radius:8px;padding:6px 6px}
 .tx.ev.past{opacity:.45}                 /* 时间过了就自动变淡，不用你去打勾 */
 .tx.ev.past .evtm{color:var(--muted);background:var(--faint)}
 .evtm.span{min-width:72px;font-size:11px}
@@ -553,7 +553,7 @@ body.theme-journal .subitem{background:#FBF7EF;border-color:#E4DCCF}
 .daypeek .dplun{display:inline-block;padding:2.5px 10px;border-radius:99px;background:rgba(150,158,175,.20);color:var(--muted);font-size:11px;font-weight:800;margin-left:9px;vertical-align:middle;font-variant-numeric:normal}
 /* v11.44 「农历」跟日期同颜色（不分深浅），只有日期加粗；农历二字用常规字重 */
 .daypeek .dplun i,.dp-title .dptlun i{font-style:normal;font-weight:500;font-size:inherit;color:inherit;-webkit-text-fill-color:inherit;background:none;margin-right:5px;opacity:1}
-.daypeek .dpfull{font-size:12px;font-weight:600;color:var(--emerald);background:rgba(11,166,120,.12);padding:4px 10px;border-radius:9px;cursor:pointer}
+.daypeek .dpfull{font-size:12px;font-weight:600;color:var(--emerald);background:rgba(59,130,246,.12);padding:4px 10px;border-radius:9px;cursor:pointer}
 /* ⚠️ v9.90 重排（用户：「字体乱乱放，不好看」）。
    旧版是 flex + flex-wrap:wrap，商家名一长就换行 → 名字被挤到图标底下、金额还固定贴在顶端
    （align-items:flex-start）→ 每一列高矮不一、左边界对不齐，四笔就看得出乱。
@@ -656,10 +656,10 @@ body.phototheme .catadd .pi,body.phototheme .ecatadd .ei{border-color:rgba(255,2
 body.theme-journal .catadd .pi,body.theme-journal .ecatadd .ei{border-color:#CDBEA6!important;color:#8A7F6E}
 /* v9.73 收件箱详情按钮：更小、半透明磨砂（emerald 淡色调 + 细边），字不折行 */
 .ibacts{margin-top:16px;display:flex;flex-direction:column;gap:8px}
-.ibprimary{width:100%;border:1px solid rgba(11,166,120,.35);border-radius:12px;padding:11px;font-family:inherit;font-weight:600;font-size:14px;
-  background:rgba(11,166,120,.12);color:var(--emerald-dark);cursor:pointer;white-space:nowrap;
+.ibprimary{width:100%;border:1px solid rgba(59,130,246,.35);border-radius:12px;padding:11px;font-family:inherit;font-weight:600;font-size:14px;
+  background:rgba(59,130,246,.12);color:var(--emerald-dark);cursor:pointer;white-space:nowrap;
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background .12s}
-.ibprimary:active{background:rgba(11,166,120,.22)}
+.ibprimary:active{background:rgba(59,130,246,.22)}
 .ibprimary:disabled{opacity:.4}
 .ibminor{display:flex;gap:7px;margin-top:1px}
 .ibminor button{flex:1;border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:9px 5px;font-family:inherit;font-weight:500;font-size:12.5px;
@@ -676,7 +676,7 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .ebtns button{flex:1;border:none;border-radius:13px;padding:14px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer}
 .ecancel{background:var(--faint);color:var(--ink-2)}
 .ecancel:active{background:var(--line)}
-.econfirm{background:var(--emerald);color:#fff;box-shadow:0 4px 14px rgba(11,166,120,.35)}
+.econfirm{background:var(--emerald);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.35)}
 .econfirm:active{background:var(--emerald-dark)}
 .econfirm:disabled{opacity:.4;box-shadow:none}
 
@@ -690,12 +690,12 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .nav .nb .ni{font-size:19px}.nav .nb.on{color:var(--emerald)}
 .nav .nb{position:relative;min-width:0;flex:0 0 20%;box-sizing:border-box;padding:4px 0}
 .nav .navadd{flex:1;background:none;box-shadow:none;margin-top:0;padding:0;justify-content:center;align-items:center}
-.nav .navadd .plbtn{width:50px;height:50px;border-radius:16px;background:var(--emerald);box-shadow:0 6px 16px rgba(11,166,120,.34);margin-top:-16px;display:flex;align-items:center;justify-content:center}
+.nav .navadd .plbtn{width:50px;height:50px;border-radius:16px;background:var(--emerald);box-shadow:0 6px 16px rgba(59,130,246,.34);margin-top:-16px;display:flex;align-items:center;justify-content:center}
 .nav .navadd .pl{font-size:27px;line-height:1;font-weight:300;color:#fff;margin-top:-1px}
 .nav .navadd:active .plbtn{transform:scale(.94)}
 .nav .navdot{display:none;position:absolute;top:1px;left:calc(50% + 7px);width:8px;height:8px;border-radius:50%;background:var(--red);border:1.5px solid var(--card);box-sizing:border-box}
 .fab{display:none!important}
-.fab{position:fixed;z-index:40;right:calc(50% - 260px + 18px);bottom:calc(84px + env(safe-area-inset-bottom));background:var(--emerald);color:#fff;border:none;width:56px;height:56px;border-radius:50%;font-size:28px;font-family:inherit;line-height:1;display:grid;place-items:center;box-shadow:0 6px 20px rgba(11,166,120,.45);cursor:pointer;transition:transform .15s;transform:translateZ(0)}
+.fab{position:fixed;z-index:40;right:calc(50% - 260px + 18px);bottom:calc(84px + env(safe-area-inset-bottom));background:var(--emerald);color:#fff;border:none;width:56px;height:56px;border-radius:50%;font-size:28px;font-family:inherit;line-height:1;display:grid;place-items:center;box-shadow:0 6px 20px rgba(59,130,246,.45);cursor:pointer;transition:transform .15s;transform:translateZ(0)}
 .fab:active{transform:scale(.93)}
 @media(max-width:556px){.fab{right:18px}}
 
@@ -768,7 +768,7 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .pastepanel textarea{width:100%;min-height:150px;box-sizing:border-box;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:13px;font-size:14px;font-family:inherit;line-height:1.6;resize:vertical}
 .pastepanel textarea:focus{outline:none;border-color:var(--brand)}
 .pastehint{font-size:11.5px;color:var(--muted);margin:10px 2px 14px;line-height:1.6}
-.pastepanel .save{width:100%;background:var(--emerald);color:#fff;border:none;font-family:inherit;font-size:17px;font-weight:700;padding:15px;border-radius:16px;box-shadow:0 4px 14px rgba(11,166,120,.35);cursor:pointer}
+.pastepanel .save{width:100%;background:var(--emerald);color:#fff;border:none;font-family:inherit;font-size:17px;font-weight:700;padding:15px;border-radius:16px;box-shadow:0 4px 14px rgba(59,130,246,.35);cursor:pointer}
 .pastepanel .save:active{background:var(--emerald-dark)}
 .pastepanel .save:disabled{opacity:.5}
 #add.paste .add-top{padding-bottom:10px}
@@ -820,7 +820,7 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
   color:var(--ink);border-radius:12px;padding:12px;font-size:15px;font-family:inherit}
 .eventpanel input[type="text"]:focus{outline:none;border-color:var(--brand)}
 .eventpanel .save{width:100%;background:var(--emerald);color:#fff;border:none;font-family:inherit;font-size:17px;
-  font-weight:700;padding:15px;border-radius:16px;box-shadow:0 4px 14px rgba(11,166,120,.35);cursor:pointer;margin-top:14px}
+  font-weight:700;padding:15px;border-radius:16px;box-shadow:0 4px 14px rgba(59,130,246,.35);cursor:pointer;margin-top:14px}
 .eventpanel .save:active{background:var(--emerald-dark)}
 .eventpanel .cdel{width:100%;margin-top:10px}
 /* v9.89 事项颜色色盘：跟分类管理同一份 COLORS，所以选择一样多。
@@ -868,8 +868,19 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 #add.noteedit .pad{display:none}
 .pad button{background:var(--card);border:none;font-family:inherit;font-weight:600;font-size:23px;color:var(--ink);padding:11px 0;border-radius:14px;cursor:pointer;box-shadow:var(--shadow);transition:.08s}
 .pad button:active{background:var(--faint);transform:scale(.97)}
-.pad .save{grid-column:span 3;background:var(--emerald);color:#fff;font-size:17px;font-weight:700;box-shadow:0 4px 14px rgba(11,166,120,.35);padding:13px}
+.pad .save{grid-column:span 3;background:var(--emerald);color:#fff;font-size:17px;font-weight:700;box-shadow:0 4px 14px rgba(59,130,246,.35);padding:13px}
 .pad .save:active{background:var(--emerald-dark)}.pad .save:disabled{opacity:.4}.pad .bk{font-size:20px}
+/* ===== v11.44 青色按钮 → 蓝色描边框框（淡蓝底 + 蓝边 + 蓝字），全主题统一。分两类： ===== */
+/* ① 主要动作按钮 */
+.navadd .plbtn,.fab,.econfirm,.pad .save,.pastepanel .save,.eventpanel .save,.gdbtn.primary,.icsgo,.dp-add,#sxWrap button.primary,#sxWrap>button{
+  background:rgba(59,130,246,.14)!important;border:1.6px solid #3B82F6!important;color:#3B82F6!important;box-shadow:none!important}
+.navadd .plbtn .pl{color:#3B82F6!important}
+.dp-add,.fab{color:#3B82F6!important}
+.navadd:active .plbtn,.pad .save:active,.econfirm:active,.pastepanel .save:active,.eventpanel .save:active,.gdbtn.primary:active,.dp-add:active,.icsgo:active{background:rgba(59,130,246,.26)!important}
+/* ② 选中态（段选/付款/月份/快捷）也做成蓝色框框，别再实心 */
+.addtabs button.on,.payrow button.on,.mp-grid button.cur,.evquick button.on,.evallday.on,.evnotify button.on,.evrep button.on,.evrepint button.on,.dpseg button.on{
+  background:rgba(59,130,246,.16)!important;border:1.5px solid #3B82F6!important;color:#3B82F6!important;box-shadow:none!important}
+/* 滑块段选（金额/事项 等）保持蓝色实心滑块——滑块做描边会破相；只把它变蓝即可（已随变量变蓝） */
 
 .expbar{display:flex;gap:8px;margin:2px 2px 12px}
 .expbtn{flex:1;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px;font-family:inherit;font-weight:600;font-size:13px;color:var(--ink-2);cursor:pointer;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;gap:6px}
@@ -917,7 +928,7 @@ body.phototheme .ibminor button.danger{color:#ff8a84;border-color:rgba(255,138,1
 .setgrp-h .sgchips:empty{display:none}
 .sgchip{font-size:10.5px;font-weight:600;color:var(--muted);background:var(--faint);border-radius:99px;padding:2.5px 9px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sgchip.warn{background:rgba(231,163,62,.16);color:#E7A33E}
-.sgchip.ok{background:rgba(11,166,120,.15);color:#12b981}
+.sgchip.ok{background:rgba(59,130,246,.15);color:#12b981}
 .setgrp-h .sgar{flex-shrink:0;color:var(--muted);font-size:20px;transition:transform .25s;align-self:center}
 .setgrp.open .setgrp-h .sgar{transform:rotate(90deg)}
 .statusdot{width:9px;height:9px;border-radius:50%;background:#12b981;display:inline-block;flex-shrink:0;box-shadow:0 0 0 3px rgba(18,185,129,.18)}
@@ -1262,7 +1273,7 @@ body.theme-journal .herocpf{border-top-color:#E4DCCF}
 .cpf-tot .v{font-size:38px;font-weight:800;letter-spacing:-1px;color:var(--ink);margin-top:2px}
 .cpf-tot .v .s{font-size:19px;font-weight:700;color:var(--muted);margin-right:4px}
 .cpf-tot .g{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:4px}
-.cpf-tot .g b{color:#0BA678}
+.cpf-tot .g b{color:#3B82F6}
 .cpf-accts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin:14px 0 4px}
 .cpf-acct{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px 9px;position:relative;overflow:hidden}
 body.phototheme .cpf-acct{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1)}
@@ -1285,7 +1296,7 @@ body.theme-journal .cpf-mrow{background:#FBF7EF;border-color:#E4DCCF}
 .cpf-mrow .msplit{flex:1;display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
 .cpf-mrow .mseg{font-size:10.5px;color:var(--muted);font-weight:600}
 .cpf-mrow .mseg b{color:var(--ink);font-weight:800}
-.cpf-mrow .mtot{font-size:14px;font-weight:800;color:#0BA678;min-width:64px;text-align:right}
+.cpf-mrow .mtot{font-size:14px;font-weight:800;color:#3B82F6;min-width:64px;text-align:right}
 .cpf-mrow .mdel{border:0;background:none;color:var(--muted);font-size:15px;font-family:inherit;padding:2px 4px;cursor:pointer}
 .cpf-empty{text-align:center;color:var(--muted);font-size:12.5px;padding:22px 10px;line-height:1.7}
 .cpf-setup{background:var(--card);border:1px dashed var(--line);border-radius:16px;padding:16px}
@@ -1430,7 +1441,7 @@ body.kbup #feed{padding-bottom:64px}
 .hval{width:58px;flex:0 0 auto;text-align:right;font-size:12.5px;font-weight:700;
   font-variant-numeric:tabular-nums;color:var(--muted)}
 .hrow.cur .hname,.hrow.cur .hval{color:var(--ink)}
-.hrow.cur .htrack{box-shadow:0 0 0 1.5px rgba(11,166,120,.75)}
+.hrow.cur .htrack{box-shadow:0 0 0 1.5px rgba(59,130,246,.75)}
 .hrow:active .htrack{opacity:.75}
 .barleg{display:flex;flex-wrap:wrap;gap:7px 12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .barleg span{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);font-weight:600}
@@ -1441,12 +1452,12 @@ body.kbup #feed{padding-bottom:64px}
 .vscard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:14px}
 .vstop{display:flex;gap:10px;margin-bottom:12px}
 .vsbox{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:10px 11px}
-.vsbox.now{border-color:rgba(11,166,120,.5)}
+.vsbox.now{border-color:rgba(59,130,246,.5)}
 .vsbox .k{font-size:10.5px;color:var(--muted);font-weight:600;margin-bottom:3px}
 .vsbox .n{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--ink)}
 .dlt{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:100px;margin-top:6px}
 .dlt.up{background:rgba(224,87,78,.18);color:#FF9FB2}
-.dlt.dn{background:rgba(11,166,120,.18);color:#7EE7C7}
+.dlt.dn{background:rgba(59,130,246,.18);color:#7EE7C7}
 .dlt.eq{background:rgba(255,255,255,.08);color:var(--muted)}
 .vshr{border:0;border-top:1px solid var(--line);margin:4px 0 10px}
 .dcat{display:flex;align-items:center;gap:9px;font-size:12.5px;margin-top:9px}
@@ -1468,7 +1479,7 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
 .cmptop .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
 .dlt{font-size:12px;font-weight:700;padding:3px 8px;border-radius:100px}
 .dlt.up{background:rgba(224,87,78,.14);color:#D6463C}
-.dlt.dn{background:rgba(11,166,120,.14);color:#0BA678}
+.dlt.dn{background:rgba(59,130,246,.14);color:#0BA678}
 .dlt.eq{background:var(--card);color:var(--muted)}
 .cmprow{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:13px}
 .cmprow .ci{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;flex:0 0 auto}
@@ -1486,7 +1497,7 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
 /* v11.30 明细：分类行「比上月」小胶囊 + 展开里的商家频次 */
 .catdelta{display:inline-block;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;padding:1px 6px;border-radius:99px;line-height:1.5;vertical-align:middle;margin-left:6px}
 .catdelta.up{background:rgba(231,163,62,.18);color:#E7A33E}
-.catdelta.down{background:rgba(11,166,120,.16);color:#12b981}
+.catdelta.down{background:rgba(59,130,246,.16);color:#12b981}
 .catdelta.flat{background:var(--faint);color:var(--muted)}
 .subbreak .mbr{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:4px 0 0}
 .subbreak .mbr .mn{flex:1;min-width:0;font-size:12.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1515,7 +1526,7 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
   min-height:44px;-webkit-tap-highlight-color:transparent;line-height:1.35;text-align:center}
 .ibmonths .ibm .mn{display:block;font-size:10px;font-weight:600;opacity:.75;margin-top:2px}
 .ibmonths .ibm .yr{font-size:9px;font-weight:700;opacity:.55;margin-left:2px;vertical-align:top}
-.ibmonths .ibm.on{background:rgba(11,166,120,.20);border-color:rgba(11,166,120,.6);color:var(--ink)}
+.ibmonths .ibm.on{background:rgba(59,130,246,.20);border-color:rgba(59,130,246,.6);color:var(--ink)}
 .ibmonths .ibarr{flex:0 0 40px;background:var(--card);border:1px solid var(--line);color:var(--ink);
   border-radius:12px;font-size:20px;font-weight:700;min-height:44px;padding:0;
   display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
@@ -1524,7 +1535,7 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
 .ibkeep{font-size:11px;color:var(--muted);line-height:1.6;margin:0 2px 12px}
 .ibn{display:inline-block;min-width:18px;padding:0 5px;border-radius:100px;background:rgba(255,255,255,.14);
   font-size:10.5px;font-weight:800;margin-left:4px;vertical-align:1px}
-.cpseg button.on .ibn{background:rgba(11,166,120,.35)}
+.cpseg button.on .ibn{background:rgba(59,130,246,.35)}
 .ibhint{font-size:11.5px;color:var(--muted);line-height:1.7;margin:12px 2px}
 /* v11.05 「读不到」一键清空 —— 刻意沿用 App 收件箱既有的 danger 按钮设计（跟 .ibminor button.danger 同一套色/圆角/字重），
    不另造一个红药丸。放在提示下方**右对齐**一条：一眼看得到、又不占满整行、不容易误触。 */
@@ -1534,7 +1545,7 @@ body.phototheme .vsbox{background:rgba(255,255,255,.05)}
 .ibclear:disabled{opacity:.4}
 body.phototheme .ibclear{color:#ff8a84;border-color:rgba(255,138,132,.3);background:rgba(255,138,132,.10)}
 body.phototheme .ibclear:active{background:rgba(255,138,132,.18)}
-.ibsum{font-size:11.5px;color:#7EE7C7;font-weight:600;margin-top:3px}
+.ibsum{font-size:11.5px;color:#8FBCFF;font-weight:600;margin-top:3px}
 .ibrow{width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:8px;font-family:inherit;display:block}
 .ibrow.done{opacity:.5}
 /* ═══ v9.95 只画看得见的那几行 ═══
@@ -1563,7 +1574,7 @@ body.phototheme .ibclear:active{background:rgba(255,138,132,.18)}
 .okmod .ob3{margin:0 0 8px;display:flex;flex-direction:column;gap:8px}
 .okmod .ob3 .one{width:100%;border:1px solid var(--brand);background:transparent;color:var(--brand);
   font-family:inherit;font-size:15px;font-weight:700;padding:13px;border-radius:12px;cursor:pointer}
-.okmod .ob3 .one:active{background:rgba(11,166,120,.12)}
+.okmod .ob3 .one:active{background:rgba(59,130,246,.12)}
 .okmod .ob{display:flex;gap:9px}
 .okmod .ob button{flex:1;border:0;border-radius:12px;padding:12px;font-weight:700;font-size:14px;font-family:inherit}
 .okmod .no{background:var(--card);border:1px solid var(--line);color:var(--ink)}
@@ -1603,7 +1614,7 @@ body.phototheme .ibclear:active{background:rgba(255,138,132,.18)}
 body.theme-journal{
   --bg:#F1E9DB;--ink:#2A2521;--ink-2:#6A6157;--muted:#A79D8E;
   --line:#E6DCC9;--faint:#EFE7D8;--card:#FCF8F1;
-  --brand:#256B5E;--emerald:#256B5E;--emerald-dark:#1c5349;--emerald-soft:#E4EEE9;--red:#B8552F;
+  --brand:#2E6FD6;--emerald:#2E6FD6;--emerald-dark:#2357AB;--emerald-soft:#E6EEF9;--red:#B8552F;
   --shadow:0 1px 2px rgba(120,90,50,.06),0 10px 26px rgba(120,90,50,.09)!important;
   font-family:"Hanken Grotesk",-apple-system,"PingFang SC",system-ui,sans-serif;
   color:#2A2521;background:linear-gradient(#F4ECDD,#EFE6D5)!important;   /* 整个 body 的暖底：滚多远都不露黑 */
@@ -1835,7 +1846,7 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
   font:15px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC",system-ui,sans-serif;
   /* 深到近黑，只留两团很淡的光（翡翠 + 一点紫）给玻璃反射用，再压一圈暗角。 */
   background:
-    radial-gradient(76% 44% at 82% -8%, rgba(11,166,120,.20), transparent 60%),
+    radial-gradient(76% 44% at 82% -8%, rgba(59,130,246,.20), transparent 60%),
     radial-gradient(60% 38% at 2% 6%,   rgba(177,92,224,.10), transparent 58%),
     radial-gradient(120% 78% at 50% 50%, transparent 42%, rgba(0,0,0,.45) 100%),
     linear-gradient(170deg,#101821 0%,#0a0e14 48%,#06070b 100%);
@@ -1851,7 +1862,7 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
 #sxWrap .sxlogo{
   width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;
   background:linear-gradient(150deg,#0BA678,#087a58);color:#fff;font-size:19px;font-weight:800;
-  box-shadow:0 5px 16px rgba(11,166,120,.34)}
+  box-shadow:0 5px 16px rgba(59,130,246,.34)}
 #sxWrap .sxeyebrow{font-size:10px;font-weight:700;letter-spacing:2.6px;color:#cdbf95;opacity:.72}
 #sxWrap .sxtitle{font-size:28px;font-weight:700;letter-spacing:-1.2px;line-height:1.1;margin-top:1px;
   overflow-wrap:anywhere}
@@ -1880,7 +1891,7 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
   transition:border-color .16s,background .16s,box-shadow .16s}
 #sxWrap input::placeholder{color:rgba(255,255,255,.30)}
 #sxWrap input:focus{outline:0;border-color:#0BA678;background:rgba(0,0,0,.38);
-  box-shadow:inset 0 1px 2px rgba(0,0,0,.35),0 0 0 3px rgba(11,166,120,.20)}
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.35),0 0 0 3px rgba(59,130,246,.20)}
 #sxWrap input.bad{border-color:#F0665F;box-shadow:inset 0 1px 2px rgba(0,0,0,.35),0 0 0 3px rgba(240,102,95,.18)}
 #sxWrap .sxeye{position:absolute;right:5px;top:50%;transform:translateY(-50%);
   background:transparent;border:0;color:#cdbf95;font-family:inherit;font-size:12.5px;font-weight:600;
@@ -1897,7 +1908,7 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
 #sxWrap .sxst.on{display:flex;animation:sxFade .22s ease both}
 #sxWrap .sxdot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px;background:#cdbf95}
 #sxWrap .sxst.busy .sxdot{animation:sxPulse 1s ease-in-out infinite}
-#sxWrap .sxst.ok  .sxdot{background:#0BA678;box-shadow:0 0 0 3px rgba(11,166,120,.22)}
+#sxWrap .sxst.ok  .sxdot{background:#0BA678;box-shadow:0 0 0 3px rgba(59,130,246,.22)}
 #sxWrap .sxst.err .sxdot{background:#F0665F;box-shadow:0 0 0 3px rgba(240,102,95,.20)}
 #sxWrap .sxst.ok  b{color:#4fd1a5}
 #sxWrap .sxst.err b{color:#F0665F}
@@ -1910,7 +1921,7 @@ body.theme-journal .hero{border:3px solid transparent!important;border-radius:18
 #sxWrap .sxgo{
   width:100%;margin-top:15px;padding:15px;border-radius:14px;border:0;
   background:#0BA678;color:#fff;font-family:inherit;font-size:16px;font-weight:700;letter-spacing:.2px;
-  box-shadow:0 6px 20px rgba(11,166,120,.28)}
+  box-shadow:0 6px 20px rgba(59,130,246,.28)}
 #sxWrap .sxgo:active{background:#087a58}
 #sxWrap .sxgo:disabled{opacity:.55;box-shadow:none}
 #sxWrap .sxalt{
@@ -8476,7 +8487,7 @@ function subRender(){
   let h=`<div class="section-h"><span class="h">侦测到 ${subs.length} 个定期扣款</span></div>`;
   h+=`<div class="glance" style="margin:0 0 12px"><div class="gl"><span class="k">每月订阅约</span><span class="val">S$${fmt(monthly)}</span></div></div>`;
   h+=subs.map(x=>{
-    const dot=x.emailed?'#39C07C':'#8A9099';
+    const dot=x.emailed?'#3B82F6':'#8A9099';
     const note=x.emailed?'✅ 银行邮件自动记账（不会重复）':'✍️ 手动/现金记的 · 想自动记可去「定期账单」加一条';
     return `<div class="subitem">
       <div class="si-l">
