@@ -2620,6 +2620,24 @@ async function suiteEdit() {
       const pf = await pg.evaluate(() => ({ oa: +document.getElementById('cpfRc_oa').value, sa: +document.getElementById('cpfRc_sa').value }));
       (Math.abs(pf.oa - 83237.30) < 0.01 && Math.abs(pf.sa - 42274.56) < 0.01) ? ok('CPF 按钮：估利息填进「现在余额」= 现有+估的（OA 83237.30 / SA 42274.56），可再手改') : bad('CPF 估利息没填进对账框', JSON.stringify(pf));
       await pg.evaluate(() => { try { closeCpfMod(); } catch (e) {} }); await dismiss();
+      // 2k) v11.50 CPF 截图 OCR：解析器 + 编排（图片只在内存、读完 terminate 释放、绝不保存）· OCR 引擎按需载不进开机
+      const notBoot = await pg.evaluate(() => typeof window.Tesseract === 'undefined');   // 开机没载 OCR 引擎
+      notBoot ? ok('CPF OCR 引擎不在开机路径（typeof Tesseract=undefined，按下截图才载）') : bad('OCR 引擎开机就载了（违反按需）');
+      const parsed = await pg.evaluate(() => cpfParseCpfText('DASHBOARD Total Amount $2,222.23\nOA Ordinary Account $1,372.79\nSA Special Account $362.60\nMA MediSave Account $486.84'));
+      (parsed.oa === 1372.79 && Math.abs(parsed.sa - 362.60) < 0.005 && parsed.ma === 486.84 && Math.abs(parsed.total - 2222.23) < 0.005) ? ok('CPF 截图解析：从 OCR 文字挑出 OA1372.79 / SA362.60 / MA486.84 / 总2222.23', JSON.stringify(parsed)) : bad('CPF 截图解析错', JSON.stringify(parsed));
+      const parsedJunk = await pg.evaluate(() => cpfParseCpfText('hello no numbers'));
+      (parsedJunk.oa === null && parsedJunk.sa === null && parsedJunk.ma === null) ? ok('CPF 截图解析：读不到数字 → 三个都 null（不乱填）') : bad('CPF 截图垃圾输入没挡住', JSON.stringify(parsedJunk));
+      // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
+      const orch = await pg.evaluate(async () => {
+        let terminated = false, gotBlob = false;
+        window.Tesseract = { createWorker: async () => ({ recognize: async (f) => { gotBlob = (f instanceof Blob); return { data: { text: 'OA Ordinary Account $9,001.23 SA Special Account $2,002.10 MA MediSave Account $3,003.00' } }; }, terminate: async () => { terminated = true; } }) };
+        const r = await cpfReadScreenshot(new Blob(['x'], { type: 'image/png' }), () => {});
+        delete window.Tesseract;
+        return { r, terminated, gotBlob };
+      });
+      (orch.r.oa === 9001.23 && orch.terminated && orch.gotBlob) ? ok('CPF OCR 编排：内存 Blob 进 OCR → 解析出余额 → 用完 terminate 释放内存', JSON.stringify(orch.r)) : bad('CPF OCR 编排/释放错', JSON.stringify(orch));
+      const failGrace = await pg.evaluate(async () => { window.Tesseract = { createWorker: async () => { throw new Error('network'); } }; let msg = 'ok'; try { await cpfReadScreenshot(new Blob(['x']), () => {}); } catch (e) { msg = 'threw'; } delete window.Tesseract; return msg; });
+      failGrace === 'threw' ? ok('CPF OCR 引擎载不到 → 抛错被接住（UI 退回手打，不崩）') : bad('CPF OCR 失败没退路', failGrace);
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 
     // 3) 设置：改数值颜色 → 存
