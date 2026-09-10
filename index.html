@@ -4113,7 +4113,7 @@ function catDeltaChip(now,prev){
      → 一律改用「↑N×」倍数，更直观。例：上月 S$9、这月 S$1256 → 以前 +14004%，现在 ↑140×；+817% → ↑9.2×。 */
   let txt;
   if(up&&pc>=400){const m=now/prev;txt='↑'+(m>=10?Math.round(m):m.toFixed(1))+'×';}
-  else txt=(up?'+':'−')+Math.abs(pc)+'%';
+  else txt=(up?'↑':'↓')+Math.abs(pc)+'%';   /* v11.45 用上下箭头代替 +/−（−号太像负数、confusing）：↑=比上月多、↓=比上月少 */
   return ` <span class="catdelta ${up?'up':'down'}">${txt}</span>`;
 }
 function buildCats(){
@@ -7098,7 +7098,7 @@ function buildDetailSummary(){
   const lastExp=Object.values(pby).reduce((s,v)=>s+v,0);
   let dchip='';
   if(lastExp>0){const pc=Math.round((exp-lastExp)/lastExp*100);const lab=samePeriod?'比上月同期':'比上月';
-    dchip=pc===0?`<span class="dtchip">${lab} 持平</span>`:`<span class="dtchip ${pc>0?'up':'down'}">${lab} ${pc>0?'+':'−'}${Math.abs(pc)}%</span>`;}
+    dchip=pc===0?`<span class="dtchip">${lab} 持平</span>`:`<span class="dtchip ${pc>0?'up':'down'}">${lab} ${pc>0?'↑':'↓'}${Math.abs(pc)}%</span>`;}
   const avg=cnt>0?exp/cnt:0;
   el.innerHTML=`<div class="dtmo">${mo} · 支出</div><div class="dtbig"><span class="s">S$</span>${fmt(exp)}</div>`+
     `<div class="dt2">${dchip}<span class="dtchip">${cnt} 笔</span><span class="dtchip">均 S$${fmt(avg)}</span></div>`;
@@ -8226,7 +8226,7 @@ function buildCpfPage(){
         ?`最近一笔 <b>+S$${cpfFmt(CPF.entries[0].oa+CPF.entries[0].sa+CPF.entries[0].ma)}</b>（${CPF.entries[0].month}）· 累计已记 <b>+S$${cpfFmt(recSum)}</b>（${CPF.entries.length}个月）`
         :`这是你填的起点余额 · 每月工资进来记一笔，就往上加 📈`}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
-    <div class="cpf-note" style="text-align:center;margin-top:10px">${idn} · ${ageTxt} · 每 S$100 工资 → OA ${rt.oa} / SA ${rt.sa} / MA ${rt.ma}　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
+    <div class="cpf-note" style="text-align:center;margin-top:10px;line-height:1.7">${idn} · ${ageTxt} · 工资的 <b>${rt.total}%</b> 进 CPF（你 ${rt.emp}% + 公司 ${rt.empr}%）<br>每 S$100 工资 → OA <b>S$${cpfFmt(rt.oa)}</b> · SA <b>S$${cpfFmt(rt.sa)}</b> · MA <b>S$${cpfFmt(rt.ma)}</b>　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></div>
     ${entriesHTML}`;
 }
@@ -8460,7 +8460,9 @@ function detectSubs(){
     const prevPrice=_median(amts.slice(0,-1));
     const priceUp=(prevPrice>0&&lastAmt>prevPrice*1.02)?{from:prevPrice,to:lastAmt}:null;
     const emailed=rows.every(r=>r.source==='dbs'||r.source==='ocbc');
-    out.push({key:k,name:last.merchant||k,amount:price,period,pd,n:rows.length,lastDay,nextDay:dayAdd(lastDay,pd),emailed,priceUp});
+    /* v11.45 跟「定期账单」联动：这商家已经在 REC 里（名字对得上，或本来就是定期账单自动记的）→ 标「已在定期账单」，别再叫人去加 */
+    const inRec=rows.some(r=>r.source==='recurring')||REC.some(r=>merchantKey(r.name)===k);
+    out.push({key:k,name:last.merchant||k,amount:price,period,pd,n:rows.length,lastDay,nextDay:dayAdd(lastDay,pd),emailed,inRec,priceUp});
   }
   out.sort((a,b)=>b.amount-a.amount);
   return out;
@@ -8487,8 +8489,10 @@ function subRender(){
   let h=`<div class="section-h"><span class="h">侦测到 ${subs.length} 个定期扣款</span></div>`;
   h+=`<div class="glance" style="margin:0 0 12px"><div class="gl"><span class="k">每月订阅约</span><span class="val">S$${fmt(monthly)}</span></div></div>`;
   h+=subs.map(x=>{
-    const dot=x.emailed?'#3B82F6':'#8A9099';
-    const note=x.emailed?'✅ 银行邮件自动记账（不会重复）':'✍️ 手动/现金记的 · 想自动记可去「定期账单」加一条';
+    const dot=(x.emailed||x.inRec)?'#3B82F6':'#8A9099';
+    const note=x.inRec?'🔁 已在你的定期账单 · 每月自动记，不用管'
+                     :x.emailed?'✅ 银行邮件自动记账（不会重复）'
+                              :'✍️ 手动/现金记的 · 想自动记可去「定期账单」加一条';
     return `<div class="subitem">
       <div class="si-l">
         <div class="si-hd"><span class="si-dot" style="background:${dot}"></span><span class="si-nm">${esc(x.name)}</span><span class="si-amt">S$${fmt(x.amount)}<small> /${x.period.replace('每','')}</small></span></div>
