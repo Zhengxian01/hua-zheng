@@ -8181,8 +8181,7 @@ function buildCpfPage(){
   const idn=CPF.status==='citizen'?'公民/PR满3年':(cpfPrYear(now)===1?'PR 第1年':cpfPrYear(now)===2?'PR 第2年':'PR 满3年');
   const ageTxt=CPF.birthYear?`${(+now.slice(0,4))-CPF.birthYear} 岁`:'年龄未填';
   const b=cpfBal(),tot=b.oa+b.sa+b.ma;
-  const yr=(todayKey()||'').slice(0,4);
-  const yrIn=CPF.entries.filter(e=>e.month.slice(0,4)===yr).reduce((s,e)=>s+e.oa+e.sa+e.ma,0);
+  const recSum=CPF.entries.reduce((s,e)=>s+e.oa+e.sa+e.ma,0);   // 累计已记供款（所有月，不按年重置 → 明年也一直往上加）
   const acctsHTML=CPF_ACCTS.map(([k,n,d,c])=>{
     const v=b[k],pct=tot>0?Math.round(v/tot*100):0;
     return `<div class="cpf-acct" style="color:${c}"><div class="an">${n}</div><div class="ad">${d.split(' · ')[0]}</div>
@@ -8197,7 +8196,7 @@ function buildCpfPage(){
     </div>`).join(''):`<div class="cpf-empty">还没记过月供款。<br>每月工资进来，点右上「＋ 记这个月」，填工资总额就自动拆进三个账户。</div>`;
   body.innerHTML=`
     <div class="cpf-tot"><div class="k">CPF 总额</div><div class="v"><span class="s">S$</span>${cpfFmt(tot)}</div>
-      <div class="g">${CPF.entries.length?`今年记录供款 <b>+S$${cpfFmt(yrIn)}</b> · `:''}期初余额 S$${cpfFmt(CPF.open.oa+CPF.open.sa+CPF.open.ma)}${CPF.entries.length?'':' · 还没记月供（记了会往上加）'}</div></div>
+      <div class="g">${CPF.entries.length?`累计已记供款 <b>+S$${cpfFmt(recSum)}</b>（${CPF.entries.length}个月）· `:''}期初余额 S$${cpfFmt(CPF.open.oa+CPF.open.sa+CPF.open.ma)}${CPF.entries.length?'':' · 还没记月供（记了会往上加）'}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
     <div class="cpf-note" style="text-align:center;margin-top:10px">${idn} · ${ageTxt} · 每 S$100 工资 → OA ${rt.oa} / SA ${rt.sa} / MA ${rt.ma}　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></div>
