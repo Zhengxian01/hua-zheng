@@ -1369,7 +1369,7 @@ body.theme-journal .fxchip.base{background:#E4DCCF!important;color:#2A2521!impor
 .hero .fxdot{opacity:.4;font-weight:700}
 .hero .fxmore{font-size:11px;font-weight:700;opacity:.6}
 .fxnote{display:flex;align-items:center;gap:8px;font-size:10.5px;opacity:.72;margin-top:6px;letter-spacing:.2px}
-.fxnote .fxpill{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(255,255,255,.10);padding:3px 9px;border-radius:99px;font-variant-numeric:tabular-nums}
+.fxnote .fxpill{flex:0 1 auto;max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(255,255,255,.10);padding:3px 9px;border-radius:99px;font-variant-numeric:tabular-nums}   /* v11.46 别再 flex:1 撑满整行（↻刷新拿掉后单独一条会拉成长椭圆），改成裹住内容 */
 .fxnote .fxpill.warn{background:rgba(255,140,140,.16);color:#ff9fa5;opacity:1}
 .fxnote .fxrefresh{flex:none;font-weight:700;opacity:.9;padding:3px 9px;border-radius:99px;background:rgba(125,227,176,.16);color:#7de3b0;cursor:pointer;text-shadow:none}
 .fxnote .fxrefresh:active{transform:scale(.94)}
