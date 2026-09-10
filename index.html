@@ -1285,6 +1285,13 @@ body.theme-journal .cpf-acct{background:#FBF7EF;border-color:#E4DCCF}
 .cpf-acct .abar{height:3px;border-radius:2px;margin-top:8px;background:currentColor;opacity:.9}
 .cpf-sec-h{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 10px}
 .cpf-sec-h .t{font-size:13.5px;font-weight:800;color:var(--ink)}
+/* 工资起记控制条：轻量、贴在明细头下面，一眼看到起点月 + 跳过几笔 */
+.cpf-salfrom{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 2px 10px;padding:8px 12px;border-radius:12px;background:rgba(120,130,145,.1);font-size:11.5px;color:var(--muted);line-height:1.4}
+.cpf-salfrom .sf-t{flex:1}
+.cpf-salfrom .sf-t b{color:var(--ink);font-weight:800}
+.cpf-salfrom .sf-btn{flex:none;border:1.5px solid color-mix(in srgb,var(--ink) 32%,transparent);background:transparent;color:var(--ink);font-family:inherit;font-size:11.5px;font-weight:800;border-radius:100px;padding:4px 13px;cursor:pointer;transition:.12s}
+.cpf-salfrom .sf-btn:active{transform:scale(.95);background:rgba(140,140,150,.16)}
+body.phototheme .cpf-salfrom{background:rgba(255,255,255,.1)}
 /* v11.42 CPF 按钮：中性描边（不要青色）——透明底 + 淡墨边 + 墨字，按下淡填一点 */
 .cpf-add{border:1.5px solid var(--muted);border-color:color-mix(in srgb,var(--ink) 38%,transparent);background:transparent;color:var(--ink);font-family:inherit;font-size:12.5px;font-weight:800;border-radius:100px;padding:7px 15px;cursor:pointer;transition:.12s}
 .cpf-add:active{transform:scale(.96);background:rgba(140,140,150,.16)}
@@ -3002,7 +3009,7 @@ const CPF_STATUS={citizen:{n:'公民 / PR 满3年'},pr:{n:'PR（填拿证年月�
 function cpfAllocFor(age){const a=(age==null||!isFinite(age))?30:age;for(const[cap,al]of CPF_ALLOC)if(a<=cap)return al;return CPF_ALLOC[CPF_ALLOC.length-1][1];}
 /* intCredited：已经自动补过利息的【最后一个年份】。每年过完，那年的利息在次年 1 月入；
    app 一开就检查有没有该补的、自动补上（automation）。首次设置认定当前余额已含到去年利息。 */
-function defaultCpf(){return {on:false,hidden:false,open:{oa:0,sa:0,ma:0},status:'citizen',prStart:'',birthYear:0,ceiling:8000,intCredited:0,entries:[]};}
+function defaultCpf(){return {on:false,hidden:false,open:{oa:0,sa:0,ma:0},status:'citizen',prStart:'',birthYear:0,ceiling:8000,intCredited:0,salaryFrom:'',entries:[]};}
 let CPF=defaultCpf();
 function cpfNum(v,d){const x=parseFloat(v);return isFinite(x)&&x>=0?x:d;}
 function cpfNumS(v,d){const x=parseFloat(v);return isFinite(x)?x:d;}   /* 允许负数：对账/校准那笔差额可能是负的（之前记多了） */
@@ -3017,6 +3024,7 @@ function normCpf(c){
   n.birthYear=Math.round(cpfNum(c.birthYear,0))||0;
   n.ceiling=cpfNum(c.ceiling,8000)||8000;
   n.intCredited=Math.round(cpfNum(c.intCredited,0))||0;
+  if(typeof c.salaryFrom==='string'&&/^\d{4}-\d{2}$/.test(c.salaryFrom))n.salaryFrom=c.salaryFrom;   // 工资起记月：这个月之前的工资当作已在期初余额里，不自动记（避免重复加）
   if(Array.isArray(c.entries))n.entries=c.entries.filter(e=>e&&e.month).map(e=>{
     const k=e.kind==='topup'?'topup':e.kind==='adjust'?'adjust':e.kind==='interest'?'interest':'salary';
     const num=k==='adjust'?cpfNumS:cpfNum;   // 对账那笔差额可以是负数
@@ -3142,7 +3150,8 @@ function cpfSalaryIncome(monthStr){
    只在 CPF 已启用时动；只碰 srcId 那种「自动条」，手动记的（记这个月/存一笔/对账/利息）一律不碰。返回有没有改动。 */
 function cpfSyncFromSalary(){
   if(!cpfActive())return false;
-  const sal={};DATA.forEach(r=>{if(isInc(r)&&r.category==='salary'){const net=Math.round(sgdOf(r)*100)/100;if(net>0)sal[String(r.id)]={net,month:isoDay(r.ts).slice(0,7),ts:new Date(r.ts).getTime()||Date.now()};}});
+  const cut=CPF.salaryFrom||'';   // 工资起记月：早于这个月的工资 = 当作已在期初余额里，不重复记
+  const sal={};DATA.forEach(r=>{if(isInc(r)&&r.category==='salary'){const net=Math.round(sgdOf(r)*100)/100;const month=isoDay(r.ts).slice(0,7);if(net>0&&(!cut||month>=cut))sal[String(r.id)]={net,month,ts:new Date(r.ts).getTime()||Date.now()};}});
   let changed=false;
   const kept=CPF.entries.filter(e=>{if(e.kind==='salary'&&e.auto&&e.srcId){if(!sal[e.srcId]){changed=true;return false;}}return true;});   // 源没了 → 删自动条
   if(changed)CPF.entries=kept;
@@ -8407,6 +8416,10 @@ function buildCpfPage(){
   const nowY=now.slice(0,4);
   const janRemind=lastInt&&lastInt.month.slice(0,4)===nowY&&(!lastAdj||lastAdj.month.slice(0,4)!==nowY);   // 今年刚自动加了利息、还没核对过 → 提醒拍照核对
   const recSum=CPF.entries.reduce((s,e)=>s+e.oa+e.sa+e.ma,0);   // 累计已记（所有笔，含利息，都进了总额）
+  const salRows=DATA.filter(r=>isInc(r)&&r.category==='salary'&&sgdOf(r)>0);   // 主列表里的工资进账
+  const salCut=CPF.salaryFrom||'';
+  const salIgnored=salCut?salRows.filter(r=>isoDay(r.ts).slice(0,7)<salCut).length:0;   // 起记月之前、被跳过的工资笔数
+  const salFromHTML=(salRows.length||salCut)?`<div class="cpf-salfrom" id="cpfSalFrom"><span class="sf-t">🔗 工资起记 ${salCut?`<b>${salCut}</b> 起`:'<b>全部都算</b>'}${salIgnored?` · 之前 <b>${salIgnored}</b> 笔当作已在期初`:''}</span><button type="button" class="sf-btn">改</button></div>`:'';
   const acctsHTML=CPF_ACCTS.map(([k,n,d,c])=>{
     const v=b[k],pct=tot>0?Math.round(v/tot*100):0;
     return `<div class="cpf-acct" style="color:${c}"><div class="an">${n}</div><div class="ad">${d.split(' · ')[0]}</div>
@@ -8450,6 +8463,7 @@ function buildCpfPage(){
     </div>
     <div class="cpf-note" style="text-align:center;margin-top:10px;line-height:1.7">${idn} · ${ageTxt} · 你出 <b>${rt.emp}%</b> + 公司出 <b>${rt.empr}%</b> = 工资的 <b>${rt.total}%</b> 进 CPF<br>这 ${rt.total}% 里：OA <b>${shO}%</b> · SA <b>${shS}%</b> · MA <b>${shM}%</b>　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">明细<small style="font-size:10px;color:var(--muted);font-weight:600;margin-left:5px">工资 · 存入 · 利息 · 对账</small></span><span style="display:flex;gap:8px"><button class="cpf-add" id="cpfTopupBtn" style="padding:7px 12px">💰 存一笔</button><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></span></div>
+    ${salFromHTML}
     ${entriesHTML}`;
 }
 document.getElementById('cpfBody').addEventListener('click',e=>{
@@ -8458,12 +8472,14 @@ document.getElementById('cpfBody').addEventListener('click',e=>{
     const st=document.querySelector('#cpfSetupStat .cpf-stat.on');if(st)CPF.status=st.dataset.stat;
     const ps=document.getElementById('cpfPrStart');if(ps&&CPF.status!=='citizen'&&/^\d{4}-\d{2}$/.test(ps.value||''))CPF.prStart=ps.value;
     CPF_ACCTS.forEach(([k])=>{const el=document.getElementById('cpfOpen_'+k);if(el)CPF.open[k]=cpfNum(el.value,0);});
+    if(!CPF.salaryFrom&&(CPF.open.oa+CPF.open.sa+CPF.open.ma)>0)CPF.salaryFrom=cpfCurMonth();   // 期初有余额 → 默认从这个月起记工资，之前的当作已在期初（不重复加）；明细里可改
     CPF.on=true;saveCpf();buildCpfPage();toast('好了，开始追踪 CPF');return;
   }
   if(e.target.closest('#cpfEditProfile')){openCpfMod('settings');return;}
   if(e.target.closest('#cpfReconBtn')){openCpfMod('recon');return;}
   if(e.target.closest('#cpfAddBtn')){openCpfMod('month');return;}
   if(e.target.closest('#cpfTopupBtn')){openCpfMod('topup');return;}
+  if(e.target.closest('#cpfSalFrom')){openCpfMod('salfrom');return;}
   const del=e.target.closest('[data-cpfdel]');
   if(del){cpfDelEntry(del.dataset.cpfdel);return;}
   if(e.target.closest('.mlink')){toast('这笔跟主列表的工资联动 · 去「明细」删那笔工资，这里会一起删');return;}
@@ -8590,6 +8606,28 @@ function openCpfMod(mode,id){
     };
     CPF_ACCTS.forEach(([k])=>document.getElementById('cpfRc_'+k).addEventListener('input',rcalc));
     rcalc();
+  } else if(mode==='salfrom'){
+    title.textContent='工资从哪个月起算';
+    const salRows=DATA.filter(r=>isInc(r)&&r.category==='salary'&&sgdOf(r)>0);
+    body.innerHTML=`
+      <div class="cpf-note" style="margin-bottom:10px">你填的<b>期初余额</b>已经包含之前所有 CPF。选一个月，<b>从这个月起</b>的工资才自动记进来；更早的（当作已经在期初里了）就<b>不重复加</b>。</div>
+      <div class="cpf-inrow" id="cpfSalMRow"><label>从这个月起<small>更早的不记</small></label><input class="cpf-in" type="month" id="cpfSalFromM" value="${CPF.salaryFrom||cpfCurMonth()}"></div>
+      <label class="cpf-chk" id="cpfSalAllWrap"><input type="checkbox" id="cpfSalAll" ${CPF.salaryFrom?'':'checked'}> 不设起点 · <b>全部工资都算</b>（期初留空、想从头记全部时选这个）</label>
+      <div class="cpf-splitprev" id="cpfSalPrev"></div>`;
+    const salPrev=()=>{
+      const all=document.getElementById('cpfSalAll').checked;
+      const m=(document.getElementById('cpfSalFromM').value||'').slice(0,7);
+      const el=document.getElementById('cpfSalPrev'),row=document.getElementById('cpfSalMRow');
+      if(row)row.style.opacity=all?'.4':'1';
+      if(all){el.innerHTML=`主列表 <b>${salRows.length}</b> 笔工资<b>全部</b>自动记进 CPF。`;return;}
+      if(!/^\d{4}-\d{2}$/.test(m)){el.innerHTML='选个月份';return;}
+      const keep=salRows.filter(r=>isoDay(r.ts).slice(0,7)>=m).length,ign=salRows.length-keep;
+      el.innerHTML=`从 <b>${m}</b> 起：记 <b>${keep}</b> 笔工资${ign?` · 之前 <b>${ign}</b> 笔跳过（当作已在期初）`:''}。`;
+    };
+    document.getElementById('cpfSalFromM').addEventListener('input',salPrev);
+    document.getElementById('cpfSalFromM').addEventListener('change',salPrev);
+    document.getElementById('cpfSalAll').addEventListener('change',salPrev);
+    salPrev();
   } else if(mode==='topup'||mode==='topupedit'){
     const isEdit=mode==='topupedit';
     const e=isEdit?CPF.entries.find(x=>x.id===id):null;
@@ -8690,6 +8728,17 @@ document.getElementById('cpfModSave').onclick=()=>{
     CPF.ceiling=cpfNum(gv('cpfCeil'),8000)||8000;
     CPF_ACCTS.forEach(([k])=>{const el=document.getElementById('cpfOpenS_'+k);if(el)CPF.open[k]=cpfNum(el.value,0);});
     closeCpfMod();saveCpf();buildCpfPage();toast('CPF 资料已存');return;
+  }
+  if(cpfModMode==='salfrom'){
+    const all=document.getElementById('cpfSalAll')&&document.getElementById('cpfSalAll').checked;
+    let nv='';
+    if(!all){const m=(gv('cpfSalFromM')||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(m)){toast('先选月份','err');return;}nv=m;}
+    const before=CPF.entries.slice(),beforeFrom=CPF.salaryFrom;
+    CPF.salaryFrom=nv;
+    cpfSyncFromSalary();   // 重新同步：跳过起点之前的工资、删掉之前多记的自动条
+    CPF.on=true;closeCpfMod();buildCpfPage();
+    saveCpf().then(ok=>{if(!ok){CPF.entries=before;CPF.salaryFrom=beforeFrom;buildCpfPage();toast('没同步上去，已还原','err');}});
+    toast(nv?`好了 · 从 ${nv} 起才记工资，之前的当作已在期初`:'好了 · 全部工资都算');return;
   }
   if(cpfModMode==='recon'){
     const rm=(gv('cpfRcMonth')||'').slice(0,7);

@@ -2670,6 +2670,21 @@ async function suiteEdit() {
         return { lock: !!(row && /crow-lock/.test(row.className)), car: row ? row.querySelector('.car').textContent : '', opened, editToast: t, delBlocked: /不能删除/.test(dt) };
       });
       (salLock.lock && salLock.car === '🔒' && !salLock.opened && /系统分类/.test(salLock.editToast) && salLock.delBlocked) ? ok('工资分类锁：跟 CPF 联动 → 列表标 🔒、点开被挡、删被挡（不会误删/改断链）') : bad('工资分类没锁住', JSON.stringify(salLock));
+      // 2s) v11.53 工资起记月：期初余额已含之前 CPF → salaryFrom 之前的工资跳过（不重复加）；起记月及以后照记；清空=全部都算
+      const salFrom = await pg.evaluate(() => {
+        const keep = DATA.slice();
+        DATA = [{ id: 's1', ts: '2026-07-10T22:00:00+08:00', amount: 5000, currency: 'SGD', type: 'income', category: 'salary', merchant: 'Sal' },
+                { id: 's2', ts: '2026-08-10T22:00:00+08:00', amount: 5000, currency: 'SGD', type: 'income', category: 'salary', merchant: 'Sal' },
+                { id: 's3', ts: '2026-09-10T22:00:00+08:00', amount: 5000, currency: 'SGD', type: 'income', category: 'salary', merchant: 'Sal' }];
+        CPF = normCpf({ open: { oa: 100, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1994, salaryFrom: '2026-09' }); CPF.on = true;
+        cpfSyncFromSalary();
+        const cut = { n: CPF.entries.filter(x => x.kind === 'salary' && x.auto).length, months: CPF.entries.filter(x => x.kind === 'salary').map(x => x.month) };
+        CPF.salaryFrom = ''; cpfSyncFromSalary();
+        const all = { n: CPF.entries.filter(x => x.kind === 'salary' && x.auto).length };
+        const persisted = normCpf(JSON.parse(JSON.stringify(normCpf({ open: { oa: 0, sa: 0, ma: 0 }, salaryFrom: '2026-09' })))).salaryFrom;
+        DATA = keep; return { cut, all, persisted };
+      });
+      (salFrom.cut.n === 1 && salFrom.cut.months.join() === '2026-09' && salFrom.all.n === 3 && salFrom.persisted === '2026-09') ? ok('CPF 工资起记月：起点前的工资跳过（3笔只记1笔·2026-09）· 清空起点→全部3笔都记 · salaryFrom 存得住', JSON.stringify(salFrom)) : bad('CPF 工资起记月没生效', JSON.stringify(salFrom));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
       const orch = await pg.evaluate(async () => {
         let terminated = false, gotBlob = false;
