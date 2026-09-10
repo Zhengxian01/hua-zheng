@@ -8144,12 +8144,12 @@ function buildCpfCard(){
   const b=cpfBal();
   el.innerHTML=`<div class="hc-row">
       <span class="hc-l"><span class="hc-ico">🏦</span><span class="hc-cap">CPF 公积金</span></span>
-      <span class="hc-r"><span class="hc-amt"><span class="s">S$</span>${cpfFmt0(b.oa+b.sa+b.ma)}</span><span class="hc-go">›</span></span>
+      <span class="hc-r"><span class="hc-amt"><span class="s">S$</span>${cpfFmt(b.oa+b.sa+b.ma)}</span><span class="hc-go">›</span></span>
     </div>
     <div class="hc-seg">
-      <span style="color:#0BA678">OA <b>${cpfFmt0(b.oa)}</b></span>
-      <span style="color:#7C6FF0">SA <b>${cpfFmt0(b.sa)}</b></span>
-      <span style="color:#12B5A6">MA <b>${cpfFmt0(b.ma)}</b></span>
+      <span style="color:#0BA678">OA <b>${cpfFmt(b.oa)}</b></span>
+      <span style="color:#7C6FF0">SA <b>${cpfFmt(b.sa)}</b></span>
+      <span style="color:#12B5A6">MA <b>${cpfFmt(b.ma)}</b></span>
     </div>`;
 }
 document.getElementById('cpfCard').addEventListener('click',openCpf);
