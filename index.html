@@ -2929,7 +2929,7 @@ function normCpf(c){
   if(Array.isArray(c.entries))n.entries=c.entries.filter(e=>e&&e.month).map(e=>({
     id:e.id||('cpf'+Math.random().toString(36).slice(2,9)),
     month:String(e.month).slice(0,7),
-    gross:cpfNum(e.gross,0),oa:cpfNum(e.oa,0),sa:cpfNum(e.sa,0),ma:cpfNum(e.ma,0),
+    gross:cpfNum(e.gross,0),bonus:cpfNum(e.bonus,0),oa:cpfNum(e.oa,0),sa:cpfNum(e.sa,0),ma:cpfNum(e.ma,0),
     ts:e.ts||Date.now()}))
     .sort((a,b)=>a.month<b.month?1:a.month>b.month?-1:0);   // 新月在前
   return n;
@@ -2972,6 +2972,16 @@ function cpfSplit(gross,monthStr){   // 基本工资(gross) → 各账户当月�
   const rd=x=>Math.round(x*100)/100;
   const oa=rd(w*r.oa/100),sa=rd(w*r.sa/100),ma=rd(w*r.ma/100);
   return {oa,sa,ma,total:rd(oa+sa+ma),empAmt:rd(w*r.emp/100),emprAmt:rd(w*r.empr/100),gross:g,capped:g>CPF.ceiling,rate:r};
+}
+/* 奖金(Additional Wage)→ 各账户：跟工资同比例，但不套每月普通工资上限（年度 AW 上限较复杂，先不管，可手动微调）。 */
+function cpfBonusSplit(bonus,monthStr){
+  const w=Math.max(cpfNum(bonus,0),0),r=cpfRatesFor(monthStr||cpfCurMonth()),rd=x=>Math.round(x*100)/100;
+  return {oa:rd(w*r.oa/100),sa:rd(w*r.sa/100),ma:rd(w*r.ma/100),total:rd(w*r.total/100),empAmt:rd(w*r.emp/100),emprAmt:rd(w*r.empr/100)};
+}
+/* 从你已经记的账里，拉某个月「工资」分类的进账（银行到手，已扣 CPF）总额 → 直接喂给 CPF，不用重打。 */
+function cpfSalaryIncome(monthStr){
+  let sum=0;DATA.forEach(r=>{if(isInc(r)&&r.category==='salary'&&isoDay(r.ts).slice(0,7)===monthStr)sum+=sgdOf(r);});
+  return Math.round(sum*100)/100;
 }
 function clone(o){return JSON.parse(JSON.stringify(o));}
 /* 拿某个 key 的分类定义；分类被删掉了也不会炸，回退到「其他」 */
@@ -8177,7 +8187,7 @@ function buildCpfPage(){
   }).join('');
   const entriesHTML=CPF.entries.length?CPF.entries.map(e=>`
     <div class="cpf-mrow" data-eid="${e.id}">
-      <div><div class="mm">${e.month}</div>${e.gross?`<div class="mg">工资 S$${cpfFmt(e.gross)}${e.gross>CPF.ceiling?' <span class="cpf-cap">(顶)</span>':''}</div>`:''}</div>
+      <div><div class="mm">${e.month}</div>${e.gross?`<div class="mg">工资 S$${cpfFmt(e.gross)}${e.gross>CPF.ceiling?' <span class="cpf-cap">(顶)</span>':''}${e.bonus?' · 奖金 S$'+cpfFmt(e.bonus):''}</div>`:''}</div>
       <div class="msplit"><span class="mseg">OA <b>${cpfFmt(e.oa)}</b></span><span class="mseg">SA <b>${cpfFmt(e.sa)}</b></span><span class="mseg">MA <b>${cpfFmt(e.ma)}</b></span></div>
       <div class="mtot">+${cpfFmt(e.oa+e.sa+e.ma)}</div>
       <button class="mdel" data-cpfdel="${e.id}" aria-label="删除">✕</button>
@@ -8244,37 +8254,49 @@ function openCpfMod(mode,id){
     const e=isEdit?CPF.entries.find(x=>x.id===id):null;
     const m=e?e.month:cpfCurMonth();
     title.textContent=isEdit?'改这笔 CPF':'记这个月 CPF';
+    const startNet=!isEdit&&cpfSalaryIncome(m)>0;   // 本月有记到工资进账 → 默认「到手」模式
     body.innerHTML=`
       <div class="cpf-inrow"><label>月份</label><input class="cpf-in" type="month" id="cpfMonth" value="${m}"></div>
       <div class="cpf-note" style="margin-bottom:5px">我填的是哪个数？</div>
       <div class="cpf-statrow" id="cpfWageMode">
-        <button class="cpf-stat on" data-wm="gross">基本工资<small style="display:block;font-size:9px;opacity:.7">税前 / payslip</small></button>
-        <button class="cpf-stat" data-wm="net">到手工资<small style="display:block;font-size:9px;opacity:.7">银行进账 · 已扣 CPF</small></button>
+        <button class="cpf-stat${startNet?'':' on'}" data-wm="gross">基本工资<small style="display:block;font-size:9px;opacity:.7">税前 / payslip</small></button>
+        <button class="cpf-stat${startNet?' on':''}" data-wm="net">到手工资<small style="display:block;font-size:9px;opacity:.7">银行进账 · 已扣 CPF</small></button>
       </div>
-      <div class="cpf-inrow"><label id="cpfWageLbl">基本工资<small>税前 Gross</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfGross" value="${e&&e.gross?e.gross:''}" placeholder="例：4400"></div>
+      <div id="cpfPullHint"></div>
+      <div class="cpf-inrow"><label id="cpfWageLbl">${startNet?'到手工资<small>银行进账</small>':'基本工资<small>税前 Gross</small>'}</label><input class="cpf-in" type="number" inputmode="decimal" id="cpfGross" value="${e&&e.gross?e.gross:''}" placeholder="${startNet?'例：4100':'例：4400'}"></div>
+      <div class="cpf-inrow"><label>奖金<small>Bonus / AW · 税前 · 没有留空</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfBonus" value="${e&&e.bonus?e.bonus:''}" placeholder="0"></div>
       <div class="cpf-splitprev" id="cpfPrev">填工资 → 按你的年龄 / 身份自动拆</div>
       <div class="cpf-note" style="margin-top:8px"><button type="button" id="cpfAdvT" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;padding:0">手动微调各账户 ▾</button></div>
       <div id="cpfAdv" hidden style="margin-top:6px">
         ${CPF_ACCTS.map(([k,n])=>`<div class="cpf-inrow"><label>${n} 进账</label><input class="cpf-in" type="number" inputmode="decimal" id="cpfE_${k}" value="${e?e[k]:''}"></div>`).join('')}
       </div>`;
-    const gross=document.getElementById('cpfGross'),monthEl=document.getElementById('cpfMonth');
-    let wageNet=false;   // false=填基本工资(gross)；true=填到手(net)，先倒推基本
+    const gross=document.getElementById('cpfGross'),monthEl=document.getElementById('cpfMonth'),bonusEl=document.getElementById('cpfBonus');
+    let wageNet=startNet;   // false=填基本工资(gross)；true=填到手(net)，先倒推基本
+    /* 从记账里拉本月工资进账（到手），给个一键填按钮 */
+    const pullHint=()=>{const inc=cpfSalaryIncome(monthEl.value),el=document.getElementById('cpfPullHint');if(!el)return;
+      el.innerHTML=inc>0?`<button type="button" class="cpf-add" id="cpfPullBtn" style="width:100%;margin:2px 0 8px;padding:8px">📥 本月工资进账 S$${cpfFmt(inc)}（从你记的账拉）· 用这个</button>`:'';
+      const pb=document.getElementById('cpfPullBtn');if(pb)pb.onclick=()=>{if(!wageNet){wageNet=true;[...document.getElementById('cpfWageMode').children].forEach(x=>x.classList.toggle('on',x.dataset.wm==='net'));document.getElementById('cpfWageLbl').innerHTML='到手工资<small>银行进账</small>';}gross.value=inc;recalc();};};
     const recalc=()=>{
       const raw=cpfNum(gross.value,0);
       const basic=wageNet?cpfGrossFromNet(raw,monthEl.value):raw;   // 到手 → 倒推基本
       gross.dataset.basic=basic;   // 存的是基本工资，不是到手
-      const sp=cpfSplit(basic,monthEl.value);
-      CPF_ACCTS.forEach(([k])=>{const f=document.getElementById('cpfE_'+k);if(f)f.value=sp[k]?sp[k]:'';});
+      const bonus=cpfNum(bonusEl.value,0);
+      const sp=cpfSplit(basic,monthEl.value),bp=cpfBonusSplit(bonus,monthEl.value);
+      const tot={oa:sp.oa+bp.oa,sa:sp.sa+bp.sa,ma:sp.ma+bp.ma,total:sp.total+bp.total,emp:sp.empAmt+bp.empAmt,empr:sp.emprAmt+bp.emprAmt};
+      CPF_ACCTS.forEach(([k])=>{const f=document.getElementById('cpfE_'+k);if(f)f.value=tot[k]?cpfFmt(tot[k]):'';});
       const idn=sp.rate.prYear<3&&CPF.status!=='citizen'?`PR 第${sp.rate.prYear}年 · `:'';
-      if(raw>0){
-        const back=wageNet?`到手 S$${cpfFmt(raw)} → <b>基本工资 S$${cpfFmt(basic)}</b>（倒推）<br>`:'';
-        document.getElementById('cpfPrev').innerHTML=`${back}你出(雇员 ${sp.rate.emp}%) <b>S$${cpfFmt(sp.empAmt)}</b> · 公司出(雇主 ${sp.rate.empr}%) <b>S$${cpfFmt(sp.emprAmt)}</b><br>共进 CPF <b>+S$${cpfFmt(sp.total)}</b> → OA <b>${cpfFmt(sp.oa)}</b>/SA <b>${cpfFmt(sp.sa)}</b>/MA <b>${cpfFmt(sp.ma)}</b><br><span style="color:var(--muted)">${idn}合计 ${sp.rate.total}%${sp.capped?` · 工资超上限，只算到 S$${cpfFmt(CPF.ceiling)}`:''}</span>`;
+      if(raw>0||bonus>0){
+        const back=wageNet&&raw>0?`到手 S$${cpfFmt(raw)} → <b>基本工资 S$${cpfFmt(basic)}</b>（倒推）<br>`:'';
+        const bl=bonus>0?` · 含奖金 S$${cpfFmt(bonus)}`:'';
+        document.getElementById('cpfPrev').innerHTML=`${back}你出(雇员) <b>S$${cpfFmt(tot.emp)}</b> · 公司出(雇主) <b>S$${cpfFmt(tot.empr)}</b>${bl}<br>共进 CPF <b>+S$${cpfFmt(tot.total)}</b> → OA <b>${cpfFmt(tot.oa)}</b>/SA <b>${cpfFmt(tot.sa)}</b>/MA <b>${cpfFmt(tot.ma)}</b><br><span style="color:var(--muted)">${idn}合计 ${sp.rate.total}%${sp.capped?` · 工资超上限，只算到 S$${cpfFmt(CPF.ceiling)}`:''}</span>`;
       }else document.getElementById('cpfPrev').innerHTML='填工资 → 按你的年龄 / 身份自动拆';
     };
     document.getElementById('cpfWageMode').addEventListener('click',ev=>{const b=ev.target.closest('[data-wm]');if(!b)return;wageNet=(b.dataset.wm==='net');[...ev.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));
       document.getElementById('cpfWageLbl').innerHTML=wageNet?'到手工资<small>银行进账</small>':'基本工资<small>税前 Gross</small>';
       gross.placeholder=wageNet?'例：4100':'例：4400';recalc();});
-    gross.addEventListener('input',recalc);monthEl.addEventListener('change',recalc);
+    gross.addEventListener('input',recalc);bonusEl.addEventListener('input',recalc);
+    monthEl.addEventListener('change',()=>{pullHint();recalc();});
+    pullHint();
     if(!isEdit&&gross.value)recalc();
     if(isEdit&&e){document.getElementById('cpfPrev').innerHTML=`OA <b>+${cpfFmt(e.oa)}</b> · SA <b>+${cpfFmt(e.sa)}</b> · MA <b>+${cpfFmt(e.ma)}</b>`;}
     document.getElementById('cpfAdvT').onclick=()=>{const a=document.getElementById('cpfAdv');a.hidden=!a.hidden;};
@@ -8299,11 +8321,12 @@ document.getElementById('cpfModSave').onclick=()=>{
   if(!/^\d{4}-\d{2}$/.test(month)){toast('先选月份','err');return;}
   const gel=document.getElementById('cpfGross');
   const gross=cpfNum(gel&&gel.dataset.basic!=null?gel.dataset.basic:gv('cpfGross'),0);   /* 填到手时存倒推的基本工资 */
+  const bonus=cpfNum(gv('cpfBonus'),0);
   const oa=cpfNum(gv('cpfE_oa'),0),sa=cpfNum(gv('cpfE_sa'),0),ma=cpfNum(gv('cpfE_ma'),0);
   if(oa+sa+ma<=0){toast('填工资总额，或手动填各账户','err');return;}
   const before=CPF.entries.slice();
-  if(cpfModMode==='edit'&&cpfEditId){const e=CPF.entries.find(x=>x.id===cpfEditId);if(e){e.month=month;e.gross=gross;e.oa=oa;e.sa=sa;e.ma=ma;}}
-  else{CPF.entries.push({id:'cpf'+Math.random().toString(36).slice(2,9),month,gross,oa,sa,ma,ts:Date.now()});}
+  if(cpfModMode==='edit'&&cpfEditId){const e=CPF.entries.find(x=>x.id===cpfEditId);if(e){e.month=month;e.gross=gross;e.bonus=bonus;e.oa=oa;e.sa=sa;e.ma=ma;}}
+  else{CPF.entries.push({id:'cpf'+Math.random().toString(36).slice(2,9),month,gross,bonus,oa,sa,ma,ts:Date.now()});}
   CPF.entries.sort((a,b)=>a.month<b.month?1:a.month>b.month?-1:0);
   CPF.on=true;closeCpfMod();buildCpfPage();
   saveCpf().then(ok=>{if(!ok){CPF.entries=before;buildCpfPage();toast('没同步上去，已还原','err');}});

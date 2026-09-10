@@ -2538,6 +2538,12 @@ async function suiteEdit() {
       // 到手工资倒推基本 + 雇员/雇主拆（用来核公司的%）：公民全额 雇员20% → 到手4100 = 基本5125
       const nb = await pg.evaluate(() => { const g = cpfGrossFromNet(4100, '2026-09'); const s = cpfSplit(g, '2026-09'); return { g, emp: s.empAmt, empr: s.emprAmt, total: s.total, er: s.rate.emp, err: s.rate.empr }; });
       (Math.abs(nb.g - 5125) < 0.01 && nb.er === 20 && nb.err === 17 && Math.abs(nb.emp - 1025) < 0.01 && Math.abs(nb.empr - 871.25) < 0.01) ? ok('CPF 到手 4100 倒推基本 5125 · 雇员20%=1025 / 雇主17%=871.25（能核公司的%）') : bad('CPF 到手倒推基本/雇员雇主拆错', JSON.stringify(nb));
+      // 奖金(AW)：跟工资同比例、不套月上限。公民 3000 → 3000×37% = 1110
+      const bon = await pg.evaluate(() => { const b = cpfBonusSplit(3000, '2026-09'); return { total: b.total, oa: b.oa, sa: b.sa, ma: b.ma }; });
+      (Math.abs(bon.total - 1110) < 0.02 && Math.abs(bon.oa - 690) < 0.02) ? ok('CPF 奖金 3000 按 37% 拆 = +1110（OA690/SA180/MA240）') : bad('CPF 奖金拆错', JSON.stringify(bon));
+      // 从记账拉「工资」分类的进账：造一笔 income category=salary SGD 4200 → cpfSalaryIncome 抓到
+      const pull = await pg.evaluate(() => { DATA.push({ id: 90001, ts: '2026-09-04T10:00:00+08:00', amount: 4200, currency: 'SGD', merchant: 'Pay', source: 'm', type: 'income', category: 'salary', raw: '' }); const v = cpfSalaryIncome('2026-09'); DATA = DATA.filter(x => x.id !== 90001); return v; });
+      (Math.abs(pull - 4200) < 0.01) ? ok('CPF 从记账里拉本月「工资」进账 S$4200（email 自动记的薪水直接喂 CPF，不用重打）') : bad('CPF 没拉到工资进账', String(pull));
       const capped = await pg.evaluate(() => cpfSplit(10000, '2026-09'));  // 超上限 8000 → 只算 8000×37%=2960
       (capped.capped && Math.abs(capped.total - 2960) < 0.02) ? ok('CPF 工资超上限只算到 8000（本月共 2960）') : bad('CPF 工资上限没生效', JSON.stringify(capped));
       await pg.evaluate(() => { CPF.entries.push({ id: 't1', month: '2026-09', gross: 6000, oa: 1380, sa: 360, ma: 480, ts: 1 }); });
