@@ -1301,6 +1301,17 @@ body.theme-journal .cpf-mrow{background:#FBF7EF;border-color:#E4DCCF}
 .cpf-mrow-top{background:#E8F0FE;border-color:#BBD3FB}
 body.phototheme .cpf-mrow-top{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.34)}
 body.theme-journal .cpf-mrow-top{background:#EEF4FD;border-color:#C7DBF7}
+.cpf-int{margin-top:12px;padding:13px 15px;border-radius:16px;background:linear-gradient(135deg,#EAF7EF,#E8F0FE);border:1px solid #CDE7D6}
+body.phototheme .cpf-int{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.28)}
+body.theme-journal .cpf-int{background:#F0F6EE;border-color:#D8E6D2}
+.cpf-int .ci-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.cpf-int .ci-cap{font-size:12.5px;font-weight:800;color:var(--ink)}
+.cpf-int .ci-amt{font-size:20px;font-weight:900;color:#12b981;letter-spacing:-.5px}
+.cpf-int .ci-amt small{font-size:11px;font-weight:700;opacity:.7;margin-left:1px}
+.cpf-int .ci-sub{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:4px;line-height:1.6}
+.cpf-int .ci-sub b{color:var(--ink);font-weight:800}
+.cpf-int .ci-note{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.cpf-int .ci-note button{border:0;background:none;color:#3B82F6;font-family:inherit;font-weight:800;font-size:10.5px;cursor:pointer;padding:0;white-space:nowrap}
 .cpf-empty{text-align:center;color:var(--muted);font-size:12.5px;padding:22px 10px;line-height:1.7}
 .cpf-setup{background:var(--card);border:1px dashed var(--line);border-radius:16px;padding:16px}
 body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,255,255,.18)}
@@ -2946,7 +2957,9 @@ const CPF_ALLOC=[   // [年龄上限, {oa,sa,ma}]：各账户占工资的%（公
   [35,{oa:23,sa:6,ma:8}],[45,{oa:21,sa:7,ma:9}],[50,{oa:19,sa:8,ma:10}],[55,{oa:15,sa:11.5,ma:10.5}],[999,{oa:12,sa:3.5,ma:10.5}]];
 const CPF_STATUS={citizen:{n:'公民 / PR 满3年'},pr:{n:'PR（填拿证年月）'}};   /* PR 的第几年按【拿 PR 年月→供款月】自己算，会自动升级，不用每年来改 */
 function cpfAllocFor(age){const a=(age==null||!isFinite(age))?30:age;for(const[cap,al]of CPF_ALLOC)if(a<=cap)return al;return CPF_ALLOC[CPF_ALLOC.length-1][1];}
-function defaultCpf(){return {on:false,hidden:false,open:{oa:0,sa:0,ma:0},status:'citizen',prStart:'',birthYear:0,ceiling:8000,entries:[]};}
+/* rate：CPF 利率（年%）。默认就是新加坡官方的：OA 2.5、SA/MA 4，首 $6万还有 +1% 额外利息。
+   使用者可以自己改（利率偶尔会调），extra 关掉就不算那 +1%。 */
+function defaultCpf(){return {on:false,hidden:false,open:{oa:0,sa:0,ma:0},status:'citizen',prStart:'',birthYear:0,ceiling:8000,rate:{oa:2.5,sa:4,ma:4,extra:true},entries:[]};}
 let CPF=defaultCpf();
 function cpfNum(v,d){const x=parseFloat(v);return isFinite(x)&&x>=0?x:d;}
 function normCpf(c){
@@ -2959,6 +2972,7 @@ function normCpf(c){
   if(typeof c.prStart==='string'&&/^\d{4}-\d{2}$/.test(c.prStart))n.prStart=c.prStart;
   n.birthYear=Math.round(cpfNum(c.birthYear,0))||0;
   n.ceiling=cpfNum(c.ceiling,8000)||8000;
+  if(c.rate&&typeof c.rate==='object')n.rate={oa:cpfNum(c.rate.oa,2.5),sa:cpfNum(c.rate.sa,4),ma:cpfNum(c.rate.ma,4),extra:c.rate.extra!==false};
   if(Array.isArray(c.entries))n.entries=c.entries.filter(e=>e&&e.month).map(e=>({
     id:e.id||('cpf'+Math.random().toString(36).slice(2,9)),
     month:String(e.month).slice(0,7),
@@ -2970,6 +2984,21 @@ function normCpf(c){
 }
 function cpfBal(){const b={oa:CPF.open.oa,sa:CPF.open.sa,ma:CPF.open.ma};CPF.entries.forEach(e=>{b.oa+=e.oa;b.sa+=e.sa;b.ma+=e.ma;});return b;}
 function cpfTotal(){const b=cpfBal();return b.oa+b.sa+b.ma;}
+/* 估一年 CPF 利息。各账户按各自利率算基础利息；额外 +1% 只加在「首 $6万」合计余额上
+   （OA 最多算到 $2万，官方口径）。55 岁起：首 $3万 +2%、下一个 $3万 +1%。利率可在设置里改。 */
+function cpfInterest(){
+  const b=cpfBal(),r=CPF.rate||{oa:2.5,sa:4,ma:4,extra:true};
+  const base=b.oa*r.oa/100+b.sa*r.sa/100+b.ma*r.ma/100;
+  let extra=0;
+  if(r.extra){
+    const yr=new Date().getFullYear(),age=CPF.birthYear?yr-CPF.birthYear:30;
+    const elig=Math.min(Math.min(b.oa,20000)+b.sa+b.ma,60000);   // 计入额外利息的合计（OA≤$2万，封顶$6万）
+    if(age>=55){const t1=Math.min(elig,30000);extra=t1*0.02+Math.max(elig-30000,0)*0.01;}   // 55+：首$3万+2%、$3万–$6万+1%
+    else extra=elig*0.01;
+  }
+  const annual=base+extra;
+  return {annual,monthly:annual/12,base,extra};
+}
 function cpfActive(){return CPF.on||CPF.entries.length>0||(CPF.open.oa+CPF.open.sa+CPF.open.ma)>0;}
 /* PR 年资：拿 PR 的年月 → 到某供款月是第几年（1/2/3+），会随月份自己往上升。
    公民 / PR 满3年 / 说是 PR 但没填年月 → 一律当满3年（全额）。 */
@@ -8164,6 +8193,7 @@ const budPage=document.getElementById('budPage');
 /* ================= v11.40 CPF 公积金 ================= */
 function cpfFmt(n){return (Math.round((+n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function cpfFmt0(n){return Math.round(+n||0).toLocaleString('en-US');}   /* 账户卡用整数，省位、6 位数也塞得下 */
+function cpfPctTxt(n){const x=Math.round((+n||0)*100)/100;return (x%1===0?x.toFixed(0):x.toString().replace(/0+$/,'').replace(/\.$/,''))+'%';}   /* 2.5% / 4% / 4.05% 都显示得干净 */
 const CPF_ACCTS=[['oa','OA','普通账户 · 可买房','#0BA678'],['sa','SA','特别账户 · 退休','#7C6FF0'],['ma','MA','MediSave · 医疗','#12B5A6']];
 /* 总览那张卡：只显示总额（没设过 → 引导第一次填），点一下进全屏页 */
 function buildCpfCard(){
@@ -8197,8 +8227,13 @@ function cpfSyncToggleRow(){
   if(sd)sd.textContent=CPF.hidden?'已隐藏 · 点这里在总览显示':'在总览显示 · 没有 CPF 可以隐藏';
   if(ar)ar.textContent=CPF.hidden?'显示':'隐藏';
 }
-document.getElementById('cpfToggleRow').onclick=()=>{
-  CPF.hidden=!CPF.hidden;cpfSyncToggleRow();cpfPersist();
+document.getElementById('cpfToggleRow').onclick=async()=>{
+  if(!CPF.hidden){   /* 要隐藏 → 先确认（记的数据不会没，只是总览不显示） */
+    const yes=await askConfirm('隐藏 CPF 公积金卡？\n记过的数据都还在，只是总览先不显示。以后在这里可以再打开。','隐藏',true);
+    if(!yes)return;
+    CPF.hidden=true;
+  }else CPF.hidden=false;
+  cpfSyncToggleRow();cpfPersist();
   toast(CPF.hidden?'CPF 卡已隐藏 · 设置里可再打开':'CPF 卡已显示');
 };
 
@@ -8226,6 +8261,7 @@ function buildCpfPage(){
   const idn=CPF.status==='citizen'?'公民/PR满3年':(cpfPrYear(now)===1?'PR 第1年':cpfPrYear(now)===2?'PR 第2年':'PR 满3年');
   const ageTxt=CPF.birthYear?`${(+now.slice(0,4))-CPF.birthYear} 岁`:'年龄未填';
   const b=cpfBal(),tot=b.oa+b.sa+b.ma;
+  const it=cpfInterest(),age=CPF.birthYear?(+now.slice(0,4))-CPF.birthYear:30;   // 利息估算
   const recSum=CPF.entries.reduce((s,e)=>s+e.oa+e.sa+e.ma,0);   // 累计已记供款（所有月，不按年重置 → 明年也一直往上加）
   const acctsHTML=CPF_ACCTS.map(([k,n,d,c])=>{
     const v=b[k],pct=tot>0?Math.round(v/tot*100):0;
@@ -8245,6 +8281,11 @@ function buildCpfPage(){
         ?`最近一笔 <b>+S$${cpfFmt(CPF.entries[0].oa+CPF.entries[0].sa+CPF.entries[0].ma)}</b>（${CPF.entries[0].month}）· 累计已记 <b>+S$${cpfFmt(recSum)}</b>（${CPF.entries.length}个月）`
         :`这是你填的起点余额 · 每月工资进来记一笔，就往上加 📈`}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
+    <div class="cpf-int" id="cpfIntBox">
+      <div class="ci-top"><span class="ci-cap">📈 一年大约生利息</span><span class="ci-amt">≈ S$${cpfFmt0(it.annual)}<small>/年</small></span></div>
+      <div class="ci-sub">每月大约 <b>+S$${cpfFmt0(it.monthly)}</b> · 利率 OA <b>${cpfPctTxt(CPF.rate.oa)}</b> / SA <b>${cpfPctTxt(CPF.rate.sa)}</b> / MA <b>${cpfPctTxt(CPF.rate.ma)}</b>${CPF.rate.extra?` · 首 S$6万 <b>+1%</b>${age>=55?'（55+ 首$3万+2%）':''}`:''}</div>
+      <div class="ci-note">这是估的（利息按最低余额逐月算、年底才入账）· 利率会调 <button type="button" id="cpfIntEdit">改利率 ›</button></div>
+    </div>
     <div class="cpf-note" style="text-align:center;margin-top:10px;line-height:1.7">${idn} · ${ageTxt} · 你出 <b>${rt.emp}%</b> + 公司出 <b>${rt.empr}%</b> = 工资的 <b>${rt.total}%</b> 进 CPF<br>这 ${rt.total}% 里：OA <b>${shO}%</b> · SA <b>${shS}%</b> · MA <b>${shM}%</b>　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
     <div class="cpf-sec-h"><span class="t">每月供款</span><span style="display:flex;gap:8px"><button class="cpf-add" id="cpfTopupBtn" style="padding:7px 12px">💰 存一笔</button><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></span></div>
     ${entriesHTML}`;
@@ -8258,6 +8299,7 @@ document.getElementById('cpfBody').addEventListener('click',e=>{
     CPF.on=true;saveCpf();buildCpfPage();toast('好了，开始追踪 CPF');return;
   }
   if(e.target.closest('#cpfEditProfile')){openCpfMod('settings');return;}
+  if(e.target.closest('#cpfIntEdit')){openCpfMod('rate');return;}
   if(e.target.closest('#cpfAddBtn')){openCpfMod('month');return;}
   if(e.target.closest('#cpfTopupBtn')){openCpfMod('topup');return;}
   const del=e.target.closest('[data-cpfdel]');
@@ -8299,6 +8341,25 @@ function openCpfMod(mode,id){
     document.getElementById('cpfPrStartS').addEventListener('input',applyStat);
     cpfRenderRatePrev();
     document.getElementById('cpfResetBtn').onclick=async()=>{const yes=await askConfirm('清空所有 CPF 记录？\n资料 + 期初余额 + 每月供款全部删掉，回到没设置的状态。','清空');if(!yes)return;CPF=defaultCpf();saveCpf();closeCpfMod();buildCpfPage();buildCpfCard();toast('CPF 记录已清空');};
+  } else if(mode==='rate'){
+    const r=CPF.rate||{oa:2.5,sa:4,ma:4,extra:true};
+    title.textContent='CPF 利率';
+    body.innerHTML=`
+      <div class="cpf-note" style="margin-bottom:8px">系统默认填的就是新加坡官方现行利率。政府偶尔会调（SA/MA 每季度看一次），到时你自己改这里就行。</div>
+      <div class="cpf-inrow"><label>OA 普通账户<small>年利率 %</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfRateOa" value="${r.oa}" placeholder="2.5"></div>
+      <div class="cpf-inrow"><label>SA 特别账户<small>年利率 %</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfRateSa" value="${r.sa}" placeholder="4"></div>
+      <div class="cpf-inrow"><label>MA MediSave<small>年利率 %</small></label><input class="cpf-in" type="number" inputmode="decimal" id="cpfRateMa" value="${r.ma}" placeholder="4"></div>
+      <label class="cpf-chk" id="cpfRateExtraWrap"><input type="checkbox" id="cpfRateExtra" ${r.extra?'checked':''}> 算<b>额外利息</b>：首 S$6万合计 +1%（OA 最多算到 $2万）· 55 岁起首 $3万 +2%</label>
+      <div class="cpf-splitprev" id="cpfRateItPrev"></div>
+      <button type="button" id="cpfRateReset" style="border:0;background:none;color:#3B82F6;font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;padding:6px 0;margin-top:2px">↺ 恢复官方默认（2.5 / 4 / 4）</button>`;
+    const rprev=()=>{const oa=cpfNum(gvv('cpfRateOa'),2.5),sa=cpfNum(gvv('cpfRateSa'),4),ma=cpfNum(gvv('cpfRateMa'),4),ex=document.getElementById('cpfRateExtra').checked;
+      const save=CPF.rate;CPF.rate={oa,sa,ma,extra:ex};const it=cpfInterest();CPF.rate=save;
+      document.getElementById('cpfRateItPrev').innerHTML=`按现在的余额，一年大约生利息 <b>≈ S$${cpfFmt0(it.annual)}</b>（每月 <b>+S$${cpfFmt0(it.monthly)}</b>）${it.extra>0?`<br>其中额外利息 <b>+S$${cpfFmt0(it.extra)}</b>/年`:''}`;};
+    const gvv=id=>{const el=document.getElementById(id);return el?el.value:'';};
+    ['cpfRateOa','cpfRateSa','cpfRateMa'].forEach(id=>document.getElementById(id).addEventListener('input',rprev));
+    document.getElementById('cpfRateExtra').addEventListener('change',rprev);
+    document.getElementById('cpfRateReset').onclick=()=>{document.getElementById('cpfRateOa').value='2.5';document.getElementById('cpfRateSa').value='4';document.getElementById('cpfRateMa').value='4';document.getElementById('cpfRateExtra').checked=true;rprev();};
+    rprev();
   } else if(mode==='topup'||mode==='topupedit'){
     const isEdit=mode==='topupedit';
     const e=isEdit?CPF.entries.find(x=>x.id===id):null;
@@ -8399,6 +8460,10 @@ document.getElementById('cpfModSave').onclick=()=>{
     CPF.ceiling=cpfNum(gv('cpfCeil'),8000)||8000;
     CPF_ACCTS.forEach(([k])=>{const el=document.getElementById('cpfOpenS_'+k);if(el)CPF.open[k]=cpfNum(el.value,0);});
     closeCpfMod();saveCpf();buildCpfPage();toast('CPF 资料已存');return;
+  }
+  if(cpfModMode==='rate'){
+    CPF.rate={oa:cpfNum(gv('cpfRateOa'),2.5),sa:cpfNum(gv('cpfRateSa'),4),ma:cpfNum(gv('cpfRateMa'),4),extra:document.getElementById('cpfRateExtra').checked};
+    closeCpfMod();saveCpf();buildCpfPage();toast('利率已更新');return;
   }
   if(cpfModMode==='topup'||cpfModMode==='topupedit'){
     const tm=(gv('cpfTMonth')||'').slice(0,7);

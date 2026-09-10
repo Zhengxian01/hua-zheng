@@ -2589,6 +2589,19 @@ async function suiteEdit() {
       const hpersist = await pg.evaluate(() => { CPF.hidden = true; return curPrefs().cpf.hidden === true; });
       hpersist ? ok('CPF hidden 跟着 prefs.cpf 存（换手机也记得隐藏了）') : bad('CPF hidden 没进 curPrefs');
       await pg.evaluate(() => { CPF.hidden = false; });
+      // 2h) v11.48 隐藏前要确认（不直接藏）：点开关先弹 askConfirm，取消 → 不藏
+      const hconf = await pg.evaluate(async () => { CPF.hidden = false; const p = document.getElementById('cpfToggleRow').onclick(); await new Promise(r => setTimeout(r, 60)); const shown = document.getElementById('okmod').classList.contains('show'); document.getElementById('okNo').click(); await p; return { shown, hidden: CPF.hidden }; });
+      (hconf.shown && hconf.hidden === false) ? ok('CPF 隐藏前先确认，点「取消」→ 卡不藏（不直接隐藏）') : bad('CPF 隐藏没先确认', JSON.stringify(hconf));
+      // 2i) v11.48 CPF 利息估算：OA 按 oa%、SA/MA 按各自%，额外 +1% 只加首 $6万合计（OA≤$2万），55+ 首$3万+2%
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 80000, sa: 40000, ma: 25000 }, status: 'citizen', birthYear: 1990, rate: { oa: 2.5, sa: 4, ma: 4, extra: true } }); CPF.on = true; });
+      const iu = await pg.evaluate(() => cpfInterest());   // base=2000+1600+1000=4600 · extra=min(20000+40000+25000,60000)=60000*1%=600 → 5200
+      (Math.abs(iu.base - 4600) < 0.01 && Math.abs(iu.extra - 600) < 0.01 && Math.abs(iu.annual - 5200) < 0.01) ? ok('CPF 利息（<55）：base 4600 + 额外 600（首$6万+1%，OA≤$2万）= 一年 ≈ 5200') : bad('CPF 利息（<55）算错', JSON.stringify(iu));
+      const i55 = await pg.evaluate(() => { CPF.birthYear = 1960; const r = cpfInterest(); CPF.birthYear = 1990; return r; });   // 55+ extra=30000*2%+30000*1%=900
+      Math.abs(i55.extra - 900) < 0.01 ? ok('CPF 利息（55+）：额外 = 首$3万×2% + 次$3万×1% = 900') : bad('CPF 55+ 额外利息算错', JSON.stringify(i55));
+      const ioff = await pg.evaluate(() => { CPF.rate.extra = false; const r = cpfInterest(); CPF.rate.extra = true; return r; });
+      Math.abs(ioff.extra) < 0.01 ? ok('CPF 关掉额外利息 → extra=0（只算基础利率）') : bad('CPF 额外利息关不掉', JSON.stringify(ioff));
+      const irate = await pg.evaluate(() => { CPF.rate = { oa: 3, sa: 4.05, ma: 4.05, extra: true }; return { r: curPrefs().cpf.rate, ann: cpfInterest().annual }; });
+      (irate.r.sa === 4.05 && irate.r.oa === 3) ? ok('CPF 手动改利率（OA3 / SA4.05）跟着 prefs.cpf 存、利息跟着重算', JSON.stringify(irate.r)) : bad('CPF 改利率没存进 curPrefs', JSON.stringify(irate));
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 
     // 3) 设置：改数值颜色 → 存
