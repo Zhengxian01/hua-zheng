@@ -8335,7 +8335,7 @@ const budPage=document.getElementById('budPage');
 function cpfFmt(n){return (Math.round((+n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function cpfFmt0(n){return Math.round(+n||0).toLocaleString('en-US');}   /* 账户卡用整数，省位、6 位数也塞得下 */
 function cpfFmtSigned(n){const x=Math.round((+n||0)*100)/100;return (x<0?'−':'+')+cpfFmt(Math.abs(x));}   /* 对账差额带正负号 */
-const CPF_ACCTS=[['oa','OA','普通账户 · 可买房','#0BA678'],['sa','SA','特别账户 · 退休','#7C6FF0'],['ma','MA','MediSave · 医疗','#12B5A6']];
+const CPF_ACCTS=[['oa','OA','普通账户 · 可买房','#0BA678'],['sa','SA','特别账户 · 退休','#7C6FF0'],['ma','MA','MediSave · 医疗','#E8883C']];
 /* 总览那张卡：只显示总额（没设过 → 引导第一次填），点一下进全屏页 */
 function buildCpfCard(){
   const el=document.getElementById('cpfCard');if(!el)return;
@@ -8354,7 +8354,7 @@ function buildCpfCard(){
     <div class="hc-seg">
       <span style="color:#0BA678">OA <b>${cpfFmt(b.oa)}</b></span>
       <span style="color:#7C6FF0">SA <b>${cpfFmt(b.sa)}</b></span>
-      <span style="color:#12B5A6">MA <b>${cpfFmt(b.ma)}</b></span>
+      <span style="color:#E8883C">MA <b>${cpfFmt(b.ma)}</b></span>
     </div>`;
 }
 document.getElementById('cpfCard').addEventListener('click',openCpf);
@@ -8873,7 +8873,7 @@ function subRender(){
       <button class="si-ign" data-subig="${esc(x.key)}">忽略</button>
     </div>`;
   }).join('');
-  h+='<div class="gdhint" style="margin:10px 2px">「忽略」= 告诉它这不是订阅、别再列出来。<b>本页永远不会新增任何一笔交易。</b></div>';
+  h+='<div class="gdhint" style="margin:10px 2px">「忽略」= 告诉它这不是订阅、别再列出来。</div>';
   el.innerHTML=h;
 }
 document.getElementById('openSubs').onclick=()=>{subPage.classList.add('show');subPage.scrollTop=0;syncPageOpen();
