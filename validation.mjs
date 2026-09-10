@@ -2672,12 +2672,16 @@ async function suiteEdit() {
       // 每格下面小号码 = 截图读到的值（对比用）：一样→绿，改动了→红；数目对时一键按钮=绿(ok)、不是青绿
       const teal = s => /^rgb\(18,185,129|^rgb\(11,166,120|^rgb\(14,158,110/.test(s.replace(/\s/g, ''));
       const cmp = await pg.evaluate(() => { const m = document.getElementById('cpfRc_ma'); m.value = '999'; m.dispatchEvent(new Event('input', { bubbles: true })); const oa = document.getElementById('cpfRcRead_oa'), ma = document.getElementById('cpfRcRead_ma'); const btn = document.getElementById('cpfRcUse'); const bs = getComputedStyle(btn); return { oaTxt: oa.textContent.trim(), oaSame: /same/.test(oa.className), maDiff: /diff/.test(ma.className), maTxt: ma.textContent.trim(), btnCls: btn.className, btnColor: bs.color }; });
-      (/1,372.79/.test(cmp.oaTxt) && cmp.oaSame && cmp.maDiff && /你改动了/.test(cmp.maTxt) && /\bok\b/.test(cmp.btnCls) && !teal(cmp.btnColor)) ? ok('CPF 截图：每格小号码对比（一样绿/改动红）· 数目对→按钮绿(ok)、不是青绿', JSON.stringify({ oa: cmp.oaTxt, btn: cmp.btnColor })) : bad('CPF 截图对比号码/按钮色不对', JSON.stringify(cmp));
+      // 把 MA 改成 999（乱数）→ 那格小号码变红「你改动了」，同时对账灯实时判「对不上」→ 按钮变红(bad)
+      (/1,372.79/.test(cmp.oaTxt) && cmp.oaSame && cmp.maDiff && /你改动了/.test(cmp.maTxt) && /\bbad\b/.test(cmp.btnCls) && !teal(cmp.btnColor)) ? ok('CPF 截图：每格小号码对比（一样绿/改动红）· 改成乱数→对账灯实时判对不上、按钮红(非青绿)', JSON.stringify({ oa: cmp.oaTxt, btn: cmp.btnColor })) : bad('CPF 截图对比号码/按钮色不对', JSON.stringify(cmp));
       // 数目对不上 → 按钮变红（bad），红也能按（硬用截图的数）
       await pg.evaluate(() => { openCpfMod('recon'); window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.00' } }), terminate: async () => { } }) }; }); await pg.waitForTimeout(120);
       await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
       const badBtn = await pg.evaluate(() => { const btn = document.getElementById('cpfRcUse'); return { cls: btn.className, color: getComputedStyle(btn).color }; });
       (/\bbad\b/.test(badBtn.cls) && /214,\s*70,\s*60/.test(badBtn.color)) ? ok('CPF 截图：数目对不上 → 一键按钮变红(bad)，红也能按（硬用截图的数对账）', JSON.stringify(badBtn)) : bad('CPF 截图对不上按钮没变红', JSON.stringify(badBtn));
+      // 读错了可以改：把读歪的 MA 改对 → 对账灯 + 按钮【实时】从红变绿（不用重拍）
+      const fixLive = await pg.evaluate(() => { const m = document.getElementById('cpfRc_ma'); m.value = '486.84'; m.dispatchEvent(new Event('input', { bubbles: true })); const btn = document.getElementById('cpfRcUse'), tl = document.querySelector('#cpfRcLive .cpf-tally'); return { btn: btn.className, tally: tl.className, tallyOk: /对得上/.test(tl.textContent) }; });
+      (/\bok\b/.test(fixLive.btn) && /cpf-tally ok/.test(fixLive.tally) && fixLive.tallyOk) ? ok('CPF 截图读错→改：把读歪那格改对，对账灯+按钮实时从红变绿（不用重拍）', JSON.stringify(fixLive)) : bad('CPF 截图改对后没实时变绿', JSON.stringify(fixLive));
       await pg.evaluate(() => { openCpfMod('recon'); window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.84' } }), terminate: async () => { } }) }; }); await pg.waitForTimeout(120);
       await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
       const useShown = await pg.evaluate(() => !!document.getElementById('cpfRcUse'));

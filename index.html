@@ -8501,45 +8501,41 @@ function openCpfMod(mode,id){
         rcalc();
         /* 每个账户格子下面放一个小号码 = 截图读到的值，方便你一格一格对着 CPF app 比、看哪个错。
            跟格子里的数一样 → 绿；你把格子改动了 → 红（提醒这格跟截图不同）。 */
+        let syncTallyRef=()=>{};   // 下面定义 syncTally 后赋值；格子一改就叫它重算对账灯+按钮
         CPF_ACCTS.forEach(([k])=>{
           const cap=document.getElementById('cpfRcRead_'+k),fld=document.getElementById('cpfRc_'+k);if(!cap||!fld)return;
-          if(r[k]==null){cap.hidden=true;fld.oninput=null;return;}
+          if(r[k]==null){cap.hidden=true;fld.oninput=()=>syncTallyRef();return;}   // 没读到这格 → 你填进去也要重算
           cap.hidden=false;cap.dataset.read=r[k];
           const upd=()=>{const rd=+cap.dataset.read,cv=cpfNumS(fld.value,NaN),same=isFinite(cv)&&Math.abs(cv-rd)<0.005;cap.className='cpf-rc-read '+(same?'same':'diff');cap.innerHTML=`📷 截图读到 <b>S$${cpfFmt(rd)}</b>${same?'':' · 你改动了'}`;};
-          fld.oninput=upd;upd();
+          fld.oninput=()=>{upd();syncTallyRef();};upd();
         });
         /* 「看原文」：把 OCR 到底读到什么原样给你看（跟读支出那样） */
         const raw=(r.text||'').replace(/[<>&]/g,' ').replace(/[ \t]{2,}/g,' ').replace(/\n{2,}/g,'\n').trim().slice(0,700);
         const totTxt=r.total!=null?` · 截图总额 <b>S$${cpfFmt(r.total)}</b>`:' · 没读到总额';
         const rawBox=raw?`<details class="cpf-raw"><summary>看读到的原文（OCR 到底认到啥）</summary><pre>${raw}</pre></details>`:'';
         const label=({k,n})=>`${n} <b>${cpfFmt(r[k])}</b>${k===inferred?'<span class="cpf-inf">总额算的</span>':''}`;
-        let head,tally='',tState='ok';   // tState：数目对=ok(绿)/对不上=bad(红)/读不全=warn(黄) → 一键按钮跟着变色
-        if(!got.length){head=`😕 这张一个账户都没读到（${sec}秒）· 换张清楚点、只框住三个账户那块的截图，或手动填下面`;}
+        if(!got.length){shotStatus(`😕 这张一个账户都没读到（${sec}秒）· 换张清楚点、只框住三个账户那块的截图，或手动填下面${rawBox}`);}
         else{
-          const sum=CPF_ACCTS.reduce((s,[k])=>s+(r[k]||0),0);
-          head=`✅ 读到：${got.map(label).join(' · ')}（${sec}秒）${totTxt}`;
-          if(got.length===3&&r.total!=null){
-            const diff=Math.round((sum-r.total)*100)/100;
-            if(Math.abs(diff)<0.01){
-              tState='ok';
-              tally=inferred
-                ? `<div class="cpf-tally ok">✓ <b>${CPF_ACCTS.find(([k])=>k===inferred)[1]}</b> 没直接读到 → 用「总额 − 另外两个」补出 <b>S$${cpfFmt(r[inferred])}</b> · 三个加起来 = 总额，对上了</div>`
-                : `<div class="cpf-tally ok">✓ 三个加起来 = 截图总额 <b>S$${cpfFmt(r.total)}</b> · 对得上，读对了</div>`;
-            }else{
-              tState='bad';
-              /* 三个都读到、但加起来≠总额 → 数学上认不出是哪个读歪（差额均摊在三个上都成立），
-                 老实说这点：把三个 vs 总额摆出来、原文直接展开，让你一眼比。 */
-              tally=`<div class="cpf-tally bad">✗ 对不上：三个加起来 <b>S$${cpfFmt(sum)}</b>，截图总额 <b>S$${cpfFmt(r.total)}</b> · 差 <b>S$${cpfFmt(Math.abs(diff))}</b><br>👇 三个都读到了、认不出哪个数字歪，看下面原文核一下（总额 S$${cpfFmt(r.total)} 是准的），改了再存
-                <div class="cpf-raw-open">${raw?`<pre>${raw}</pre>`:''}</div></div>`;
-            }
-          }else{tState='warn';tally=`<div class="cpf-tally warn">缺的账户没读到${r.total==null?'、也没读到总额，没法帮你推 → 手动填缺的':' → 手动填一下缺的'}</div>`;}
+          const head=`✅ 读到：${got.map(label).join(' · ')}（${sec}秒）${totTxt}`;
+          shotStatus(`${head}<div id="cpfRcLive"></div>${rawBox}`);
+          /* 对账灯 + 一键按钮，跟着你改格子【实时重算】：读错了？直接改那个格子（照下面「截图读到」小号码 / 你的 CPF app），
+             改到三个加起来 = 截图总额，红灯自动变绿，再按按钮对账。 */
+          const syncTally=()=>{
+            const live=document.getElementById('cpfRcLive');if(!live)return;
+            let allNum=true;const cv={};CPF_ACCTS.forEach(([k])=>{const v=cpfNumS(document.getElementById('cpfRc_'+k).value,NaN);cv[k]=v;if(!isFinite(v))allNum=false;});
+            const sum=Math.round((cv.oa+cv.sa+cv.ma)*100)/100;
+            let tState,tallyHtml;
+            if(r.total!=null&&allNum){
+              const diff=Math.round((sum-r.total)*100)/100;
+              if(Math.abs(diff)<0.01){tState='ok';tallyHtml=`<div class="cpf-tally ok">✓ 三个加起来 = 截图总额 <b>S$${cpfFmt(r.total)}</b> · 对得上${inferred?`（${CPF_ACCTS.find(([k])=>k===inferred)[1]} 用总额补的）`:''}</div>`;}
+              else{tState='bad';tallyHtml=`<div class="cpf-tally bad">✗ 对不上：三个加起来 <b>S$${cpfFmt(sum)}</b>，截图总额 <b>S$${cpfFmt(r.total)}</b> · 差 <b>S$${cpfFmt(Math.abs(diff))}</b><br>👉 哪格不对就改哪格（对下面「截图读到」小号码 / 你的 CPF app）· 改到<b>变绿</b>就对了</div>`;}
+            }else{tState='warn';tallyHtml=`<div class="cpf-tally warn">${allNum?'':'有格子空着 · '}${r.total==null?'截图没读到总额 · 自己核一下三个数':'填齐三个数'}</div>`;}
+            const lbl=tState==='bad'?'⚠️ 有对不上 · 还是用现在这个数对账 →':tState==='ok'?'✅ 对得上 · 就用这个数对账 →':'用现在这个数对账 →';
+            live.innerHTML=`${tallyHtml}<button type="button" class="cpf-recon-use ${tState}" id="cpfRcUse">${lbl}</button>`;
+            document.getElementById('cpfRcUse').onclick=()=>document.getElementById('cpfModSave').click();   // 拿现在框里的数去对账
+          };
+          syncTallyRef=syncTally;syncTally();
         }
-        /* 读到了就给一个一键按钮：直接拿截图读到的数去对账。按对错变色：对=绿、不上=红（红也能按，硬用截图的数） */
-        const useLabel=tState==='bad'?'⚠️ 有对不上 · 还是用截图这个数对账 →':'✅ 就用截图这个数 · 对账 →';
-        const useBtn=got.length?`<button type="button" class="cpf-recon-use ${tState}" id="cpfRcUse">${useLabel}</button>`:'';
-        shotStatus(`${head}${tally}${useBtn}${rawBox}`);
-        const ub=document.getElementById('cpfRcUse');
-        if(ub)ub.onclick=()=>document.getElementById('cpfModSave').click();   // = 按下面的「保存」，拿现在框里（截图填的）数去对账
       }catch(e){
         shotStatus(e.message==='busy'?'还在读上一张…':'😕 读不到（引擎没载到 / 离线）· 直接手动填下面三个数就行');
       }finally{btn.disabled=false;}
