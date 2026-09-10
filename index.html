@@ -8606,24 +8606,28 @@ function openCpfMod(mode,id){
   } else if(mode==='salfrom'){
     title.textContent='工资从哪个月起算';
     const salRows=DATA.filter(r=>isInc(r)&&r.category==='salary'&&sgdOf(r)>0);
+    const hasCut=!!CPF.salaryFrom;
     body.innerHTML=`
-      <div class="cpf-note" style="margin-bottom:10px">你填的<b>期初余额</b>已经包含之前所有 CPF。选一个月，<b>从这个月起</b>的工资才自动记进来；更早的（当作已经在期初里了）就<b>不重复加</b>。</div>
-      <div class="cpf-inrow" id="cpfSalMRow"><label>从这个月起<small>更早的不记</small></label><input class="cpf-in" type="month" id="cpfSalFromM" value="${CPF.salaryFrom||cpfCurMonth()}"></div>
-      <label class="cpf-chk" id="cpfSalAllWrap"><input type="checkbox" id="cpfSalAll" ${CPF.salaryFrom?'':'checked'}> 不设起点 · <b>全部工资都算</b>（期初留空、想从头记全部时选这个）</label>
+      <div class="cpf-note" style="margin-bottom:12px">你填的<b>期初余额</b>已经包含之前所有 CPF。<b>从起点那个月起</b>的工资才自动记进来；更早的（当作已经在期初里了）就<b>不重复加</b>。</div>
+      <div class="cpf-statrow" id="cpfSalMode">
+        <button class="cpf-stat${hasCut?' on':''}" data-sm="from">从某月起<small style="display:block;font-size:9px;opacity:.7">之前的不记</small></button>
+        <button class="cpf-stat${hasCut?'':' on'}" data-sm="all">全部都算<small style="display:block;font-size:9px;opacity:.7">从头记全部</small></button>
+      </div>
+      <div class="cpf-inrow" id="cpfSalMRow" style="margin-top:12px${hasCut?'':';display:none'}"><label>从这个月起<small>更早的不记</small></label><input class="cpf-in" type="month" id="cpfSalFromM" value="${CPF.salaryFrom||cpfCurMonth()}"></div>
       <div class="cpf-splitprev" id="cpfSalPrev"></div>`;
+    let salMode=hasCut?'from':'all';
     const salPrev=()=>{
-      const all=document.getElementById('cpfSalAll').checked;
       const m=(document.getElementById('cpfSalFromM').value||'').slice(0,7);
-      const el=document.getElementById('cpfSalPrev'),row=document.getElementById('cpfSalMRow');
-      if(row)row.style.opacity=all?'.4':'1';
-      if(all){el.innerHTML=`主列表 <b>${salRows.length}</b> 笔工资<b>全部</b>自动记进 CPF。`;return;}
+      const el=document.getElementById('cpfSalPrev');
+      document.getElementById('cpfSalMRow').style.display=(salMode==='from')?'':'none';
+      if(salMode==='all'){el.innerHTML=`主列表 <b>${salRows.length}</b> 笔工资<b>全部</b>自动记进 CPF。`;return;}
       if(!/^\d{4}-\d{2}$/.test(m)){el.innerHTML='选个月份';return;}
       const keep=salRows.filter(r=>isoDay(r.ts).slice(0,7)>=m).length,ign=salRows.length-keep;
       el.innerHTML=`从 <b>${m}</b> 起：记 <b>${keep}</b> 笔工资${ign?` · 之前 <b>${ign}</b> 笔跳过（当作已在期初）`:''}。`;
     };
+    document.getElementById('cpfSalMode').addEventListener('click',ev=>{const b=ev.target.closest('[data-sm]');if(!b)return;salMode=b.dataset.sm;[...ev.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));salPrev();});
     document.getElementById('cpfSalFromM').addEventListener('input',salPrev);
     document.getElementById('cpfSalFromM').addEventListener('change',salPrev);
-    document.getElementById('cpfSalAll').addEventListener('change',salPrev);
     salPrev();
   } else if(mode==='topup'||mode==='topupedit'){
     const isEdit=mode==='topupedit';
@@ -8727,7 +8731,8 @@ document.getElementById('cpfModSave').onclick=()=>{
     closeCpfMod();saveCpf();buildCpfPage();toast('CPF 资料已存');return;
   }
   if(cpfModMode==='salfrom'){
-    const all=document.getElementById('cpfSalAll')&&document.getElementById('cpfSalAll').checked;
+    const modeBtn=document.querySelector('#cpfSalMode .cpf-stat.on');
+    const all=modeBtn&&modeBtn.dataset.sm==='all';
     let nv='';
     if(!all){const m=(gv('cpfSalFromM')||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(m)){toast('先选月份','err');return;}nv=m;}
     const before=CPF.entries.slice(),beforeFrom=CPF.salaryFrom;
