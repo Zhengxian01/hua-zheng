@@ -1323,6 +1323,11 @@ body.phototheme .cpf-int-remind{background:rgba(16,185,129,.2);border-color:rgba
 body.phototheme .cpf-tally.ok{color:#3DDCA6}
 body.phototheme .cpf-tally.bad{color:#FF7A70}
 body.phototheme .cpf-tally.warn{color:#F0B65A}
+.cpf-inf{display:inline-block;margin-left:4px;padding:1px 6px;border-radius:6px;font-size:9.5px;font-weight:800;background:rgba(18,185,129,.16);color:#0E9E6E;vertical-align:middle}
+.cpf-raw{margin-top:7px;font-weight:600}
+.cpf-raw summary{font-size:11px;color:#3B82F6;font-weight:800;cursor:pointer;list-style:revert}
+.cpf-raw pre,.cpf-raw-open pre{margin:6px 0 0;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:9px;font-size:10.5px;line-height:1.5;color:var(--muted);white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
+body.phototheme .cpf-raw pre,body.phototheme .cpf-raw-open pre{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.12)}
 .cpf-empty{text-align:center;color:var(--muted);font-size:12.5px;padding:22px 10px;line-height:1.7}
 .cpf-setup{background:var(--card);border:1px dashed var(--line);border-radius:16px;padding:16px}
 body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,255,255,.18)}
@@ -3033,7 +3038,8 @@ async function cpfReadScreenshot(file,onStatus){
     onStatus&&onStatus('读图中…（在后台跑，不卡）');
     worker=await T.createWorker('eng');
     const {data}=await worker.recognize(file);   // file 是内存里的 Blob，不落地
-    return cpfParseCpfText(data&&data.text||'');
+    const txt=data&&data.text||'';
+    return {...cpfParseCpfText(txt),text:txt};   // 连原文一起带回去，好让使用者看到到底读到啥
   }finally{
     if(worker){try{await worker.terminate();}catch(e){}}   // 释放内存
     cpfOcrBusy=false;   // 图片对象没存进任何地方，函数一走就被回收
@@ -8434,20 +8440,42 @@ function openCpfMod(mode,id){
       const btn=document.getElementById('cpfRcShot');btn.disabled=true;const t0=performance.now();
       try{
         const r=await cpfReadScreenshot(f,m=>shotStatus('⏳ '+m));
-        const got=[];CPF_ACCTS.forEach(([k,n])=>{if(r[k]!=null){document.getElementById('cpfRc_'+k).value=r[k];got.push(n+' '+cpfFmt(r[k]));}});
+        const sec=((performance.now()-t0)/1000).toFixed(1);
+        /* 只漏读 1 个账户、但读到了「总额」→ 用 总额−另外两个 把它补出来（这样就不用你自己看是哪个漏了） */
+        let inferred=null;
+        const presentNow=()=>CPF_ACCTS.filter(([k])=>r[k]!=null);
+        if(presentNow().length===2&&r.total!=null){
+          const miss=CPF_ACCTS.find(([k])=>r[k]==null);
+          const val=Math.round((r.total-presentNow().reduce((s,[k])=>s+r[k],0))*100)/100;
+          if(val>=0){r[miss[0]]=val;inferred=miss[0];}
+        }
+        const got=[];CPF_ACCTS.forEach(([k,n])=>{if(r[k]!=null){document.getElementById('cpfRc_'+k).value=r[k];got.push({k,n});}});
         rcalc();
-        if(!got.length){shotStatus('😕 这张没读到 OA/SA/MA · 换张清楚点的截图，或手动填下面');}
+        /* 「看原文」：把 OCR 到底读到什么原样给你看（跟读支出那样） */
+        const raw=(r.text||'').replace(/[<>&]/g,' ').replace(/[ \t]{2,}/g,' ').replace(/\n{2,}/g,'\n').trim().slice(0,700);
+        const totTxt=r.total!=null?` · 截图总额 <b>S$${cpfFmt(r.total)}</b>`:' · 没读到总额';
+        const rawBox=raw?`<details class="cpf-raw"><summary>看读到的原文（OCR 到底认到啥）</summary><pre>${raw}</pre></details>`:'';
+        const label=({k,n})=>`${n} <b>${cpfFmt(r[k])}</b>${k===inferred?'<span class="cpf-inf">总额算的</span>':''}`;
+        let head,tally='';
+        if(!got.length){head=`😕 这张一个账户都没读到（${sec}秒）· 换张清楚点、只框住三个账户那块的截图，或手动填下面`;}
         else{
-          const sum=CPF_ACCTS.reduce((s,[k])=>s+(r[k]||0),0),sec=((performance.now()-t0)/1000).toFixed(1);
-          let tally;   // 读到的三个加起来，跟截图上的「总额」对不对得上 → 对上=读对了(青)，对不上=有数字读歪(红)
+          const sum=CPF_ACCTS.reduce((s,[k])=>s+(r[k]||0),0);
+          head=`✅ 读到：${got.map(label).join(' · ')}（${sec}秒）${totTxt}`;
           if(got.length===3&&r.total!=null){
             const diff=Math.round((sum-r.total)*100)/100;
-            tally=Math.abs(diff)<0.01
-              ? `<div class="cpf-tally ok">✓ 三个加起来 = 截图总额 <b>S$${cpfFmt(r.total)}</b> · 对得上，读对了</div>`
-              : `<div class="cpf-tally bad">✗ 对不上 · 差 <b>S$${cpfFmt(Math.abs(diff))}</b><br>三个加起来 <b>S$${cpfFmt(sum)}</b>，截图总额 <b>S$${cpfFmt(r.total)}</b> · 有个数字读歪了，核一下再改</div>`;
-          }else tally=`<div class="cpf-tally warn">${got.length<3?'只读到 '+got.length+' 个账户 · ':''}${r.total==null?'截图没读到总额 · ':''}自己跟 CPF app 核一下</div>`;
-          shotStatus(`✅ 读到：${got.join(' · ')}（${sec}秒）${tally}`);
+            if(Math.abs(diff)<0.01){
+              tally=inferred
+                ? `<div class="cpf-tally ok">✓ <b>${CPF_ACCTS.find(([k])=>k===inferred)[1]}</b> 没直接读到 → 用「总额 − 另外两个」补出 <b>S$${cpfFmt(r[inferred])}</b> · 三个加起来 = 总额，对上了</div>`
+                : `<div class="cpf-tally ok">✓ 三个加起来 = 截图总额 <b>S$${cpfFmt(r.total)}</b> · 对得上，读对了</div>`;
+            }else{
+              /* 三个都读到、但加起来≠总额 → 数学上认不出是哪个读歪（差额均摊在三个上都成立），
+                 老实说这点：把三个 vs 总额摆出来、原文直接展开，让你一眼比。 */
+              tally=`<div class="cpf-tally bad">✗ 对不上：三个加起来 <b>S$${cpfFmt(sum)}</b>，截图总额 <b>S$${cpfFmt(r.total)}</b> · 差 <b>S$${cpfFmt(Math.abs(diff))}</b><br>👇 三个都读到了、认不出哪个数字歪，看下面原文核一下（总额 S$${cpfFmt(r.total)} 是准的），改了再存
+                <div class="cpf-raw-open">${raw?`<pre>${raw}</pre>`:''}</div></div>`;
+            }
+          }else tally=`<div class="cpf-tally warn">缺的账户没读到${r.total==null?'、也没读到总额，没法帮你推 → 手动填缺的':' → 手动填一下缺的'}</div>`;
         }
+        shotStatus(`${head}${tally}${rawBox}`);
       }catch(e){
         shotStatus(e.message==='busy'?'还在读上一张…':'😕 读不到（引擎没载到 / 离线）· 直接手动填下面三个数就行');
       }finally{btn.disabled=false;}

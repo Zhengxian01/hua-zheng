@@ -2648,7 +2648,16 @@ async function suiteEdit() {
       await pg.evaluate(() => { window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.00' } }), terminate: async () => { } }) }; });
       await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
       const tBad = await pg.evaluate(() => { const el = document.querySelector('#cpfRcShotStatus .cpf-tally'); return { cls: el ? el.className : null, diff: el ? /0\.84/.test(el.textContent) : false }; });
-      (tBad.cls === 'cpf-tally bad' && tBad.diff) ? ok('CPF 截图对账灯：对不上 → 红灯(bad) + 显示差 S$0.84（哪个数字读歪看得出）') : bad('tally 对不上没亮红灯/没显示差额', JSON.stringify(tBad));
+      (tBad.cls === 'cpf-tally bad' && tBad.diff) ? ok('CPF 截图对账灯：对不上 → 红灯(bad) + 显示差 S$0.84') : bad('tally 对不上没亮红灯/没显示差额', JSON.stringify(tBad));
+      // 2m) v11.51 漏读 1 个账户但有总额 → 用「总额−另外两个」把它推出来（真机复现：只读到 SA+MA，OA 漏了）
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 } }); CPF.on = true; openCpfMod('recon'); }); await pg.waitForTimeout(120);
+      await pg.evaluate(() => { window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Special Account $362.60 MediSave Account $486.84' } }), terminate: async () => { } }) }; });
+      await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
+      const inf = await pg.evaluate(() => ({ oa: +document.getElementById('cpfRc_oa').value, cls: (document.querySelector('#cpfRcShotStatus .cpf-tally') || {}).className || '', inferShown: /总额算的/.test(document.getElementById('cpfRcShotStatus').textContent) }));
+      (Math.abs(inf.oa - 1372.79) < 0.01 && inf.cls === 'cpf-tally ok' && inf.inferShown) ? ok('CPF 截图漏读 OA + 有总额 → 自动推 OA=1372.79（总额−另两个）· 青灯 · 标「总额算的」', JSON.stringify(inf)) : bad('CPF 漏读账户没从总额推出来', JSON.stringify(inf));
+      // 原文可查：读完永远能展开「看读到的原文」（跟读支出那样，看得到 OCR 到底认到啥）
+      const rawSeen = await pg.evaluate(() => !!document.querySelector('#cpfRcShotStatus .cpf-raw summary'));
+      rawSeen ? ok('CPF 截图：读完能展开「看读到的原文」（OCR 原文摊给你看）') : bad('CPF 截图没给看原文');
       await pg.evaluate(() => { try { delete window.Tesseract; closeCpfMod(); } catch (e) { } }); await dismiss();
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 
