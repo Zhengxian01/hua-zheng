@@ -1291,12 +1291,21 @@ body.theme-journal .cpf-acct{background:#FBF7EF;border-color:#E4DCCF}
 .cpf-mrow{display:flex;align-items:center;gap:10px;padding:12px 13px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:8px}
 body.phototheme .cpf-mrow{background:rgba(12,16,22,.42);border-color:rgba(255,255,255,.08)}
 body.theme-journal .cpf-mrow{background:#FBF7EF;border-color:#E4DCCF}
-.cpf-mrow .mm{font-size:13px;font-weight:800;color:var(--ink);min-width:66px}
-.cpf-mrow .mg{font-size:10.5px;color:var(--muted);font-weight:600;margin-top:2px}
+.cpf-mrow .mcell{min-width:0}
+.cpf-mrow .mm{font-size:13px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cpf-tag{font-size:9px;font-weight:800;padding:2px 7px;border-radius:100px;white-space:nowrap;letter-spacing:.2px}
+.cpf-tag.t-sal{background:rgba(120,130,145,.16);color:var(--muted)}
+.cpf-tag.t-top{background:rgba(59,130,246,.16);color:#2563EB}
+.cpf-tag.t-adj{background:rgba(16,185,129,.18);color:#0E9E6E}
+.cpf-tag.t-int{background:rgba(231,163,62,.2);color:#B87A18}
+body.phototheme .cpf-tag.t-sal{color:rgba(255,255,255,.7)}
+body.phototheme .cpf-tag.t-int{color:#F0B65A}
+.cpf-mrow .mg{font-size:10.5px;color:var(--muted);font-weight:600;margin-top:3px}
 .cpf-mrow .msplit{flex:1;display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
 .cpf-mrow .mseg{font-size:10.5px;color:var(--muted);font-weight:600}
 .cpf-mrow .mseg b{color:var(--ink);font-weight:800}
 .cpf-mrow .mtot{font-size:14px;font-weight:800;color:#3B82F6;min-width:64px;text-align:right}
+.cpf-mrow .mtot.gain{color:#12b981}
 .cpf-mrow .mdel{border:0;background:none;color:var(--muted);font-size:15px;font-family:inherit;padding:2px 4px;cursor:pointer}
 .cpf-mrow-top{background:#E8F0FE;border-color:#BBD3FB}
 body.phototheme .cpf-mrow-top{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.34)}
@@ -1331,10 +1340,6 @@ body.phototheme .cpf-tally.warn{color:#F0B65A}
 .cpf-raw summary{font-size:11px;color:#3B82F6;font-weight:800;cursor:pointer;list-style:revert}
 .cpf-raw pre,.cpf-raw-open pre{margin:6px 0 0;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:9px;font-size:10.5px;line-height:1.5;color:var(--muted);white-space:pre-wrap;word-break:break-word;max-height:160px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
 body.phototheme .cpf-raw pre,body.phototheme .cpf-raw-open pre{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.12)}
-.cpf-intlist{margin-top:6px;display:flex;flex-direction:column;gap:4px}
-.cpf-intlist div{display:flex;justify-content:space-between;gap:10px;font-size:12px;font-weight:700;color:var(--ink);padding:5px 2px;border-bottom:1px solid var(--line)}
-.cpf-intlist div:last-child{border-bottom:0}
-.cpf-intlist b{color:#12b981;font-weight:800}
 .cpf-empty{text-align:center;color:var(--muted);font-size:12.5px;padding:22px 10px;line-height:1.7}
 .cpf-setup{background:var(--card);border:1px dashed var(--line);border-radius:16px;padding:16px}
 body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,255,255,.18)}
@@ -8350,33 +8355,35 @@ function buildCpfPage(){
   const lastInt=CPF.entries.find(e=>e.kind==='interest');   // 最近一笔自动利息
   const nowY=now.slice(0,4);
   const janRemind=lastInt&&lastInt.month.slice(0,4)===nowY&&(!lastAdj||lastAdj.month.slice(0,4)!==nowY);   // 今年刚自动加了利息、还没核对过 → 提醒拍照核对
-  const listEntries=CPF.entries.filter(e=>e.kind!=='interest');   // 明细只列你自己的供款/存入/对账；利息不列（它已经进总额了）
-  const intEntries=CPF.entries.filter(e=>e.kind==='interest');    // 利息单独收进利息卡的历史里
-  const recSum=listEntries.reduce((s,e)=>s+e.oa+e.sa+e.ma,0);
+  const recSum=CPF.entries.reduce((s,e)=>s+e.oa+e.sa+e.ma,0);   // 累计已记（所有笔，含利息，都进了总额）
   const acctsHTML=CPF_ACCTS.map(([k,n,d,c])=>{
     const v=b[k],pct=tot>0?Math.round(v/tot*100):0;
     return `<div class="cpf-acct" style="color:${c}"><div class="an">${n}</div><div class="ad">${d.split(' · ')[0]}</div>
       <div class="av">${cpfFmt(v)}</div><div class="abar" style="width:${Math.max(pct,4)}%"></div></div>`;
   }).join('');
-  const entriesHTML=listEntries.length?listEntries.map(e=>{
-    const isAdj=e.kind==='adjust',isTop=e.kind==='topup';
-    const cls=isTop?' cpf-mrow-top':isAdj?' cpf-mrow-adj':'';
-    const head=isTop?'💰 '+e.month:isAdj?'🎯 '+e.month:e.month;
+  const entriesHTML=CPF.entries.length?CPF.entries.map(e=>{
+    const isAdj=e.kind==='adjust',isTop=e.kind==='topup',isInt=e.kind==='interest';
+    const cls=isTop?' cpf-mrow-top':isAdj?' cpf-mrow-adj':isInt?' cpf-mrow-int':'';
+    /* 每种记录给一个小标签 chip，取代原来塞在月份前面的 emoji，一眼分得清 */
+    const tag=isTop?'<span class="cpf-tag t-top">💰 存入</span>'
+      :isAdj?'<span class="cpf-tag t-adj">🎯 对账</span>'
+      :isInt?'<span class="cpf-tag t-int">📈 利息</span>':'<span class="cpf-tag t-sal">工资</span>';
     const sub=isTop?`自己存入${e.note?' · '+esc(e.note):''}`
-      :isAdj?`对账校准${e.note?' · '+esc(e.note):''}`
+      :isAdj?`跟 CPF app 对账${e.note?' · '+esc(e.note):''}`
+      :isInt?`${esc((e.note||'年度利息').replace('（自动·估）','').trim())} · 按官方利率自动入账`
       :e.gross?`工资 S$${cpfFmt(e.gross)}${e.gross>CPF.ceiling?' <span class="cpf-cap">(顶)</span>':''}${e.bonus?' · 奖金 S$'+cpfFmt(e.bonus):''}`:'';
     const seg=k=>isAdj?cpfFmtSigned(e[k]):cpfFmt(e[k]);
     const t=e.oa+e.sa+e.ma;
     return `<div class="cpf-mrow${cls}" data-eid="${e.id}">
-      <div><div class="mm">${head}</div>${sub?`<div class="mg">${sub}</div>`:''}</div>
+      <div class="mcell"><div class="mm">${e.month}${tag}</div>${sub?`<div class="mg">${sub}</div>`:''}</div>
       <div class="msplit"><span class="mseg">OA <b>${seg('oa')}</b></span><span class="mseg">SA <b>${seg('sa')}</b></span><span class="mseg">MA <b>${seg('ma')}</b></span></div>
-      <div class="mtot">${isAdj?cpfFmtSigned(t):'+'+cpfFmt(t)}</div>
+      <div class="mtot${isInt?' gain':''}">${isAdj?cpfFmtSigned(t):'+'+cpfFmt(t)}</div>
       <button class="mdel" data-cpfdel="${e.id}" aria-label="删除">✕</button>
     </div>`;}).join(''):`<div class="cpf-empty">还没记过月供款。<br>每月工资进来，点右上「＋ 记这个月」，填工资总额就自动拆进三个账户。</div>`;
   body.innerHTML=`
     <div class="cpf-tot"><div class="k">CPF 总额</div><div class="v"><span class="s">S$</span>${cpfFmt(tot)}</div>
-      <div class="g">${listEntries.length
-        ?`最近一笔 <b>+S$${cpfFmt(listEntries[0].oa+listEntries[0].sa+listEntries[0].ma)}</b>（${listEntries[0].month}）· 累计已记 <b>+S$${cpfFmt(recSum)}</b>（${listEntries.length}个月）`
+      <div class="g">${CPF.entries.length
+        ?`最近一笔 <b>+S$${cpfFmt(CPF.entries[0].oa+CPF.entries[0].sa+CPF.entries[0].ma)}</b>（${CPF.entries[0].month}）· 累计已记 <b>+S$${cpfFmt(recSum)}</b>（${CPF.entries.length}笔）`
         :`这是你填的起点余额 · 每月工资进来记一笔，就往上加 📈`}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
     <div class="cpf-int${janRemind?' cpf-int-remind':''}" id="cpfReconBox">
@@ -8387,10 +8394,9 @@ function buildCpfPage(){
       <div class="ci-note">${janRemind
         ?`🎉 新的一年 · 利息已自动加进总额了 · <b>拍张 CPF 截图核对一下</b>就分毫不差`
         :`想跟 CPF app 分毫不差？拍张截图（或手填），我把差额补齐 · 平时不用管`}</div>
-      ${intEntries.length?`<details class="cpf-raw" style="margin-top:9px"><summary>📈 历年利息（${intEntries.length}笔 · 已进总额）</summary><div class="cpf-intlist">${intEntries.map(e=>`<div><span>${esc((e.note||((+e.month.slice(0,4)-1)+' 利息')).replace('（自动·估）','').trim())}</span><b>+S$${cpfFmt0(e.oa+e.sa+e.ma)}</b></div>`).join('')}</div></details>`:''}
     </div>
     <div class="cpf-note" style="text-align:center;margin-top:10px;line-height:1.7">${idn} · ${ageTxt} · 你出 <b>${rt.emp}%</b> + 公司出 <b>${rt.empr}%</b> = 工资的 <b>${rt.total}%</b> 进 CPF<br>这 ${rt.total}% 里：OA <b>${shO}%</b> · SA <b>${shS}%</b> · MA <b>${shM}%</b>　<button type="button" id="cpfEditProfile" style="border:0;background:none;color:var(--ink);text-decoration:underline;font-family:inherit;font-weight:700;font-size:11px;cursor:pointer;padding:0">改资料</button></div>
-    <div class="cpf-sec-h"><span class="t">每月供款</span><span style="display:flex;gap:8px"><button class="cpf-add" id="cpfTopupBtn" style="padding:7px 12px">💰 存一笔</button><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></span></div>
+    <div class="cpf-sec-h"><span class="t">明细<small style="font-size:10px;color:var(--muted);font-weight:600;margin-left:5px">工资 · 存入 · 利息 · 对账</small></span><span style="display:flex;gap:8px"><button class="cpf-add" id="cpfTopupBtn" style="padding:7px 12px">💰 存一笔</button><button class="cpf-add" id="cpfAddBtn">＋ 记这个月</button></span></div>
     ${entriesHTML}`;
 }
 document.getElementById('cpfBody').addEventListener('click',e=>{
