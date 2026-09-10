@@ -2658,6 +2658,18 @@ async function suiteEdit() {
         return { found, salWarn: /CPF 里联动/.test(msgs[0] || ''), foodWarn: /CPF 里联动/.test(msgs[1] || '') };
       });
       (delWarn.found && delWarn.salWarn && !delWarn.foodWarn) ? ok('CPF 防手滑：删工资的确认里警告「CPF 联动那条也会删」· 删普通支出不警告') : bad('CPF 删工资没警告/误警告', JSON.stringify(delWarn));
+      // 2r) v11.52 工资分类锁：跟 CPF 联动 → 列表标 🔒、点开被挡、删被挡（避免删/改分类把联动断了）
+      const salLock = await pg.evaluate(() => {
+        const savedCp = (typeof cpType !== 'undefined') ? cpType : 'expense'; cpType = 'income'; cpRender();
+        const row = document.querySelector('#cpList .crow[data-k="salary"]');
+        let t = ''; const ot = window.toast; window.toast = (m) => { t = m; };
+        const before = document.getElementById('cmod').classList.contains('show'); openCatEdit('salary');
+        const opened = document.getElementById('cmod').classList.contains('show') && !before;
+        cmKey = 'salary'; let dt = ''; window.toast = (m) => { dt = m; }; document.getElementById('cmDel').onclick(); window.toast = ot; cmKey = null;
+        cpType = savedCp; cpRender();
+        return { lock: !!(row && /crow-lock/.test(row.className)), car: row ? row.querySelector('.car').textContent : '', opened, editToast: t, delBlocked: /不能删除/.test(dt) };
+      });
+      (salLock.lock && salLock.car === '🔒' && !salLock.opened && /系统分类/.test(salLock.editToast) && salLock.delBlocked) ? ok('工资分类锁：跟 CPF 联动 → 列表标 🔒、点开被挡、删被挡（不会误删/改断链）') : bad('工资分类没锁住', JSON.stringify(salLock));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
       const orch = await pg.evaluate(async () => {
         let terminated = false, gotBlob = false;

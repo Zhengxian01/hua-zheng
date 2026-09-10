@@ -6430,14 +6430,17 @@ function cpRender(){
     '<div class="cphint">按住左边的 ☰ 上下拖，可以调顺序。这个顺序就是记账时分类网格的顺序。</div>'
     +Object.entries(set).map(([k,c])=>{
       const n=(c.subs||[]).length;
+      const isSalary=(cpType==='income'&&k==='salary');   // 工资跟 CPF 联动 → 锁住，不给改/删
       const subLabel=(cpType==='expense'&&k===FOOD_KEY)
         ? '🍜 子分类按时间自动 · 早餐/午餐/下午茶/晚餐/宵夜'
+        : isSalary
+        ? '🔗 跟 CPF 联动 · 系统分类，不能改 / 删'
         : (n?n+' 个子分类 · '+esc((c.subs||[]).join('、')):'没有子分类');
-      return `<div class="crow" data-k="${k}">
+      return `<div class="crow${isSalary?' crow-lock':''}" data-k="${k}">
         <span class="grip" data-grip>☰</span>
         <span class="ci" style="background:${soft(c.c)}">${c.i}</span>
         <span><span class="cn">${esc(c.n)}</span><div class="cs">${subLabel}</div></span>
-        <span class="car">›</span></div>`;
+        <span class="car">${isSalary?'🔒':'›'}</span></div>`;
     }).join('');
 }
 
@@ -6550,6 +6553,7 @@ function cmRenderColors(){
     `<button data-c="${c}" class="${c===cmColor?'on':''}" style="background:${c}"></button>`).join('');
 }
 function openCatEdit(k){
+  if(k&&cpType==='income'&&k==='salary'){toast('「工资」是系统分类 · 跟 CPF 联动，不能改名 / 删除','err');return;}   // v11.52 锁住工资
   const set=cpType==='income'?INC:CAT;
   cmKey=k;
   const c=k?set[k]:null;
@@ -6608,6 +6612,7 @@ document.getElementById('cmSave').onclick=()=>{
 document.getElementById('cmDel').onclick=async()=>{
   if(!cmKey)return;
   if(cpType==='expense'&&cmKey===FOOD_KEY){toast('餐饮是系统分类，不能删除','err');return;}
+  if(cpType==='income'&&cmKey==='salary'){toast('工资是系统分类 · 跟 CPF 联动，不能删除','err');return;}   // v11.52 双保险
   const set=cpType==='income'?INC:CAT;
   if(Object.keys(set).length<=1){toast('至少要留一个分类','err');return;}
   const used=DATA.filter(r=>(r.type==='income')===(cpType==='income')&&r.category===cmKey).length;
