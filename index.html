@@ -446,6 +446,12 @@ body.theme-journal .subitem{background:#FBF7EF;border-color:#E4DCCF}
 .subitem .si-note{font-size:11px;font-weight:700;margin-top:6px;color:var(--muted)}
 .subitem .si-warn{font-size:11px;color:#E7A33E;font-weight:800;margin-top:5px}
 .subitem .si-ign{flex:0 0 auto;align-self:center;border:1px solid var(--line);background:transparent;color:var(--muted);font-family:inherit;font-size:12px;font-weight:800;border-radius:100px;padding:8px 15px;cursor:pointer;transition:.12s}
+.si-btns{flex:0 0 auto;align-self:center;display:flex;flex-direction:column;gap:6px}
+.si-ack{border:1.5px solid var(--brand);background:transparent;color:var(--brand);font-family:inherit;font-size:12px;font-weight:800;border-radius:100px;padding:8px 15px;cursor:pointer;transition:.12s;white-space:nowrap}
+.si-ack:active{transform:scale(.96);background:color-mix(in srgb,var(--brand) 14%,transparent)}
+.si-ok{border:1.5px solid #2E9E3D;background:color-mix(in srgb,#2E9E3D 12%,transparent);color:#2E9E3D;font-family:inherit;font-size:12px;font-weight:800;border-radius:100px;padding:8px 13px;cursor:pointer;transition:.12s;white-space:nowrap}
+.si-ok:active{transform:scale(.96)}
+.subitem-ack{opacity:.66}
 .subitem .si-ign:active{transform:scale(.95);background:rgba(140,140,150,.16)}
 .icsf{display:flex;align-items:center;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line)}
 .icsf:last-child{border-bottom:0}
@@ -3939,7 +3945,7 @@ function buildTodo(){
   if(IB_BADGE>0)it.push({w:1,i:'📬',n:IB_BADGE+' 封银行邮件读不到',d:'点开手动补一笔，或在收件箱一键清掉',go:'看看',fn:()=>{if(typeof openInboxPage==='function')openInboxPage();}});
   /* ② 订阅侦测 */
   try{
-    const subs=(typeof detectSubs==='function')?detectSubs():[];
+    const subs=((typeof detectSubs==='function')?detectSubs():[]).filter(x=>{try{return !SUBACK.includes(x.key);}catch(_){return true;}});   // 按过「知道了」的不再提醒
     if(subs.length)it.push({i:'🔁',n:'发现 '+subs.length+' 笔像订阅的扣款',
       d:subs.slice(0,2).map(x=>x.name+(x.amount?' S$'+fmt(x.amount):'')).join(' · ')||'只看不记，确认后自己决定',
       go:'确认',fn:()=>{const b=document.getElementById('openSubs');if(b)b.click();}});
@@ -7194,6 +7200,8 @@ document.getElementById('ibDel').onclick=async()=>{
 let REC=[];
 let BUD={};   /* v6.3 预算：{分类key: 每月上限SGD} */
 let SUBIG=[];   /* v9.10 订阅侦测：忽略名单（merchantKey 数组）。侦测本身纯只读，绝不新增交易。 */
+let SUBACK=[];try{SUBACK=JSON.parse(localStorage.getItem('hz_suback')||'[]')||[];}catch(_){SUBACK=[];}   /* v11.53 已确认名单：「知道了」= 确认这是我的订阅 → 不再在「等你处理」提醒，但仍留在订阅侦测列表当参考。纯本地（跟 IGN_BUD 一样，不动 worker） */
+function subAck(k,on){if(on){if(!SUBACK.includes(k))SUBACK=[...SUBACK,k];}else SUBACK=SUBACK.filter(x=>x!==k);try{localStorage.setItem('hz_suback',JSON.stringify(SUBACK));}catch(_){}}
 let WEEKLY=false;   /* v9.11 每周周报开关（存 app_settings.weekly_report；cron 读它决定推不推） */
 let PAYX=[];   /* v9.20 手动加的付款方式（卡号），存 app_settings.pay_methods。银行来的卡号从 DATA 现算，不进这。 */
 let PAYNM={};  /* v9.23 付款方式改名表 {key:名字}。key= 'cash'/'paylah'/卡号。只改显示、不动交易，删掉恢复原名。 */
@@ -7324,7 +7332,7 @@ function buildSetChips(){
   const set=(id,html)=>{const e=document.getElementById(id);if(e)e.innerHTML=html||'';};
   const chip=(t,cls)=>`<span class="sgchip${cls?' '+cls:''}">${t}</span>`;
   let memN=0;try{memN=Object.keys(RULES||{}).length;}catch(_){}
-  let subN=0;try{subN=(typeof detectSubs==='function'?detectSubs():[]).length;}catch(_){}
+  let subN=0;try{subN=(typeof detectSubs==='function'?detectSubs():[]).filter(x=>!SUBACK.includes(x.key)).length;}catch(_){}   // 只数还没「知道了」的
   let recN=0;try{recN=Array.isArray(REC)?REC.length:0;}catch(_){}
   let unread=0;try{unread=IB_BADGE||0;}catch(_){}
   /* ① 系统状态：读不到的信 = 唯一「要你动手」的信号 → 决定灯色 + 标题 */
@@ -8891,20 +8899,25 @@ function subRender(){
   h+=`<div class="glance" style="margin:0 0 12px"><div class="gl"><span class="k">每月订阅约</span><span class="val">S$${fmt(monthly)}</span></div></div>`;
   h+=subs.map(x=>{
     const dot=(x.emailed||x.inRec)?'#3B82F6':'#8A9099';
-    const note=x.inRec?'🔁 已在你的定期账单 · 每月自动记，不用管'
+    const acked=SUBACK.includes(x.key);
+    const note=acked?'✓ 你确认过了 · 不再提醒（还留在这当参考）'
+                    :x.inRec?'🔁 已在你的定期账单 · 每月自动记，不用管'
                      :x.emailed?'✅ 银行邮件自动记账（不会重复）'
                               :'✍️ 手动/现金记的 · 想自动记可去「定期账单」加一条';
-    return `<div class="subitem">
+    return `<div class="subitem${acked?' subitem-ack':''}">
       <div class="si-l">
         <div class="si-hd"><span class="si-dot" style="background:${dot}"></span><span class="si-nm">${esc(x.name)}</span><span class="si-amt">S$${fmt(x.amount)}<small> /${x.period.replace('每','')}</small></span></div>
         <div class="si-meta">${x.period} · 下次约 ${x.nextDay.slice(5)} · 已扣 ${x.n} 次</div>
         <div class="si-note">${note}</div>
         ${x.priceUp?`<div class="si-warn">⚠️ 涨价：S$${fmt(x.priceUp.from)} → S$${fmt(x.priceUp.to)}</div>`:''}
       </div>
-      <button class="si-ign" data-subig="${esc(x.key)}">忽略</button>
+      <div class="si-btns">
+        ${acked?`<button class="si-ok" data-subunack="${esc(x.key)}">✓ 已确认</button>`:`<button class="si-ack" data-suback="${esc(x.key)}">知道了</button>`}
+        <button class="si-ign" data-subig="${esc(x.key)}">忽略</button>
+      </div>
     </div>`;
   }).join('');
-  h+='<div class="gdhint" style="margin:10px 2px">「忽略」= 告诉它这不是订阅、别再列出来。</div>';
+  h+='<div class="gdhint" style="margin:10px 2px"><b>「知道了」</b>= 确认这是你的订阅，「等你处理」不再提醒（还留在这看）。<br><b>「忽略」</b>= 这不是订阅，别再列出来。</div>';
   el.innerHTML=h;
 }
 document.getElementById('openSubs').onclick=()=>{subPage.classList.add('show');subPage.scrollTop=0;syncPageOpen();
@@ -8913,6 +8926,10 @@ document.getElementById('openSubs').onclick=()=>{subPage.classList.add('show');s
   requestAnimationFrame(()=>requestAnimationFrame(subRender));};
 document.getElementById('subBack').onclick=()=>{subPage.classList.remove('show');syncPageOpen();};
 document.getElementById('subPage').addEventListener('click',async e=>{
+  const ak=e.target.closest('[data-suback]');   // 知道了：确认是我的订阅 → 不再在「等你处理」提醒
+  if(ak){subAck(ak.dataset.suback,true);subRender();try{buildTodo&&buildTodo();}catch(_){}try{buildSetChips&&buildSetChips();}catch(_){}toast('知道了 · 不再提醒');return;}
+  const uk=e.target.closest('[data-subunack]');   // 撤销确认
+  if(uk){subAck(uk.dataset.subunack,false);subRender();try{buildTodo&&buildTodo();}catch(_){}try{buildSetChips&&buildSetChips();}catch(_){}toast('已撤销确认');return;}
   const b=e.target.closest('[data-subig]');if(!b)return;
   const k=b.dataset.subig;
   if(SUBIG.includes(k))return;

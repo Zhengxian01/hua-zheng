@@ -2685,6 +2685,23 @@ async function suiteEdit() {
         DATA = keep; return { cut, all, persisted };
       });
       (salFrom.cut.n === 1 && salFrom.cut.months.join() === '2026-09' && salFrom.all.n === 3 && salFrom.persisted === '2026-09') ? ok('CPF 工资起记月：起点前的工资跳过（3笔只记1笔·2026-09）· 清空起点→全部3笔都记 · salaryFrom 存得住', JSON.stringify(salFrom)) : bad('CPF 工资起记月没生效', JSON.stringify(salFrom));
+      // 2t) v11.53 订阅侦测「知道了」：确认一笔订阅 → 「等你处理」不再提醒（但仍留在侦测列表）；撤销 → 又提醒回来；纯本地 hz_suback
+      const subAckT = await pg.evaluate(() => {
+        const keep = DATA.slice(); try { localStorage.removeItem('hz_suback'); } catch (_) { } SUBACK = [];
+        DATA = ['2026-07-01', '2026-08-01', '2026-09-01'].map((d, i) => ({ id: 'nf' + i, ts: d + 'T10:00:00+08:00', amount: 19.98, currency: 'SGD', type: 'expense', category: 'fun', merchant: 'Netflix', source: 'ocbc', card_last4: '3578' }));
+        const detected = detectSubs().length;
+        const todoTxt = () => { buildTodo(); const w = document.getElementById('todoWrap'); return w ? /像订阅的扣款/.test(w.textContent) : false; };
+        const before = todoTxt();
+        const key = detectSubs()[0].key; subAck(key, true);
+        const persisted = JSON.parse(localStorage.getItem('hz_suback') || '[]');
+        const afterAck = todoTxt(); const stillDetected = detectSubs().length;   // 仍在侦测列表（每月订阅约还算它）
+        subAck(key, false); const afterUndo = todoTxt();
+        DATA = keep; SUBACK = [];
+        return { detected, before, afterAck, afterUndo, stillDetected, persisted };
+      });
+      (subAckT.detected === 1 && subAckT.before === true && subAckT.afterAck === false && subAckT.stillDetected === 1 && subAckT.afterUndo === true && subAckT.persisted[0] === 'NETFLIX')
+        ? ok('订阅侦测「知道了」：确认后「等你处理」不再提醒（仍留在侦测列表）· 撤销后又提醒 · 存进 hz_suback', JSON.stringify(subAckT))
+        : bad('订阅侦测「知道了」没生效', JSON.stringify(subAckT));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
       const orch = await pg.evaluate(async () => {
         let terminated = false, gotBlob = false;
