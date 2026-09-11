@@ -2702,6 +2702,18 @@ async function suiteEdit() {
       (subAckT.detected === 1 && subAckT.before === true && subAckT.afterAck === false && subAckT.stillDetected === 1 && subAckT.afterUndo === true && subAckT.persisted[0] === 'NETFLIX')
         ? ok('订阅侦测「知道了」：确认后「等你处理」不再提醒（仍留在侦测列表）· 撤销后又提醒 · 存进 hz_suback', JSON.stringify(subAckT))
         : bad('订阅侦测「知道了」没生效', JSON.stringify(subAckT));
+      // 2u) v11.53 订阅侦测 ↔ 定期账单联动：已在定期账单的（名字对不上也认得——同分类+金额≈）→ inRec，「等你处理」不提醒、不当「新订阅」
+      const recLink = await pg.evaluate(() => {
+        const keep = DATA.slice(), keepRec = REC.slice(); SUBACK = [];
+        DATA = ['2026-07-01', '2026-08-01', '2026-09-01'].map((d, i) => ({ id: 'hm' + i, ts: d + 'T09:00:00+08:00', amount: 200, currency: 'SGD', type: 'expense', category: 'home', merchant: '家用', source: 'manual' }));
+        REC = [{ key: 'r1', name: '房租', cat: 'home', amount: 200, day: 1, currency: 'SGD' }];   // 名字对不上，靠 类别+金额 认
+        const s = detectSubs(); buildTodo(); const w = document.getElementById('todoWrap');
+        const r = { detected: s.length, inRec: s[0] ? s[0].inRec : null, nudge: w ? /像订阅的扣款/.test(w.textContent) : false };
+        DATA = keep; REC = keepRec; return r;
+      });
+      (recLink.detected === 1 && recLink.inRec === true && recLink.nudge === false)
+        ? ok('订阅侦测 ↔ 定期账单联动：已在定期账单的（名字对不上也认得·同类+金额≈）→ 不再当新订阅提醒', JSON.stringify(recLink))
+        : bad('订阅侦测没跟定期账单联动', JSON.stringify(recLink));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
       const orch = await pg.evaluate(async () => {
         let terminated = false, gotBlob = false;

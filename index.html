@@ -3945,7 +3945,7 @@ function buildTodo(){
   if(IB_BADGE>0)it.push({w:1,i:'📬',n:IB_BADGE+' 封银行邮件读不到',d:'点开手动补一笔，或在收件箱一键清掉',go:'看看',fn:()=>{if(typeof openInboxPage==='function')openInboxPage();}});
   /* ② 订阅侦测 */
   try{
-    const subs=((typeof detectSubs==='function')?detectSubs():[]).filter(x=>{try{return !SUBACK.includes(x.key);}catch(_){return true;}});   // 按过「知道了」的不再提醒
+    const subs=((typeof detectSubs==='function')?detectSubs():[]).filter(x=>{try{return !x.inRec&&!SUBACK.includes(x.key);}catch(_){return true;}});   // 已在「定期账单」的（你自己设的）不提醒；按过「知道了」的也不提醒
     if(subs.length)it.push({i:'🔁',n:'发现 '+subs.length+' 笔像订阅的扣款',
       d:subs.slice(0,2).map(x=>x.name+(x.amount?' S$'+fmt(x.amount):'')).join(' · ')||'只看不记，确认后自己决定',
       go:'确认',fn:()=>{const b=document.getElementById('openSubs');if(b)b.click();}});
@@ -7332,7 +7332,7 @@ function buildSetChips(){
   const set=(id,html)=>{const e=document.getElementById(id);if(e)e.innerHTML=html||'';};
   const chip=(t,cls)=>`<span class="sgchip${cls?' '+cls:''}">${t}</span>`;
   let memN=0;try{memN=Object.keys(RULES||{}).length;}catch(_){}
-  let subN=0;try{subN=(typeof detectSubs==='function'?detectSubs():[]).filter(x=>!SUBACK.includes(x.key)).length;}catch(_){}   // 只数还没「知道了」的
+  let subN=0;try{subN=(typeof detectSubs==='function'?detectSubs():[]).filter(x=>!x.inRec&&!SUBACK.includes(x.key)).length;}catch(_){}   // 只数「还没在定期账单、也还没知道了」的
   let recN=0;try{recN=Array.isArray(REC)?REC.length:0;}catch(_){}
   let unread=0;try{unread=IB_BADGE||0;}catch(_){}
   /* ① 系统状态：读不到的信 = 唯一「要你动手」的信号 → 决定灯色 + 标题 */
@@ -8869,8 +8869,11 @@ function detectSubs(){
     const prevPrice=_median(amts.slice(0,-1));
     const priceUp=(prevPrice>0&&lastAmt>prevPrice*1.02)?{from:prevPrice,to:lastAmt}:null;
     const emailed=rows.every(r=>r.source==='dbs'||r.source==='ocbc');
-    /* v11.45 跟「定期账单」联动：这商家已经在 REC 里（名字对得上，或本来就是定期账单自动记的）→ 标「已在定期账单」，别再叫人去加 */
-    const inRec=rows.some(r=>r.source==='recurring')||REC.some(r=>merchantKey(r.name)===k);
+    /* v11.45/53 跟「定期账单」联动：本来就是定期账单自动记的、或名字对得上、或【同分类 + 金额几乎一样】（你自己写的账单常常名字对不上，但类别+金额能认出来）→ 标「已在定期账单」，就不再当「新订阅」提醒你 */
+    const _lastCat=catKey(last);
+    const inRec=rows.some(r=>r.source==='recurring')
+      ||REC.some(r=>merchantKey(r.name)===k)
+      ||REC.some(r=>r.cat===_lastCat&&price>0&&Math.abs((sgdOf({amount:+r.amount||0,currency:r.currency})||0)-price)<=price*0.05);
     out.push({key:k,name:last.merchant||k,amount:price,period,pd,n:rows.length,lastDay,nextDay:dayAdd(lastDay,pd),emailed,inRec,priceUp});
   }
   out.sort((a,b)=>b.amount-a.amount);
@@ -8900,8 +8903,8 @@ function subRender(){
   h+=subs.map(x=>{
     const dot=(x.emailed||x.inRec)?'#3B82F6':'#8A9099';
     const acked=SUBACK.includes(x.key);
-    const note=acked?'✓ 你确认过了 · 不再提醒（还留在这当参考）'
-                    :x.inRec?'🔁 已在你的定期账单 · 每月自动记，不用管'
+    const note=x.inRec?'🔁 已在你的定期账单 · 不会再提醒你'
+                    :acked?'✓ 你确认过了 · 不再提醒（还留在这当参考）'
                      :x.emailed?'✅ 银行邮件自动记账（不会重复）'
                               :'✍️ 手动/现金记的 · 想自动记可去「定期账单」加一条';
     return `<div class="subitem${acked?' subitem-ack':''}">
@@ -8911,10 +8914,10 @@ function subRender(){
         <div class="si-note">${note}</div>
         ${x.priceUp?`<div class="si-warn">⚠️ 涨价：S$${fmt(x.priceUp.from)} → S$${fmt(x.priceUp.to)}</div>`:''}
       </div>
-      <div class="si-btns">
+      ${x.inRec?'':`<div class="si-btns">
         ${acked?`<button class="si-ok" data-subunack="${esc(x.key)}">✓ 已确认</button>`:`<button class="si-ack" data-suback="${esc(x.key)}">知道了</button>`}
         <button class="si-ign" data-subig="${esc(x.key)}">忽略</button>
-      </div>
+      </div>`}
     </div>`;
   }).join('');
   h+='<div class="gdhint" style="margin:10px 2px"><b>「知道了」</b>= 确认这是你的订阅，「等你处理」不再提醒（还留在这看）。<br><b>「忽略」</b>= 这不是订阅，别再列出来。</div>';
