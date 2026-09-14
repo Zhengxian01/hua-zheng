@@ -452,6 +452,22 @@ body.theme-journal .subitem{background:#FBF7EF;border-color:#E4DCCF}
 .si-ok{border:1.5px solid #2E9E3D;background:color-mix(in srgb,#2E9E3D 12%,transparent);color:#2E9E3D;font-family:inherit;font-size:12px;font-weight:800;border-radius:100px;padding:8px 13px;cursor:pointer;transition:.12s;white-space:nowrap}
 .si-ok:active{transform:scale(.96)}
 .subitem-ack{opacity:.66}
+/* v11.53 捷径记账说明页 */
+.sc-sec{font-size:12px;font-weight:800;color:var(--muted);margin:18px 2px 8px;letter-spacing:.3px}
+.sc-copy{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;width:100%;text-align:left;cursor:pointer}
+.sc-copy:active{background:var(--faint)}
+.sc-copy .sc-l{flex:1;min-width:0}
+.sc-copy .sc-k{font-size:12.5px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:6px}
+.sc-copy .sc-v{font-size:11px;color:var(--muted);margin-top:3px;word-break:break-all;font-family:ui-monospace,Menlo,monospace}
+.sc-tag{font-size:9px;font-weight:800;padding:1px 6px;border-radius:100px;background:rgba(59,130,246,.16);color:#2563EB}
+.sc-tag.warn{background:rgba(231,163,62,.2);color:#B87A18}
+.sc-btn{flex:none;border:1.5px solid var(--brand);color:var(--brand);background:transparent;font-family:inherit;font-size:12px;font-weight:800;border-radius:100px;padding:7px 15px;white-space:nowrap}
+.sc-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;font-size:12.5px;color:var(--ink);line-height:1.7}
+.sc-step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:10px;font-size:13px;color:var(--ink)}
+.sc-step ol{margin:8px 0 2px;padding-left:20px;line-height:1.85;color:var(--ink-2)}
+.sc-step li{margin-bottom:4px}
+.sc-step code,.gdhint code{background:var(--faint);padding:1px 5px;border-radius:5px;font-size:11px;font-family:ui-monospace,Menlo,monospace}
+body.phototheme .sc-copy,body.phototheme .sc-card,body.phototheme .sc-step{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1)}
 .subitem .si-ign:active{transform:scale(.95);background:rgba(140,140,150,.16)}
 .icsf{display:flex;align-items:center;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line)}
 .icsf:last-child{border-bottom:0}
@@ -2216,6 +2232,7 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
         <button class="setrow" id="openRules"><span class="si">🧠</span><div class="st"><div class="sn">商家记忆</div><div class="sd">它学过的商家→分类 · 左滑改/删</div></div><span class="sar">›</span></button>
         <button class="setrow" id="openSubs"><span class="si">🔁</span><div class="st"><div class="sn">订阅侦测<span class="badge" id="subBadge" style="display:none">0</span></div><div class="sd" id="subSd">从你的账里找出定期扣款 · 只看不记</div></div><span class="sar">›</span></button>
         <button class="setrow" id="openRec"><span class="si">🔁</span><div class="st"><div class="sn">定期账单</div><div class="sd">Netflix / iCloud 这种，每月自动记</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="openShortcut"><span class="si">⚡</span><div class="st"><div class="sn">捷径记账 · 轻点背面</div><div class="sd">双击 iPhone 背面就记一笔 · 不用截图（教你设 + 一键复制网址）</div></div><span class="sar">›</span></button>
       </div>
     </div>
 
@@ -2538,6 +2555,45 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
   <div class="cp-body">
     <div class="gdhint" style="margin:0 2px 10px">从你已有的账里自动找出「定期扣款」。<b>只是分析，绝不会新增任何一笔交易</b>——银行邮件照旧是唯一记账来源，不会重复。</div>
     <div id="subList"></div>
+  </div>
+</div>
+
+<div class="cpage" id="scPage">
+  <div class="cp-top"><button class="dp-back" id="scBack">‹ 返回</button><span class="cp-title">捷径记账 · 轻点背面</span><span style="width:52px"></span></div>
+  <div class="cp-body">
+    <div class="gdhint" style="margin:0 2px 12px">双击 iPhone <b>背面</b>就记一笔，不用截图。原理：iOS「捷径」把一段文字（银行短信 / 你打的字）发给你的 Worker，<b>Worker 自己解析</b>成一笔账 —— 跟 App 里「粘贴短信」同一条路。</div>
+
+    <div class="sc-sec">① 复制下面这三样，等下贴进捷径</div>
+    <div class="sc-copy" data-sccopy="url"><div class="sc-l"><div class="sc-k">记账网址<span class="sc-tag">最重要</span></div><div class="sc-v" id="scUrl">…</div></div><span class="sc-btn">复制</span></div>
+    <div class="sc-copy" data-sccopy="wurl"><div class="sc-l"><div class="sc-k">Worker 网址</div><div class="sc-v" id="scWurl">…</div></div><span class="sc-btn">复制</span></div>
+    <div class="sc-copy" data-sccopy="tk"><div class="sc-l"><div class="sc-k">Token<span class="sc-tag warn">别外传</span></div><div class="sc-v" id="scTk">…</div></div><span class="sc-btn">复制</span></div>
+    <div class="gdhint" style="margin:6px 2px 14px">「记账网址」= Worker 网址 + <code>/api/paste?token=…</code>，已经帮你拼好、token 也带上了。捷径里只要用这一条。</div>
+
+    <div class="sc-sec">② 三种玩法（看你要哪种）</div>
+    <div class="sc-card"><b>A · 复制银行短信 → 双击背面</b>（不打字、不截图）<br>银行短信来了，长按复制那条 → 双击背面 → 捷径把剪贴板送出 → 解析好。文字比截图还准。</div>
+    <div class="sc-card"><b>B · 双击背面 → 弹框问金额</b>（现金 / 没短信时）<br>捷径里加「要求输入」，打一个数字送出。</div>
+    <div class="sc-card"><b>C · 固定预设一笔</b>（例：咖啡 S$4.50）<br>捷径里写死一段文字，双击背面直接记 —— 真·零输入。</div>
+
+    <div class="sc-sec">③ 怎么设（一次搞定）</div>
+    <div class="sc-step"><b>第一步 · 建捷径</b>
+      <ol>
+        <li>打开「<b>捷径</b>」App → 右上「＋」新建</li>
+        <li>加动作「<b>获取 URL 内容</b>」</li>
+        <li>URL 贴上面复制的「<b>记账网址</b>」</li>
+        <li>展开「显示更多」→ 方法选 <b>POST</b></li>
+        <li>请求体 <b>Body</b> 选「<b>文本</b>」→ 里面放「<b>剪贴板</b>」（玩法 A）／「<b>提供的输入</b>」／你打的字</li>
+        <li>（可选）最后加「<b>显示通知</b>」= 上一步结果，记完手机上就弹一下</li>
+        <li>给捷径起名，例如「<b>记一笔</b>」，存好</li>
+      </ol>
+    </div>
+    <div class="sc-step"><b>第二步 · 绑「轻点背面」</b>
+      <ol>
+        <li>iPhone 设置 → <b>辅助功能</b> → <b>触控</b> → 划到底「<b>轻点背面</b>」</li>
+        <li>选「<b>轻点两下</b>」→ 划到最下面「捷径」区 → 选你刚建的「记一笔」</li>
+        <li>完成！以后<b>双击背面</b>就记一笔 🎉</li>
+      </ol>
+    </div>
+    <div class="gdhint" style="margin:8px 2px 20px">· iOS <b>不给</b>捷径自动读你短信（隐私），所以玩法 A 要先「复制」那条短信。<br>· 同一笔<b>重复发不会记两笔</b>（自动去重），手滑双击两次不怕。<br>· Token 明文写在捷径里 = 谁能碰你手机就能触发，知道一下就好。</div>
   </div>
 </div>
 
@@ -8948,6 +9004,29 @@ document.getElementById('subPage').addEventListener('click',async e=>{
   else toast('已忽略');
 });
 const subPage=document.getElementById('subPage');
+
+/* v11.53 捷径记账说明页：把 Worker 网址 / token / 拼好的记账网址 亮出来一键复制，教怎么绑「轻点背面」。纯前端，不动 worker（/api/paste 早就为捷径开了纯文字入口）。 */
+const scPage=document.getElementById('scPage');
+function scRender(){
+  const wurl=(CONFIG.WORKER_URL||'').replace(/\/+$/,'');
+  const tk=CONFIG.TOKEN||'';
+  const url=wurl?`${wurl}/api/paste?token=${encodeURIComponent(tk)}`:'（先连上 Worker）';
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('scUrl',url);set('scWurl',wurl||'（先连上 Worker）');set('scTk',tk||'（先连上 Worker）');
+  scPage._vals={url,wurl,tk};
+}
+document.getElementById('openShortcut').onclick=()=>{scRender();scPage.classList.add('show');scPage.scrollTop=0;syncPageOpen();};
+document.getElementById('scBack').onclick=()=>{scPage.classList.remove('show');syncPageOpen();};
+document.getElementById('scPage').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-sccopy]');if(!b)return;
+  const v=scPage._vals||{},which=b.dataset.sccopy;
+  const txt=which==='url'?v.url:which==='wurl'?v.wurl:v.tk;
+  if(!txt||/先连上/.test(txt)){toast('先连上 Worker 才有网址','err');return;}
+  let ok=false;
+  try{await navigator.clipboard.writeText(txt);ok=true;}
+  catch(_){try{const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();ok=document.execCommand('copy');ta.remove();}catch(e2){ok=false;}}
+  toast(ok?'已复制 · 去捷径里粘上':'复制不了 · 长按上面那行选中复制',ok?'':'err');
+});
 
 /* ============ ②③ v9.16 系统自检（非阻塞）+ 出问题弹窗 + 推送自愈 ============
    ⚠️ 全部 fail-safe：只读、包 try/catch、跟主流程隔离，监督逻辑自己坏也绝不拖累 app。 */
