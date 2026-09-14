@@ -2637,7 +2637,7 @@ async function suiteEdit() {
       (parsedJunk.oa === null && parsedJunk.sa === null && parsedJunk.ma === null) ? ok('CPF 截图解析：读不到数字 → 三个都 null（不乱填）') : bad('CPF 截图垃圾输入没挡住', JSON.stringify(parsedJunk));
       // 2p) v11.52 工资 ↔ CPF 全自动联动：主列表工资收入 → 自动建 srcId 联动供款；改/删/换分类 → 跟着更/删；手动条不碰
       const linkCreate = await pg.evaluate(() => {
-        CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1994, entries: [{ id: 'm1', month: '2026-07', kind: 'salary', gross: 4400, oa: 1012, sa: 264, ma: 352, ts: 1 }] }); CPF.on = true;
+        CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1994, payShift: false, entries: [{ id: 'm1', month: '2026-07', kind: 'salary', gross: 4400, oa: 1012, sa: 264, ma: 352, ts: 1 }] }); CPF.on = true;
         const keep = DATA.slice(); DATA = [{ id: 555, ts: '2026-09-01T10:00:00+08:00', amount: 4100, currency: 'SGD', type: 'income', category: 'salary', merchant: 'Sal' }];
         cpfSyncFromSalary(); const e = CPF.entries.find(x => x.kind === 'salary' && x.auto); window.__keepDATA = keep;
         return e ? { srcId: e.srcId, month: e.month, gross: Math.round(e.gross), total: Math.round((e.oa + e.sa + e.ma) * 100) / 100, manualUntouched: !!CPF.entries.find(x => x.id === 'm1' && !x.auto) } : null;
@@ -2676,7 +2676,7 @@ async function suiteEdit() {
         DATA = [{ id: 's1', ts: '2026-07-10T22:00:00+08:00', amount: 5000, currency: 'SGD', type: 'income', category: 'salary', merchant: 'Sal' },
                 { id: 's2', ts: '2026-08-10T22:00:00+08:00', amount: 5000, currency: 'SGD', type: 'income', category: 'salary', merchant: 'Sal' },
                 { id: 's3', ts: '2026-09-10T22:00:00+08:00', amount: 5000, currency: 'SGD', type: 'income', category: 'salary', merchant: 'Sal' }];
-        CPF = normCpf({ open: { oa: 100, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1994, salaryFrom: '2026-09' }); CPF.on = true;
+        CPF = normCpf({ open: { oa: 100, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1994, payShift: false, salaryFrom: '2026-09' }); CPF.on = true;
         cpfSyncFromSalary();
         const cut = { n: CPF.entries.filter(x => x.kind === 'salary' && x.auto).length, months: CPF.entries.filter(x => x.kind === 'salary').map(x => x.month) };
         CPF.salaryFrom = ''; cpfSyncFromSalary();
@@ -2743,6 +2743,25 @@ async function suiteEdit() {
         inlineCat.ruleTile && inlineCat.ruleCp === 'expense' && /记忆测试/.test(inlineCat.ruleSel) && inlineCat.ruleMade)
         ? ok('现场加分类：定期账单 + 商家记忆 都能「＋Cat」→ 存完自动选中（跟记账/编辑一套）', JSON.stringify(inlineCat))
         : bad('定期账单/商家记忆 现场加分类没生效', JSON.stringify(inlineCat));
+      // 2w) v11.55 CPF 进账时机：M 月工资 → CPF 记 M+1 月 + 到账日 cred；没到进账日→待进账、不算进总额；关 payShift→工资同月、全算
+      const payShift = await pg.evaluate(() => {
+        const keep = DATA.slice(); const tk = todayKey();   // 用「今天」往前后各推，避免依赖真实日期
+        const past = (m => { let [y, mo] = m.split('-').map(Number); mo -= 2; while (mo < 1) { mo += 12; y--; } return `${y}-${String(mo).padStart(2, '0')}`; })(tk.slice(0, 7));   // 两个月前的工资 → CPF 上个月就进了 = 已进账
+        const future = tk.slice(0, 7);   // 这个月的工资 → CPF 下个月才进 = 待进账
+        DATA = [{ id: 'sp_past', ts: past + '-27T22:00:00+08:00', amount: 5000, currency: 'SGD', type: 'income', category: 'salary', merchant: 'ACME' },
+                { id: 'sp_now', ts: future + '-27T22:00:00+08:00', amount: 5000, currency: 'SGD', type: 'income', category: 'salary', merchant: 'ACME' }];
+        CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 }, status: 'citizen', birthYear: 1994, payShift: true, creditDay: 14 }); CPF.on = true;
+        cpfSyncFromSalary();
+        const ent = k => CPF.entries.find(e => e.srcId === k);
+        const pastE = ent('sp_past'), nowE = ent('sp_now');
+        const on = { pastMonthShifted: pastE && pastE.month !== past && pastE.cred, pastCredited: pastE && !cpfPending(pastE), nowPending: nowE && cpfPending(nowE), nowCred: nowE && nowE.cred, balExclPending: (() => { const b = cpfBal(); return Math.round((b.oa + b.sa + b.ma) * 100) / 100; })(), pastTot: pastE ? Math.round((pastE.oa + pastE.sa + pastE.ma) * 100) / 100 : 0 };
+        CPF.payShift = false; cpfSyncFromSalary();
+        const off = { noCred: CPF.entries.every(e => !e.cred), bothCounted: (() => { const b = cpfBal(); return Math.round((b.oa + b.sa + b.ma) * 100) / 100; })() };
+        DATA = keep; return { on, off };
+      });
+      (payShift.on.pastMonthShifted && payShift.on.pastCredited && payShift.on.nowPending && payShift.on.nowCred && Math.abs(payShift.on.balExclPending - payShift.on.pastTot) < 0.01 && payShift.off.noCred && Math.abs(payShift.off.bothCounted - payShift.on.pastTot * 2) < 0.01)
+        ? ok('CPF 进账时机：工资的 CPF 记到下个月+到账日；没到→待进账不算进总额（总额只含已进账那笔）· 关 payShift→同月全算', JSON.stringify({ bal: payShift.on.balExclPending }))
+        : bad('CPF 进账时机（待进账/gating）没生效', JSON.stringify(payShift));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
       const orch = await pg.evaluate(async () => {
         let terminated = false, gotBlob = false;

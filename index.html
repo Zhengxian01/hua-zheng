@@ -1320,6 +1320,12 @@ body.theme-journal .cpf-mrow{background:#FBF7EF;border-color:#E4DCCF}
 .cpf-tag.t-top{background:rgba(59,130,246,.16);color:#2563EB}
 .cpf-tag.t-adj{background:rgba(16,185,129,.18);color:#0E9E6E}
 .cpf-tag.t-int{background:rgba(231,163,62,.2);color:#B87A18}
+.cpf-tag.t-pend{background:rgba(120,130,145,.16);color:#8A9099}
+.cpf-mrow-pending{opacity:.6}
+.cpf-mrow-pending .mtot{color:var(--muted)!important}
+.cpf-pend-note{display:inline-block;margin-top:5px;color:#8A9099;font-size:11px;font-weight:600}
+.cpf-pend-note b{color:var(--ink)}
+body.phototheme .cpf-tag.t-pend,body.phototheme .cpf-pend-note{color:rgba(255,255,255,.6)}
 body.phototheme .cpf-tag.t-sal{color:rgba(255,255,255,.7)}
 body.phototheme .cpf-tag.t-int{color:#F0B65A}
 .cpf-mrow .mg{font-size:10.5px;color:var(--muted);font-weight:600;margin-top:3px}
@@ -3067,7 +3073,7 @@ const CPF_STATUS={citizen:{n:'公民 / PR 满3年'},pr:{n:'PR（填拿证年月�
 function cpfAllocFor(age){const a=(age==null||!isFinite(age))?30:age;for(const[cap,al]of CPF_ALLOC)if(a<=cap)return al;return CPF_ALLOC[CPF_ALLOC.length-1][1];}
 /* intCredited：已经自动补过利息的【最后一个年份】。每年过完，那年的利息在次年 1 月入；
    app 一开就检查有没有该补的、自动补上（automation）。首次设置认定当前余额已含到去年利息。 */
-function defaultCpf(){return {on:false,hidden:false,open:{oa:0,sa:0,ma:0},status:'citizen',prStart:'',birthYear:0,ceiling:8000,intCredited:0,salaryFrom:'',entries:[]};}
+function defaultCpf(){return {on:false,hidden:false,open:{oa:0,sa:0,ma:0},status:'citizen',prStart:'',birthYear:0,ceiling:8000,intCredited:0,salaryFrom:'',payShift:true,creditDay:14,entries:[]};}
 let CPF=defaultCpf();
 function cpfNum(v,d){const x=parseFloat(v);return isFinite(x)&&x>=0?x:d;}
 function cpfNumS(v,d){const x=parseFloat(v);return isFinite(x)?x:d;}   /* 允许负数：对账/校准那笔差额可能是负的（之前记多了） */
@@ -3083,6 +3089,8 @@ function normCpf(c){
   n.ceiling=cpfNum(c.ceiling,8000)||8000;
   n.intCredited=Math.round(cpfNum(c.intCredited,0))||0;
   if(typeof c.salaryFrom==='string'&&/^\d{4}-\d{2}$/.test(c.salaryFrom))n.salaryFrom=c.salaryFrom;   // 工资起记月：这个月之前的工资当作已在期初余额里，不自动记（避免重复加）
+  n.payShift=c.payShift!==false;   // v11.55 工资的 CPF 下个月才进账（新加坡默认：M 月工资 → M+1 月 14 号前进）；默认开，可关
+  n.creditDay=Math.min(Math.max(Math.round(cpfNum(c.creditDay,14))||14,1),28);   // 下个月几号进账（1–28）
   if(Array.isArray(c.entries))n.entries=c.entries.filter(e=>e&&e.month).map(e=>{
     const k=e.kind==='topup'?'topup':e.kind==='adjust'?'adjust':e.kind==='interest'?'interest':'salary';
     const num=k==='adjust'?cpfNumS:cpfNum;   // 对账那笔差额可以是负数
@@ -3093,11 +3101,24 @@ function normCpf(c){
       srcId:(k==='salary'&&e.srcId!=null)?String(e.srcId):null,   // 从主列表哪笔工资自动来的（删工资→删这条）
       auto:k==='salary'?!!e.auto:false,
       gross:cpfNum(e.gross,0),net:(k==='salary'&&e.net!=null)?cpfNum(e.net,0):null,bonus:cpfNum(e.bonus,0),oa:num(e.oa,0),sa:num(e.sa,0),ma:num(e.ma,0),
+      cred:(k==='salary'&&typeof e.cred==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(e.cred))?e.cred:null,   // 这笔 CPF 到账的日子；今天还没到 → 待进账、不算进总额
       ts:e.ts||Date.now()};})
     .sort((a,b)=>a.month<b.month?1:a.month>b.month?-1:0);   // 新月在前
   return n;
 }
-function cpfBal(){const b={oa:CPF.open.oa,sa:CPF.open.sa,ma:CPF.open.ma};CPF.entries.forEach(e=>{b.oa+=e.oa;b.sa+=e.sa;b.ma+=e.ma;});return b;}
+/* v11.55 CPF 进账时机：M 月工资 → CPF 下个月（M+1）creditDay 号前进。cpfCreditFor 给出联动条该落哪个月 + 到账日 + ts。 */
+function cpfCreditFor(salMonth){
+  const [y,m]=String(salMonth).split('-').map(Number);
+  let ny=y,nm=m+1;if(nm>12){nm=1;ny++;}
+  const day=Math.min(Math.max(Math.round(CPF.creditDay||14),1),28);
+  const cm=`${ny}-${String(nm).padStart(2,'0')}`;
+  const cred=`${cm}-${String(day).padStart(2,'0')}`;
+  const ts=new Date(cred+'T12:00:00+08:00').getTime()||Date.now();
+  return {month:cm,cred,ts};
+}
+/* 这笔还没到账？（有 cred 且到账日晚于今天，SGT 锚定）→ 不算进总额、明细里标「待进账」 */
+function cpfPending(e){return !!(e&&e.cred&&e.cred>todayKey());}
+function cpfBal(){const b={oa:CPF.open.oa,sa:CPF.open.sa,ma:CPF.open.ma};CPF.entries.forEach(e=>{if(cpfPending(e))return;b.oa+=e.oa;b.sa+=e.sa;b.ma+=e.ma;});return b;}
 function cpfTotal(){const b=cpfBal();return b.oa+b.sa+b.ma;}
 function cpfActive(){return CPF.on||CPF.entries.length>0||(CPF.open.oa+CPF.open.sa+CPF.open.ma)>0;}
 /* CPF 利息由【Cloudflare cron 服务端】每年自动补（见 worker.js scheduled ⑥）：
@@ -3216,11 +3237,13 @@ function cpfSyncFromSalary(){
   for(const id in sal){
     const s=sal[id],gross=cpfGrossFromNet(s.net,s.month),sp=cpfSplit(gross,s.month);
     const oa=sp.oa,sa=sp.sa,ma=sp.ma;
+    /* 供款比例照【工资那个月】算（年龄/身份/上限都按工资月），但记账落在【进账那个月】+ 带到账日 cred；关掉 payShift 就还是工资同月、无 cred */
+    const cr=CPF.payShift?cpfCreditFor(s.month):{month:s.month,cred:null,ts:s.ts};
     let e=CPF.entries.find(x=>x.kind==='salary'&&x.srcId===id);
-    if(!e){CPF.entries.push({id:'cpf'+Math.random().toString(36).slice(2,9),srcId:id,auto:true,month:s.month,kind:'salary',note:'',gross,net:s.net,bonus:0,oa,sa,ma,ts:s.ts});changed=true;}
+    if(!e){CPF.entries.push({id:'cpf'+Math.random().toString(36).slice(2,9),srcId:id,auto:true,month:cr.month,cred:cr.cred,kind:'salary',note:'',gross,net:s.net,bonus:0,oa,sa,ma,ts:cr.ts});changed=true;}
     else{
-      if(e.month!==s.month||Math.abs(e.gross-gross)>0.005||Math.abs(e.oa-oa)>0.005||Math.abs(e.sa-sa)>0.005||Math.abs(e.ma-ma)>0.005){
-        e.month=s.month;e.gross=gross;e.oa=oa;e.sa=sa;e.ma=ma;e.ts=s.ts;changed=true;   // 金额/月份改了 → 跟着更
+      if(e.month!==cr.month||(e.cred||null)!==(cr.cred||null)||Math.abs(e.gross-gross)>0.005||Math.abs(e.oa-oa)>0.005||Math.abs(e.sa-sa)>0.005||Math.abs(e.ma-ma)>0.005){
+        e.month=cr.month;e.cred=cr.cred;e.gross=gross;e.oa=oa;e.sa=sa;e.ma=ma;e.ts=cr.ts;changed=true;   // 金额/月份/到账日改了 → 跟着更
       }
       if(e.net!==s.net){e.net=s.net;changed=true;}   // 到手（主列表那笔工资的原值）—— 显示用，也给旧自动条补上
     }
@@ -8482,7 +8505,10 @@ function buildCpfPage(){
   const lastInt=CPF.entries.find(e=>e.kind==='interest');   // 最近一笔自动利息
   const nowY=now.slice(0,4);
   const janRemind=lastInt&&lastInt.month.slice(0,4)===nowY&&(!lastAdj||lastAdj.month.slice(0,4)!==nowY);   // 今年刚自动加了利息、还没核对过 → 提醒拍照核对
-  const recSum=CPF.entries.reduce((s,e)=>s+e.oa+e.sa+e.ma,0);   // 累计已记（所有笔，含利息，都进了总额）
+  const recSum=CPF.entries.reduce((s,e)=>cpfPending(e)?s:s+e.oa+e.sa+e.ma,0);   // 累计已记（只算【已进账】的，待进账的不算）
+  const pend=CPF.entries.filter(cpfPending);   // 还没到进账日的（工资月尾进、CPF 下个月才进）
+  const pendSum=pend.reduce((s,e)=>s+e.oa+e.sa+e.ma,0);
+  const credited=CPF.entries.filter(e=>!cpfPending(e));
   const acctsHTML=CPF_ACCTS.map(([k,n,d,c])=>{
     const v=b[k],pct=tot>0?Math.round(v/tot*100):0;
     return `<div class="cpf-acct" style="color:${c}"><div class="an">${n}</div><div class="ad">${d.split(' · ')[0]}</div>
@@ -8490,16 +8516,18 @@ function buildCpfPage(){
   }).join('');
   const entriesHTML=CPF.entries.length?CPF.entries.map(e=>{
     const isAdj=e.kind==='adjust',isTop=e.kind==='topup',isInt=e.kind==='interest',isAutoSal=e.kind==='salary'&&e.auto;
-    const cls=isTop?' cpf-mrow-top':isAdj?' cpf-mrow-adj':isInt?' cpf-mrow-int':'';
+    const pending=cpfPending(e);   // 还没到进账日 → 灰掉、标「待进账」、不算进总额
+    const cls=(isTop?' cpf-mrow-top':isAdj?' cpf-mrow-adj':isInt?' cpf-mrow-int':'')+(pending?' cpf-mrow-pending':'');
     /* 每种记录给一个小标签 chip，取代原来塞在月份前面的 emoji，一眼分得清 */
-    const tag=isTop?'<span class="cpf-tag t-top">💰 存入</span>'
+    const tag=(pending?`<span class="cpf-tag t-pend">⏳ ${e.cred?e.cred.slice(5).replace('-','/')+' 进账':'待进账'}</span>`:'')
+      +(isTop?'<span class="cpf-tag t-top">💰 存入</span>'
       :isAdj?'<span class="cpf-tag t-adj">🎯 对账</span>'
       :isInt?'<span class="cpf-tag t-int">📈 利息</span>'
-      :isAutoSal?'<span class="cpf-tag t-sal">工资 · 🔗自动</span>':'<span class="cpf-tag t-sal">工资</span>';
+      :isAutoSal?'<span class="cpf-tag t-sal">工资 · 🔗自动</span>':'<span class="cpf-tag t-sal">工资</span>');
     const sub=isTop?`自己存入${e.note?' · '+esc(e.note):''}`
       :isAdj?`跟 CPF app 对账${e.note?' · '+esc(e.note):''}`
       :isInt?`${esc((e.note||'年度利息').replace('（自动·估）','').trim())} · 按官方利率自动入账`
-      :isAutoSal?`跟主列表的工资联动 · 到手 S$${cpfFmt(e.net!=null?e.net:e.gross)}`
+      :isAutoSal?`跟主列表的工资联动 · 到手 S$${cpfFmt(e.net!=null?e.net:e.gross)}${pending?' · 还没进账，不算进总额':''}`
       :e.gross?`工资 S$${cpfFmt(e.gross)}${e.gross>CPF.ceiling?' <span class="cpf-cap">(顶)</span>':''}${e.bonus?' · 奖金 S$'+cpfFmt(e.bonus):''}`:'';
     const seg=k=>isAdj?cpfFmtSigned(e[k]):cpfFmt(e[k]);
     const t=e.oa+e.sa+e.ma;
@@ -8511,9 +8539,9 @@ function buildCpfPage(){
     </div>`;}).join(''):`<div class="cpf-empty">还没记过月供款。<br>每月工资进来，点右上「＋ 记这个月」，填工资总额就自动拆进三个账户。</div>`;
   body.innerHTML=`
     <div class="cpf-tot"><div class="k">CPF 总额</div><div class="v"><span class="s">S$</span>${cpfFmt(tot)}</div>
-      <div class="g">${CPF.entries.length
-        ?`最近一笔 <b>+S$${cpfFmt(CPF.entries[0].oa+CPF.entries[0].sa+CPF.entries[0].ma)}</b>（${CPF.entries[0].month}）· 累计已记 <b>+S$${cpfFmt(recSum)}</b>（${CPF.entries.length}笔）`
-        :`这是你填的起点余额 · 每月工资进来记一笔，就往上加 📈`}</div></div>
+      <div class="g">${credited.length
+        ?`最近一笔 <b>+S$${cpfFmt(credited[0].oa+credited[0].sa+credited[0].ma)}</b>（${credited[0].month}）· 累计已记 <b>+S$${cpfFmt(recSum)}</b>（${credited.length}笔）`
+        :`这是你填的起点余额 · 每月工资进来记一笔，就往上加 📈`}${pend.length?`<br><span class="cpf-pend-note">⏳ 另有 ${pend.length} 笔工资的 CPF <b>待进账</b>（约 ${pend[0].cred?pend[0].cred.slice(8):''} 号进）· +S$${cpfFmt(pendSum)}，进了才算进总额</span>`:''}</div></div>
     <div class="cpf-accts">${acctsHTML}</div>
     <div class="cpf-int${janRemind?' cpf-int-remind':''}" id="cpfReconBox">
       <div class="ci-top"><span class="ci-cap">📸 拍张 CPF 截图核对</span><button type="button" class="cpf-add" id="cpfReconBtn" style="padding:7px 14px">核对一下 ›</button></div>
@@ -8582,6 +8610,9 @@ function openCpfMod(mode,id){
       </div>
       <div class="cpf-inrow" id="cpfSalMRow" style="margin-top:10px${CPF.salaryFrom?'':';display:none'}"><label>从这个月起<small>更早的不记</small></label><input class="cpf-in" type="month" id="cpfSalFromM" value="${CPF.salaryFrom||cpfCurMonth()}"></div>
       <div class="cpf-note" id="cpfSalPrev" style="margin-top:2px"></div>
+      <div class="cpf-note" style="margin:14px 0 6px;font-weight:700;color:var(--ink)">CPF 进账时机<small style="font-weight:600;color:var(--muted);margin-left:5px">工资月尾进、CPF 下个月才进</small></div>
+      <label class="cpf-chk" id="cpfPayShiftWrap"><input type="checkbox" id="cpfPayShift" ${CPF.payShift?'checked':''}> 工资的 CPF <b>下个月才进账</b>（新加坡默认 · 没进账前不算进总额）</label>
+      <div class="cpf-inrow" id="cpfCredDayRow" style="margin-top:8px${CPF.payShift?'':';display:none'}"><label>下个月几号进<small>照 CPF app（多半 10–14）</small></label><input class="cpf-in" type="number" inputmode="numeric" id="cpfCredDay" value="${CPF.creditDay||14}" placeholder="14"></div>
       <div class="cpf-note" style="margin-top:10px">比例按官方 ≤55 分配表估算；PR 头两年各账户官方另有细表，请对着你的 CPF 月结单核一下，每笔记账都能手动微调。</div>
       <button class="cpf-del-all" id="cpfResetBtn">清空所有 CPF 记录</button>`;
     const applyStat=()=>{const st=document.querySelector('#cpfStat .cpf-stat.on');CPF.status=st?st.dataset.stat:'citizen';CPF.birthYear=Math.round(cpfNum(document.getElementById('cpfBirthS').value,0))||0;const ps=document.getElementById('cpfPrStartS');if(ps&&/^\d{4}-\d{2}$/.test(ps.value||''))CPF.prStart=ps.value;document.getElementById('cpfPrRow').hidden=(CPF.status==='citizen');cpfRenderRatePrev();};
@@ -8602,6 +8633,8 @@ function openCpfMod(mode,id){
       el.innerHTML=`从 <b>${m}</b> 起：记 <b>${keep}</b> 笔工资${ign?` · 之前 <b>${ign}</b> 笔跳过（当作已在期初）`:''}。`;
     };
     document.getElementById('cpfSalMode').addEventListener('click',ev=>{const b=ev.target.closest('[data-sm]');if(!b)return;salMode=b.dataset.sm;[...ev.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));salPrev();});
+    const cpfPayShiftEl=document.getElementById('cpfPayShift');
+    if(cpfPayShiftEl)cpfPayShiftEl.addEventListener('change',()=>{document.getElementById('cpfCredDayRow').style.display=cpfPayShiftEl.checked?'':'none';});
     document.getElementById('cpfSalFromM').addEventListener('input',salPrev);
     document.getElementById('cpfSalFromM').addEventListener('change',salPrev);
     salPrev();
@@ -8612,6 +8645,7 @@ function openCpfMod(mode,id){
     const isJan=cpfCurMonth().slice(5,7)==='01';
     body.innerHTML=`
       <div class="cpf-note" style="margin-bottom:10px">下面格子是<b>你现在记的</b>余额。打开 <b>CPF app</b>（或截图让我读），看看跟你记的差多少 —— 差额多半是刚入的<b>利息</b>，把格子<b>改成 CPF app 的数</b>，我补一笔，之后就跟 CPF app <b>一模一样</b>。</div>
+      ${CPF.entries.filter(cpfPending).length?`<div class="cpf-note" style="margin-bottom:10px;color:#B87A18;background:rgba(231,163,62,.12);border-radius:10px;padding:9px 11px">⏳ 你有 <b>${CPF.entries.filter(cpfPending).length}</b> 笔工资的 CPF 还没到进账日（约 ${(CPF.entries.filter(cpfPending)[0].cred||'').slice(8)} 号进），<b>还没算进上面的总额</b>。对账最好等它们进了 CPF 再做，不然容易多补一笔。</div>`:''}
       <input type="file" accept="image/*" id="cpfRcShotIn" hidden>
       <button type="button" class="cpf-add" id="cpfRcShot" style="width:100%;padding:9px;margin-bottom:8px">📷 拍张 CPF 截图对一下（图片不保存）</button>
       <div class="cpf-note" id="cpfRcShotStatus" hidden style="margin-bottom:8px;color:var(--ink);font-weight:700"></div>
@@ -8796,8 +8830,11 @@ document.getElementById('cpfModSave').onclick=()=>{
     if(CPF.status==='citizen')CPF.prStart='';else if(/^\d{4}-\d{2}$/.test(gv('cpfPrStartS')||''))CPF.prStart=gv('cpfPrStartS');
     CPF.ceiling=cpfNum(gv('cpfCeil'),8000)||8000;
     CPF_ACCTS.forEach(([k])=>{const el=document.getElementById('cpfOpenS_'+k);if(el)CPF.open[k]=cpfNum(el.value,0);});
+    const psEl=document.getElementById('cpfPayShift');if(psEl)CPF.payShift=!!psEl.checked;   // CPF 进账时机
+    CPF.creditDay=Math.min(Math.max(Math.round(cpfNum(gv('cpfCredDay'),14))||14,1),28);
     const salBtn=document.querySelector('#cpfSalMode .cpf-stat.on');   // 工资起记月
-    if(salBtn){if(salBtn.dataset.sm==='all')CPF.salaryFrom='';else{const m=(gv('cpfSalFromM')||'').slice(0,7);if(/^\d{4}-\d{2}$/.test(m))CPF.salaryFrom=m;}cpfSyncFromSalary();}
+    if(salBtn){if(salBtn.dataset.sm==='all')CPF.salaryFrom='';else{const m=(gv('cpfSalFromM')||'').slice(0,7);if(/^\d{4}-\d{2}$/.test(m))CPF.salaryFrom=m;}}
+    cpfSyncFromSalary();   // payShift / 起记月 / 到账日 变了 → 重新同步联动条的月份+到账日
     closeCpfMod();saveCpf();buildCpfPage();toast('CPF 资料已存');return;
   }
   if(cpfModMode==='recon'){
