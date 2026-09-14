@@ -2714,6 +2714,35 @@ async function suiteEdit() {
       (recLink.detected === 1 && recLink.inRec === true && recLink.nudge === false)
         ? ok('订阅侦测 ↔ 定期账单联动：已在定期账单的（名字对不上也认得·同类+金额≈）→ 不再当新订阅提醒', JSON.stringify(recLink))
         : bad('订阅侦测没跟定期账单联动', JSON.stringify(recLink));
+      // 2v) v11.53 现场加分类：定期账单 + 商家记忆 两个编辑器都有「＋Cat」瓷砖 → 开分类弹窗（支出）→ 存完自动选中
+      const inlineCat = await pg.evaluate(() => {
+        const out = {};
+        // 定期账单
+        openRecEdit(null);
+        out.recTile = !!document.querySelector('#rmCats [data-catadd]');
+        document.querySelector('#rmCats [data-catadd]').click();
+        out.recCp = cpType; out.recTop = document.getElementById('cmod').classList.contains('show');
+        document.getElementById('cmName').value = '订阅测试';
+        document.getElementById('cmSave').click();
+        out.recSel = (document.querySelector('#rmCats .ecat.on') || {}).textContent || '';
+        out.recMade = Object.values(CAT).some(c => c.n === '订阅测试');
+        rmClose && rmClose();
+        // 商家记忆
+        RULES['__PROBE__'] = { c: 'food', s: '', d: 'probe' }; openRuleEdit('__PROBE__');
+        out.ruleTile = !!document.querySelector('#ruleCats [data-catadd]');
+        document.querySelector('#ruleCats [data-catadd]').click();
+        out.ruleCp = cpType;
+        document.getElementById('cmName').value = '记忆测试';
+        document.getElementById('cmSave').click();
+        out.ruleSel = (document.querySelector('#ruleCats .ecat.on') || {}).textContent || '';
+        out.ruleMade = Object.values(CAT).some(c => c.n === '记忆测试');
+        ruleClose && ruleClose(); delete RULES['__PROBE__'];
+        return out;
+      });
+      (inlineCat.recTile && inlineCat.recCp === 'expense' && inlineCat.recTop && /订阅测试/.test(inlineCat.recSel) && inlineCat.recMade &&
+        inlineCat.ruleTile && inlineCat.ruleCp === 'expense' && /记忆测试/.test(inlineCat.ruleSel) && inlineCat.ruleMade)
+        ? ok('现场加分类：定期账单 + 商家记忆 都能「＋Cat」→ 存完自动选中（跟记账/编辑一套）', JSON.stringify(inlineCat))
+        : bad('定期账单/商家记忆 现场加分类没生效', JSON.stringify(inlineCat));
       // 编排：塞一个假引擎（不碰网络），确认 recognize 收到的是内存 Blob、跑完 terminate、结果被解析
       const orch = await pg.evaluate(async () => {
         let terminated = false, gotBlob = false;

@@ -6550,9 +6550,11 @@ let cmKey=null,cmSubsArr=[],cmColor=COLORS[0],cmFromSheet=null;
    直接开正规的新增分类弹窗（emoji/名字/颜色/子分类都能设）。存完 cmSave 里会自动选中并刷新那排。 */
 function openCatAddFromSheet(from){
   cmFromSheet=from;
-  cpType=(from==='edit')?((emType==='income'&&!emOffset)?'income':'expense')
+  cpType=(from==='rec'||from==='rule')?'expense'   /* 定期账单 / 商家记忆 都只会是支出 */
+        :(from==='edit')?((emType==='income'&&!emOffset)?'income':'expense')
                         :((selType==='income'&&!selOffset)?'income':'expense');
   openCatEdit(null);
+  if(from==='rec'||from==='rule'){cmScrim.style.zIndex='89';cmod.style.zIndex='90';}   /* 这两个弹窗也是 .cmod(78) 且在 DOM 里更靠后，得把分类弹窗抬到它们上面 */
 }
 function cmRenderSubs(){
   document.getElementById('cmSubs').innerHTML=cmSubsArr.length
@@ -6583,7 +6585,7 @@ function openCatEdit(k){
   cmRenderColors();cmRenderSubs();
   cmScrim.classList.add('show');cmod.classList.add('show');
 }
-function closeCatEdit(){cmScrim.classList.remove('show');cmod.classList.remove('show');cmKey=null;cmFromSheet=null;}
+function closeCatEdit(){cmScrim.classList.remove('show');cmod.classList.remove('show');cmScrim.style.zIndex='';cmod.style.zIndex='';cmKey=null;cmFromSheet=null;}
 document.getElementById('cmCancel').onclick=closeCatEdit;
 cmScrim.onclick=closeCatEdit;
 document.getElementById('cmColors').addEventListener('click',e=>{const b=e.target.closest('button[data-c]');if(!b)return;cmColor=b.dataset.c;const _set=cpType==='income'?INC:CAT;const _clash=Object.entries(_set).find(([k,c])=>k!==cmKey&&c&&(c.c||'').toLowerCase()===cmColor.toLowerCase());if(_clash)toast('这个颜色「'+(_clash[1].n||_clash[0])+'」已经在用了');cmRenderColors();});
@@ -6612,6 +6614,8 @@ document.getElementById('cmSave').onclick=()=>{
   /* v11.15 从记账/编辑页加的新分类：回到那张表，自动选中它并刷新那排（不用自己再找） */
   if(wasNew&&fromSheet==='add'){selCat=key;selSub='';buildCatGrid();}
   else if(wasNew&&fromSheet==='edit'){emCat=key;emSubVal='';emBuildCats();}
+  else if(wasNew&&fromSheet==='rec'){rmCat=key;rmSub='';rmBuildCats();}   /* 定期账单：新分类自动选中 */
+  else if(wasNew&&fromSheet==='rule'){ruleEditCat=key;ruleEditSub='';ruleBuildCats();}   /* 商家记忆：新分类自动选中 */
   toast(wasNew?'分类已新增':'分类已更新');
   saveCats().then(ok=>{
     if(ok)return;
@@ -9277,7 +9281,8 @@ function openRuleEdit(k){
 }
 function ruleBuildCats(){
   document.getElementById('ruleCats').innerHTML=Object.entries(CAT).map(([k,c])=>
-    `<button class="ecat${k===ruleEditCat?' on':''}" data-c="${k}"><span class="ei" style="background:${soft(c.c)};${k===ruleEditCat?'border-color:'+c.c:''}">${c.i}</span><span class="en">${c.n}</span></button>`).join('');
+    `<button class="ecat${k===ruleEditCat?' on':''}" data-c="${k}"><span class="ei" style="background:${soft(c.c)};${k===ruleEditCat?'border-color:'+c.c:''}">${c.i}</span><span class="en">${c.n}</span></button>`).join('')
+    +`<button class="ecat ecatadd" data-catadd><span class="ei">＋</span><span class="en">+Cat</span></button>`;   /* v11.53 商家记忆也能现场加分类 */
   const row=document.getElementById('ruleSubs');
   if(ruleEditCat===FOOD_KEY){   // 餐饮特殊：子分类按时间自动，不记进商家记忆
     ruleEditSub='';row.classList.remove('hide');
@@ -9293,7 +9298,7 @@ function ruleBuildCats(){
 function ruleClose(){ruleScrim.classList.remove('show');ruleMod.classList.remove('show');ruleEditKey=null;}
 document.getElementById('ruleCancel').onclick=ruleClose;
 ruleScrim.onclick=ruleClose;
-document.getElementById('ruleCats').addEventListener('click',e=>{const b=e.target.closest('.ecat');if(!b)return;ruleEditCat=b.dataset.c;ruleEditSub='';ruleBuildCats();});
+document.getElementById('ruleCats').addEventListener('click',e=>{if(e.target.closest('[data-catadd]')){openCatAddFromSheet('rule');return;}const b=e.target.closest('.ecat');if(!b)return;ruleEditCat=b.dataset.c;ruleEditSub='';ruleBuildCats();});
 document.getElementById('ruleSubs').addEventListener('click',e=>{const b=e.target.closest('.subchip');if(!b)return;ruleEditSub=b.dataset.s||'';ruleBuildCats();});
 /* ⚠️⚠️ v9.2 修（用户回报「改了其他→餐饮，出去没有立刻更新」）：
    catKey() 是这样判的 ——
@@ -9332,7 +9337,8 @@ const rmScrim=document.getElementById('rmScrim'),rmod=document.getElementById('r
 let rmKey=null,rmCat='food',rmSub='',rmCurV='SGD';
 function rmBuildCats(){
   document.getElementById('rmCats').innerHTML=Object.entries(CAT).map(([k,c])=>
-    `<button class="ecat${k===rmCat?' on':''}" data-c="${k}"><span class="ei" style="background:${soft(c.c)};${k===rmCat?'border-color:'+c.c:''}">${c.i}</span><span class="en">${c.n}</span></button>`).join('');
+    `<button class="ecat${k===rmCat?' on':''}" data-c="${k}"><span class="ei" style="background:${soft(c.c)};${k===rmCat?'border-color:'+c.c:''}">${c.i}</span><span class="en">${c.n}</span></button>`).join('')
+    +`<button class="ecat ecatadd" data-catadd><span class="ei">＋</span><span class="en">+Cat</span></button>`;   /* v11.53 定期账单也能现场加分类，跟记账/编辑那两排一套 */
   const row=document.getElementById('rmSubs');
   if(rmCat===FOOD_KEY){   /* v6.8 餐饮：子分类按记账当天的时间自动算，给选也没用 */
     rmSub='';row.classList.remove('hide');
@@ -9362,7 +9368,7 @@ function rmClose(){rmScrim.classList.remove('show');rmod.classList.remove('show'
 document.getElementById('rmCancel').onclick=rmClose;
 rmScrim.onclick=rmClose;
 document.getElementById('rmCur').onclick=()=>{rmCurV=CURS[(CURS.indexOf(rmCurV)+1)%3];document.getElementById('rmCur').textContent=rmCurV;};
-document.getElementById('rmCats').addEventListener('click',e=>{const b=e.target.closest('.ecat');if(!b)return;rmCat=b.dataset.c;rmSub='';rmBuildCats();});
+document.getElementById('rmCats').addEventListener('click',e=>{if(e.target.closest('[data-catadd]')){openCatAddFromSheet('rec');return;}const b=e.target.closest('.ecat');if(!b)return;rmCat=b.dataset.c;rmSub='';rmBuildCats();});
 document.getElementById('rmSubs').addEventListener('click',e=>{const b=e.target.closest('.subchip');if(!b)return;rmSub=b.dataset.s||'';rmBuildCats();});
 document.getElementById('rmSave').onclick=async()=>{
   const name=document.getElementById('rmName').value.trim();
