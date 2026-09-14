@@ -1383,6 +1383,9 @@ body.phototheme .cpf-setup{background:rgba(12,16,22,.42);border-color:rgba(255,2
 .cpf-rc-read{font-size:10.5px;font-weight:800;margin-top:4px;padding-left:3px;line-height:1.4}
 .cpf-rc-read.same{color:#2E9E3D}
 .cpf-rc-read.diff{color:#D6463C}
+.cpf-recon-use:not(.ok):not(.bad):not(.warn){border-color:var(--brand);color:var(--brand);background:color-mix(in srgb,var(--brand) 10%,transparent)}
+.cpf-rc-apply{display:inline-block;margin-left:6px;border:1.4px solid var(--brand);color:var(--brand);background:transparent;font-family:inherit;font-size:10px;font-weight:800;border-radius:100px;padding:2px 9px;cursor:pointer;vertical-align:middle}
+.cpf-rc-apply:active{transform:scale(.95)}
 body.phototheme .cpf-rc-read.same{color:#5FC46B}
 body.phototheme .cpf-rc-read.diff{color:#FF7A70}
 .cpf-in{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:11px;padding:10px 12px;font-size:15px;font-family:inherit;font-weight:700;width:100%;box-sizing:border-box;-moz-appearance:textfield}
@@ -8608,13 +8611,13 @@ function openCpfMod(mode,id){
     title.textContent='跟 CPF app 对账';
     const isJan=cpfCurMonth().slice(5,7)==='01';
     body.innerHTML=`
-      <div class="cpf-note" style="margin-bottom:10px">打开你的 <b>CPF app</b>，把三个账户<b>现在的余额</b>照抄进来（或直接截图让我读）。我算出差多少（多半是刚入的<b>利息</b>），补一笔，之后这里的总额就跟 CPF app <b>一模一样</b>。</div>
+      <div class="cpf-note" style="margin-bottom:10px">下面格子是<b>你现在记的</b>余额。打开 <b>CPF app</b>（或截图让我读），看看跟你记的差多少 —— 差额多半是刚入的<b>利息</b>，把格子<b>改成 CPF app 的数</b>，我补一笔，之后就跟 CPF app <b>一模一样</b>。</div>
       <input type="file" accept="image/*" id="cpfRcShotIn" hidden>
-      <button type="button" class="cpf-add" id="cpfRcShot" style="width:100%;padding:9px;margin-bottom:8px">📷 从 CPF 截图读（自动填 · 图片不保存）</button>
+      <button type="button" class="cpf-add" id="cpfRcShot" style="width:100%;padding:9px;margin-bottom:8px">📷 拍张 CPF 截图对一下（图片不保存）</button>
       <div class="cpf-note" id="cpfRcShotStatus" hidden style="margin-bottom:8px;color:var(--ink);font-weight:700"></div>
-      <div class="cpf-note" style="margin-bottom:8px">没截图也行 —— 直接把三个数字打进下面。</div>
+      <div class="cpf-note" style="margin-bottom:8px">没截图也行 —— 照 CPF app 直接改下面三个数。</div>
       <div class="cpf-inrow"><label>对账月份<small>默认这个月 · 不用改</small></label><input class="cpf-in" type="month" id="cpfRcMonth" value="${cpfCurMonth()}"></div>
-      ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n} 现在余额<small>照 CPF app</small></label><div class="cpf-infield"><input class="cpf-in" type="number" inputmode="decimal" id="cpfRc_${k}" value="${cur[k]?Math.round(cur[k]*100)/100:''}" placeholder="0.00"><div class="cpf-rc-read" id="cpfRcRead_${k}" hidden></div></div></div>`).join('')}
+      ${CPF_ACCTS.map(([k,n,d])=>`<div class="cpf-inrow"><label>${n}<small>你现在记 S$${cpfFmt(cur[k]||0)}</small></label><div class="cpf-infield"><input class="cpf-in" type="number" inputmode="decimal" id="cpfRc_${k}" value="${cur[k]?Math.round(cur[k]*100)/100:''}" placeholder="0.00"><div class="cpf-rc-read" id="cpfRcRead_${k}" hidden></div></div></div>`).join('')}
       <div class="cpf-inrow"><label>备注<small>可留空</small></label><input class="cpf-in" type="text" id="cpfRcNote" value="${isJan?'去年利息':''}" placeholder="例：2025 利息 / 手动校准" maxlength="40"></div>
       <div class="cpf-splitprev" id="cpfRcPrev">照 CPF app 填三个账户</div>`;
     const gvv=id=>{const el=document.getElementById(id);return el?el.value:'';};
@@ -8636,16 +8639,20 @@ function openCpfMod(mode,id){
           const val=Math.round((r.total-presentNow().reduce((s,[k])=>s+r[k],0))*100)/100;
           if(val>=0){r[miss[0]]=val;inferred=miss[0];}
         }
-        const got=[];CPF_ACCTS.forEach(([k,n])=>{if(r[k]!=null){document.getElementById('cpfRc_'+k).value=r[k];got.push({k,n});}});
-        rcalc();
-        /* 每个账户格子下面放一个小号码 = 截图读到的值，方便你一格一格对着 CPF app 比、看哪个错。
-           跟格子里的数一样 → 绿；你把格子改动了 → 红（提醒这格跟截图不同）。 */
-        let syncTallyRef=()=>{};   // 下面定义 syncTally 后赋值；格子一改就叫它重算对账灯+按钮
+        const got=[];CPF_ACCTS.forEach(([k,n])=>{if(r[k]!=null)got.push({k,n});});   // v11.54 不覆盖格子——格子保持「你现在记的」，截图值放旁边对比 +「改成这个」
+        /* 每格旁边：📷 CPF app 截图读到多少 · 跟你现在记的差多少 ·「改成这个」。格子本身仍是你现在记的数，一眼看出差在哪、要不要改。 */
+        let syncTallyRef=()=>{};
+        const applyOne=(k,v)=>{const fld=document.getElementById('cpfRc_'+k);if(fld){fld.value=v;fld.dispatchEvent(new Event('input'));}};
         CPF_ACCTS.forEach(([k])=>{
           const cap=document.getElementById('cpfRcRead_'+k),fld=document.getElementById('cpfRc_'+k);if(!cap||!fld)return;
-          if(r[k]==null){cap.hidden=true;fld.oninput=()=>syncTallyRef();return;}   // 没读到这格 → 你填进去也要重算
+          if(r[k]==null){cap.hidden=true;fld.oninput=()=>syncTallyRef();return;}
           cap.hidden=false;cap.dataset.read=r[k];
-          const upd=()=>{const rd=+cap.dataset.read,cv=cpfNumS(fld.value,NaN),same=isFinite(cv)&&Math.abs(cv-rd)<0.005;cap.className='cpf-rc-read '+(same?'same':'diff');cap.innerHTML=`📷 截图读到 <b>S$${cpfFmt(rd)}</b>${same?'':' · 你改动了'}`;};
+          cap.onclick=()=>{if(cap.querySelector('[data-applyk]'))applyOne(k,+cap.dataset.read);};
+          const upd=()=>{const rd=+cap.dataset.read,cv=cpfNumS(fld.value,NaN),same=isFinite(cv)&&Math.abs(cv-rd)<0.005;
+            const dd=isFinite(cv)?Math.round((rd-cv)*100)/100:null;
+            cap.className='cpf-rc-read '+(same?'same':'diff');
+            cap.innerHTML=same?`📷 CPF app 截图 <b>S$${cpfFmt(rd)}</b> · 跟你填的一样 ✓`
+              :`📷 CPF app 截图 <b>S$${cpfFmt(rd)}</b>${dd!=null?` · 差 <b>${cpfFmtSigned(dd)}</b>`:''} <button type="button" class="cpf-rc-apply" data-applyk="${k}">改成这个</button>`;};
           fld.oninput=()=>{upd();syncTallyRef();};upd();
         });
         /* 「看原文」：把 OCR 到底读到什么原样给你看（跟读支出那样） */
@@ -8657,21 +8664,24 @@ function openCpfMod(mode,id){
         else{
           const head=`✅ 读到：${got.map(label).join(' · ')}（${sec}秒）${totTxt}`;
           shotStatus(`${head}<div id="cpfRcLive"></div>${rawBox}`);
-          /* 对账灯 + 一键按钮，跟着你改格子【实时重算】：读错了？直接改那个格子（照下面「截图读到」小号码 / 你的 CPF app），
-             改到三个加起来 = 截图总额，红灯自动变绿，再按按钮对账。 */
+          /* 「全部改成 CPF app 的数」= 把三个格子一次填成截图值；改完下面「补一笔差额」自动算好，再按保存。 */
+          document.getElementById('cpfRcShotStatus').onclick=(ev)=>{if(ev.target.closest('#cpfRcApplyAll')){CPF_ACCTS.forEach(([k])=>{if(r[k]!=null)applyOne(k,r[k]);});}};
           const syncTally=()=>{
             const live=document.getElementById('cpfRcLive');if(!live)return;
-            let allNum=true;const cv={};CPF_ACCTS.forEach(([k])=>{const v=cpfNumS(document.getElementById('cpfRc_'+k).value,NaN);cv[k]=v;if(!isFinite(v))allNum=false;});
-            const sum=Math.round((cv.oa+cv.sa+cv.ma)*100)/100;
-            let tState,tallyHtml;
-            if(r.total!=null&&allNum){
-              const diff=Math.round((sum-r.total)*100)/100;
-              if(Math.abs(diff)<0.01){tState='ok';tallyHtml=`<div class="cpf-tally ok">✓ 三个加起来 = 截图总额 <b>S$${cpfFmt(r.total)}</b> · 对得上${inferred?`（${CPF_ACCTS.find(([k])=>k===inferred)[1]} 用总额补的）`:''}</div>`;}
-              else{tState='bad';tallyHtml=`<div class="cpf-tally bad">✗ 对不上：三个加起来 <b>S$${cpfFmt(sum)}</b>，截图总额 <b>S$${cpfFmt(r.total)}</b> · 差 <b>S$${cpfFmt(Math.abs(diff))}</b><br>👉 哪格不对就改哪格（对下面「截图读到」小号码 / 你的 CPF app）· 改到<b>变绿</b>就对了</div>`;}
-            }else{tState='warn';tallyHtml=`<div class="cpf-tally warn">${allNum?'':'有格子空着 · '}${r.total==null?'截图没读到总额 · 自己核一下三个数':'填齐三个数'}</div>`;}
-            const lbl=tState==='bad'?'⚠️ 有对不上 · 还是用现在这个数对账 →':tState==='ok'?'✅ 对得上 · 就用这个数对账 →':'用现在这个数对账 →';
-            live.innerHTML=`${tallyHtml}<button type="button" class="cpf-recon-use ${tState}" id="cpfRcUse">${lbl}</button>`;
-            document.getElementById('cpfRcUse').onclick=()=>document.getElementById('cpfModSave').click();   // 拿现在框里的数去对账
+            let ocrHtml='';
+            if(r.total!=null){   // ① OCR 读得准不准：截图三个加起来 =? 截图总额
+              const readSum=Math.round(CPF_ACCTS.reduce((s,[k])=>s+(r[k]||0),0)*100)/100;
+              const d=Math.round((readSum-r.total)*100)/100;
+              ocrHtml=Math.abs(d)<0.01?`<div class="cpf-tally ok">✓ 截图三个加起来 = 总额 S$${cpfFmt(r.total)} · 读得准</div>`
+                :`<div class="cpf-tally bad">✗ 截图读得有点乱：三个加 S$${cpfFmt(readSum)} ≠ 总额 S$${cpfFmt(r.total)} · 差 S$${cpfFmt(Math.abs(d))} · 下面每格核一下</div>`;
+            }
+            // ② 对账：你现在记的 → CPF app（截图）· 差多少
+            const readTot=r.total!=null?r.total:CPF_ACCTS.reduce((s,[k])=>s+(r[k]||0),0);
+            const curTot=Math.round((cur.oa+cur.sa+cur.ma)*100)/100;
+            const diff=Math.round((readTot-curTot)*100)/100,same=Math.abs(diff)<0.01;
+            const applied=CPF_ACCTS.every(([k])=>{if(r[k]==null)return true;const cv=cpfNumS(document.getElementById('cpfRc_'+k).value,NaN);return isFinite(cv)&&Math.abs(cv-r[k])<0.005;});
+            const cmpHtml=`<div class="cpf-tally ${same?'ok':'warn'}">你现在记 <b>S$${cpfFmt(curTot)}</b> → CPF app <b>S$${cpfFmt(readTot)}</b> · 差 <b>${cpfFmtSigned(diff)}</b>${same?' · 一样，不用补':''}</div>`;
+            live.innerHTML=`${ocrHtml}${cmpHtml}${(same||applied)?'':`<button type="button" class="cpf-recon-use" id="cpfRcApplyAll">全部改成 CPF app 的数 →</button>`}`;
           };
           syncTallyRef=syncTally;syncTally();
         }

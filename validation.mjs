@@ -2754,48 +2754,43 @@ async function suiteEdit() {
       (orch.r.oa === 9001.23 && orch.terminated && orch.gotBlob) ? ok('CPF OCR 编排：内存 Blob 进 OCR → 解析出余额 → 用完 terminate 释放内存', JSON.stringify(orch.r)) : bad('CPF OCR 编排/释放错', JSON.stringify(orch));
       const failGrace = await pg.evaluate(async () => { window.Tesseract = { createWorker: async () => { throw new Error('network'); } }; let msg = 'ok'; try { await cpfReadScreenshot(new Blob(['x']), () => {}); } catch (e) { msg = 'threw'; } delete window.Tesseract; return msg; });
       failGrace === 'threw' ? ok('CPF OCR 引擎载不到 → 抛错被接住（UI 退回手打，不崩）') : bad('CPF OCR 失败没退路', failGrace);
-      // 2L) v11.50 截图读完的「对账灯」：三个加起来 = 截图总额 → 青(ok)；对不上 → 红(bad) + 差多少
+      // 2L) v11.54 截图「读得准不准」灯：截图三个加起来 = 截图总额 → 青(ok)；对不上 → 红(bad)+差。格子【不被覆盖】，仍是你现在记的
       const PNGBUF = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cf00000201010064a06f420000000049454e44ae426082', 'hex');
-      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 } }); CPF.on = true; openCpfMod('recon'); }); await pg.waitForTimeout(120);
-      await pg.evaluate(() => { window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.84' } }), terminate: async () => { } }) }; });
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 1372.79, sa: 362.60, ma: 486.84 } }); CPF.on = true; openCpfMod('recon'); }); await pg.waitForTimeout(120);
+      await pg.evaluate(() => { window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,618.23 Ordinary Account $1,618.99 Special Account $426.79 MediSave Account $572.45' } }), terminate: async () => { } }) }; });
       await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
-      const tOk = await pg.evaluate(() => { const el = document.querySelector('#cpfRcShotStatus .cpf-tally'); return el ? el.className : null; });
-      tOk === 'cpf-tally ok' ? ok('CPF 截图对账灯：三个加起来 = 截图总额 → 青灯(ok，读对了)') : bad('tally 对上没亮青灯', String(tOk));
-      await pg.evaluate(() => { window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.00' } }), terminate: async () => { } }) }; });
+      const tOk = await pg.evaluate(() => ({ ocr: (document.querySelector('#cpfRcShotStatus .cpf-tally') || {}).className || '', boxOA: document.getElementById('cpfRc_oa').value }));
+      (tOk.ocr === 'cpf-tally ok' && Math.abs(+tOk.boxOA - 1372.79) < 0.01) ? ok('CPF 截图：三个加=总额→青灯(读得准)，且格子【不被覆盖】仍是你现在记的 1372.79') : bad('tally 对上没亮青灯 / 格子被覆盖了', JSON.stringify(tOk));
+      await pg.evaluate(() => { window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,618.23 Ordinary Account $1,618.99 Special Account $426.79 MediSave Account $571.61' } }), terminate: async () => { } }) }; });
       await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
       const tBad = await pg.evaluate(() => { const el = document.querySelector('#cpfRcShotStatus .cpf-tally'); return { cls: el ? el.className : null, diff: el ? /0\.84/.test(el.textContent) : false }; });
-      (tBad.cls === 'cpf-tally bad' && tBad.diff) ? ok('CPF 截图对账灯：对不上 → 红灯(bad) + 显示差 S$0.84') : bad('tally 对不上没亮红灯/没显示差额', JSON.stringify(tBad));
-      // 2m) v11.51 漏读 1 个账户但有总额 → 用「总额−另外两个」把它推出来（真机复现：只读到 SA+MA，OA 漏了）
+      (tBad.cls === 'cpf-tally bad' && tBad.diff) ? ok('CPF 截图：读得乱（三个加≠总额）→ 红灯(bad) + 显示差 S$0.84') : bad('tally 对不上没亮红灯/没显示差额', JSON.stringify(tBad));
+      // 2m) v11.51 漏读 1 个账户但有总额 → 用「总额−另外两个」推出来；现在不填进格子，而是显示在那格的「截图读到」+ 标「总额算的」
       await pg.evaluate(() => { CPF = normCpf({ open: { oa: 0, sa: 0, ma: 0 } }); CPF.on = true; openCpfMod('recon'); }); await pg.waitForTimeout(120);
       await pg.evaluate(() => { window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Special Account $362.60 MediSave Account $486.84' } }), terminate: async () => { } }) }; });
       await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
-      const inf = await pg.evaluate(() => ({ oa: +document.getElementById('cpfRc_oa').value, cls: (document.querySelector('#cpfRcShotStatus .cpf-tally') || {}).className || '', inferShown: /总额算的/.test(document.getElementById('cpfRcShotStatus').textContent) }));
-      (Math.abs(inf.oa - 1372.79) < 0.01 && inf.cls === 'cpf-tally ok' && inf.inferShown) ? ok('CPF 截图漏读 OA + 有总额 → 自动推 OA=1372.79（总额−另两个）· 青灯 · 标「总额算的」', JSON.stringify(inf)) : bad('CPF 漏读账户没从总额推出来', JSON.stringify(inf));
-      // 原文可查：读完永远能展开「看读到的原文」（跟读支出那样，看得到 OCR 到底认到啥）
+      const inf = await pg.evaluate(() => ({ capOA: (document.getElementById('cpfRcRead_oa') || {}).textContent || '', ocr: (document.querySelector('#cpfRcShotStatus .cpf-tally') || {}).className || '', inferShown: /总额算的/.test(document.getElementById('cpfRcShotStatus').textContent) }));
+      (/1,372.79/.test(inf.capOA) && inf.ocr === 'cpf-tally ok' && inf.inferShown) ? ok('CPF 截图漏读 OA + 有总额 → 推 OA=1372.79（总额−另两个）· 青灯 · 标「总额算的」', JSON.stringify(inf)) : bad('CPF 漏读账户没从总额推出来', JSON.stringify(inf));
       const rawSeen = await pg.evaluate(() => !!document.querySelector('#cpfRcShotStatus .cpf-raw summary'));
       rawSeen ? ok('CPF 截图：读完能展开「看读到的原文」（OCR 原文摊给你看）') : bad('CPF 截图没给看原文');
-      // 一键「就用截图这个数·对账」：读完直接一按就对账到截图的值，不用手动改、不用滚下去找保存
-      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 1000, sa: 200, ma: 300 } }); CPF.on = true; openCpfMod('recon'); window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.84' } }), terminate: async () => { } }) }; }); await pg.waitForTimeout(120);
+      // 2n) v11.54 格子=你现在记的 · 截图值放旁边对比：每格 caption「📷 CPF app 截图 S$x · 差 +y · 改成这个」；对比条「你现在记→CPF app·差」
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 1372.79, sa: 362.60, ma: 486.84 } }); CPF.on = true; openCpfMod('recon'); window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,618.23 Ordinary Account $1,618.99 Special Account $426.79 MediSave Account $572.45' } }), terminate: async () => { } }) }; }); await pg.waitForTimeout(120);
       await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
-      // 每格下面小号码 = 截图读到的值（对比用）：一样→绿，改动了→红；数目对时一键按钮=绿(ok)、不是青绿
-      const teal = s => /^rgb\(18,185,129|^rgb\(11,166,120|^rgb\(14,158,110/.test(s.replace(/\s/g, ''));
-      const cmp = await pg.evaluate(() => { const m = document.getElementById('cpfRc_ma'); m.value = '999'; m.dispatchEvent(new Event('input', { bubbles: true })); const oa = document.getElementById('cpfRcRead_oa'), ma = document.getElementById('cpfRcRead_ma'); const btn = document.getElementById('cpfRcUse'); const bs = getComputedStyle(btn); return { oaTxt: oa.textContent.trim(), oaSame: /same/.test(oa.className), maDiff: /diff/.test(ma.className), maTxt: ma.textContent.trim(), btnCls: btn.className, btnColor: bs.color }; });
-      // 把 MA 改成 999（乱数）→ 那格小号码变红「你改动了」，同时对账灯实时判「对不上」→ 按钮变红(bad)
-      (/1,372.79/.test(cmp.oaTxt) && cmp.oaSame && cmp.maDiff && /你改动了/.test(cmp.maTxt) && /\bbad\b/.test(cmp.btnCls) && !teal(cmp.btnColor)) ? ok('CPF 截图：每格小号码对比（一样绿/改动红）· 改成乱数→对账灯实时判对不上、按钮红(非青绿)', JSON.stringify({ oa: cmp.oaTxt, btn: cmp.btnColor })) : bad('CPF 截图对比号码/按钮色不对', JSON.stringify(cmp));
-      // 数目对不上 → 按钮变红（bad），红也能按（硬用截图的数）
-      await pg.evaluate(() => { openCpfMod('recon'); window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.00' } }), terminate: async () => { } }) }; }); await pg.waitForTimeout(120);
+      const cmp = await pg.evaluate(() => { const oa = document.getElementById('cpfRcRead_oa'); return { boxOA: document.getElementById('cpfRc_oa').value, capOA: oa.textContent.replace(/\s+/g, ' ').trim(), capDiff: /diff/.test(oa.className), hasApplyBtn: !!oa.querySelector('[data-applyk]'), live: document.getElementById('cpfRcLive').textContent.replace(/\s+/g, ' ').trim(), applyAll: !!document.getElementById('cpfRcApplyAll') }; });
+      (Math.abs(+cmp.boxOA - 1372.79) < 0.01 && cmp.capDiff && cmp.hasApplyBtn && /1,618.99/.test(cmp.capOA) && /\+246\.20/.test(cmp.capOA) && /你现在记.*2,222\.23.*CPF app.*2,618\.23.*\+396\.00/.test(cmp.live) && cmp.applyAll)
+        ? ok('CPF 对账：格子留「你现在记 1372.79」，旁边显示截图 1618.99 · 差 +246.20 · 改成这个；对比条 2222.23→2618.23 差 +396', JSON.stringify({ box: cmp.boxOA }))
+        : bad('CPF 对账没显示 现在记vs截图 的对比', JSON.stringify(cmp));
+      // 2o) v11.54「改成这个」（单格）：点一下 → 那格变成截图值、caption 变「跟你填的一样 ✓」(same)
+      const one = await pg.evaluate(() => { document.querySelector('#cpfRcRead_oa [data-applyk]').click(); const oa = document.getElementById('cpfRcRead_oa'); return { box: document.getElementById('cpfRc_oa').value, same: /same/.test(oa.className) }; }); await pg.waitForTimeout(80);
+      (Math.abs(+one.box - 1618.99) < 0.01 && one.same) ? ok('CPF 对账「改成这个」：单格一点 → 格子变截图值 1618.99 · caption 变「一样 ✓」') : bad('CPF 单格改成这个没生效', JSON.stringify(one));
+      // 2p) v11.54「全部改成 CPF app 的数」→ 三格都变截图值、按钮消失、补一笔差额算好；再存 → 补 adjust、总额=截图
+      await pg.evaluate(() => { CPF = normCpf({ open: { oa: 1372.79, sa: 362.60, ma: 486.84 } }); CPF.on = true; openCpfMod('recon'); window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,618.23 Ordinary Account $1,618.99 Special Account $426.79 MediSave Account $572.45' } }), terminate: async () => { } }) }; }); await pg.waitForTimeout(120);
       await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
-      const badBtn = await pg.evaluate(() => { const btn = document.getElementById('cpfRcUse'); return { cls: btn.className, color: getComputedStyle(btn).color }; });
-      (/\bbad\b/.test(badBtn.cls) && /214,\s*70,\s*60/.test(badBtn.color)) ? ok('CPF 截图：数目对不上 → 一键按钮变红(bad)，红也能按（硬用截图的数对账）', JSON.stringify(badBtn)) : bad('CPF 截图对不上按钮没变红', JSON.stringify(badBtn));
-      // 读错了可以改：把读歪的 MA 改对 → 对账灯 + 按钮【实时】从红变绿（不用重拍）
-      const fixLive = await pg.evaluate(() => { const m = document.getElementById('cpfRc_ma'); m.value = '486.84'; m.dispatchEvent(new Event('input', { bubbles: true })); const btn = document.getElementById('cpfRcUse'), tl = document.querySelector('#cpfRcLive .cpf-tally'); return { btn: btn.className, tally: tl.className, tallyOk: /对得上/.test(tl.textContent) }; });
-      (/\bok\b/.test(fixLive.btn) && /cpf-tally ok/.test(fixLive.tally) && fixLive.tallyOk) ? ok('CPF 截图读错→改：把读歪那格改对，对账灯+按钮实时从红变绿（不用重拍）', JSON.stringify(fixLive)) : bad('CPF 截图改对后没实时变绿', JSON.stringify(fixLive));
-      await pg.evaluate(() => { openCpfMod('recon'); window.Tesseract = { createWorker: async () => ({ recognize: async () => ({ data: { text: 'Total Amount $2,222.23 Ordinary Account $1,372.79 Special Account $362.60 MediSave Account $486.84' } }), terminate: async () => { } }) }; }); await pg.waitForTimeout(120);
-      await pg.setInputFiles('#cpfRcShotIn', { name: 's.png', mimeType: 'image/png', buffer: PNGBUF }); await pg.waitForTimeout(300);
-      const useShown = await pg.evaluate(() => !!document.getElementById('cpfRcUse'));
-      await pg.evaluate(() => document.getElementById('cpfRcUse').click()); await pg.waitForTimeout(250);
-      const useRes = await pg.evaluate(() => { const b = cpfBal(); return { total: Math.round((b.oa + b.sa + b.ma) * 100) / 100, oa: Math.round(b.oa * 100) / 100, closed: !document.getElementById('cpfMod').classList.contains('show'), adj: !!CPF.entries.find(x => x.kind === 'adjust') }; });
-      (useShown && Math.abs(useRes.total - 2222.23) < 0.01 && Math.abs(useRes.oa - 1372.79) < 0.01 && useRes.closed && useRes.adj) ? ok('CPF 截图一键对账：读完按「就用截图这个数」→ 直接对到截图值 2222.23、关弹窗（不用手动改）', JSON.stringify({ total: useRes.total })) : bad('CPF 截图一键对账没生效', JSON.stringify({ useShown, ...useRes }));
+      const allApplied = await pg.evaluate(() => { document.getElementById('cpfRcApplyAll').click(); return { boxes: [document.getElementById('cpfRc_oa').value, document.getElementById('cpfRc_sa').value, document.getElementById('cpfRc_ma').value].join(','), btnGone: !document.getElementById('cpfRcApplyAll'), prev: document.getElementById('cpfRcPrev').textContent }; }); await pg.waitForTimeout(80);
+      (/1618.99,426.79,572.45/.test(allApplied.boxes.replace(/\s/g, '')) && allApplied.btnGone && /\+396\.00/.test(allApplied.prev)) ? ok('CPF 对账「全部改成 CPF app 的数」→ 三格都变截图值 · 按钮消失 · 补一笔差额 +396.00') : bad('CPF 全部改成没生效', JSON.stringify(allApplied));
+      await pg.evaluate(() => document.getElementById('cpfModSave').click()); await pg.waitForTimeout(250);
+      const saveRes = await pg.evaluate(() => { const b = cpfBal(); return { total: Math.round((b.oa + b.sa + b.ma) * 100) / 100, closed: !document.getElementById('cpfMod').classList.contains('show'), adj: !!CPF.entries.find(x => x.kind === 'adjust') }; });
+      (Math.abs(saveRes.total - 2618.23) < 0.01 && saveRes.closed && saveRes.adj) ? ok('CPF 对账保存：补一笔差额 adjust → 总额对到 CPF app 的 2618.23、关弹窗', JSON.stringify({ total: saveRes.total })) : bad('CPF 对账保存没生效', JSON.stringify(saveRes));
       await pg.evaluate(() => { try { delete window.Tesseract; closeCpfMod(); } catch (e) { } }); await dismiss();
     } catch (e) { bad('CPF 抛错', String(e.message).slice(0, 90)); }
 
