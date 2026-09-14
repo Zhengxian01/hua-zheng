@@ -8610,9 +8610,13 @@ function openCpfMod(mode,id){
       </div>
       <div class="cpf-inrow" id="cpfSalMRow" style="margin-top:10px${CPF.salaryFrom?'':';display:none'}"><label>从这个月起<small>更早的不记</small></label><input class="cpf-in" type="month" id="cpfSalFromM" value="${CPF.salaryFrom||cpfCurMonth()}"></div>
       <div class="cpf-note" id="cpfSalPrev" style="margin-top:2px"></div>
-      <div class="cpf-note" style="margin:14px 0 6px;font-weight:700;color:var(--ink)">CPF 进账时机<small style="font-weight:600;color:var(--muted);margin-left:5px">工资月尾进、CPF 下个月才进</small></div>
-      <label class="cpf-chk" id="cpfPayShiftWrap"><input type="checkbox" id="cpfPayShift" ${CPF.payShift?'checked':''}> 工资的 CPF <b>下个月才进账</b>（新加坡默认 · 没进账前不算进总额）</label>
-      <div class="cpf-inrow" id="cpfCredDayRow" style="margin-top:8px${CPF.payShift?'':';display:none'}"><label>下个月几号进<small>照 CPF app（多半 10–14）</small></label><input class="cpf-in" type="number" inputmode="numeric" id="cpfCredDay" value="${CPF.creditDay||14}" placeholder="14"></div>
+      <div class="cpf-note" style="margin:14px 0 6px;font-weight:700;color:var(--ink)">CPF 什么时候进账<small style="font-weight:600;color:var(--muted);margin-left:5px">工资月尾进，CPF 下个月才进</small></div>
+      <div class="cpf-statrow" id="cpfPayMode">
+        <button class="cpf-stat${CPF.payShift?' on':''}" data-ps="next">下个月进<small style="display:block;font-size:9px;opacity:.7">新加坡默认</small></button>
+        <button class="cpf-stat${CPF.payShift?'':' on'}" data-ps="same">工资同月进<small style="display:block;font-size:9px;opacity:.7">一进就算</small></button>
+      </div>
+      <div class="cpf-inrow" id="cpfCredDayRow" style="margin-top:10px${CPF.payShift?'':';display:none'}"><label>下个月几号进<small>照 CPF app · 多半 10–14</small></label><input class="cpf-in" type="number" inputmode="numeric" id="cpfCredDay" value="${CPF.creditDay||14}" placeholder="14"></div>
+      <div class="cpf-note" id="cpfPayHint" style="margin-top:4px">${CPF.payShift?'工资月尾进 → CPF 记到下个月 · 没到进账日不算进总额（跟 CPF app 对得上）':'工资一进就立刻算进 CPF 总额（跟工资同一个月）'}</div>
       <div class="cpf-note" style="margin-top:10px">比例按官方 ≤55 分配表估算；PR 头两年各账户官方另有细表，请对着你的 CPF 月结单核一下，每笔记账都能手动微调。</div>
       <button class="cpf-del-all" id="cpfResetBtn">清空所有 CPF 记录</button>`;
     const applyStat=()=>{const st=document.querySelector('#cpfStat .cpf-stat.on');CPF.status=st?st.dataset.stat:'citizen';CPF.birthYear=Math.round(cpfNum(document.getElementById('cpfBirthS').value,0))||0;const ps=document.getElementById('cpfPrStartS');if(ps&&/^\d{4}-\d{2}$/.test(ps.value||''))CPF.prStart=ps.value;document.getElementById('cpfPrRow').hidden=(CPF.status==='citizen');cpfRenderRatePrev();};
@@ -8633,8 +8637,10 @@ function openCpfMod(mode,id){
       el.innerHTML=`从 <b>${m}</b> 起：记 <b>${keep}</b> 笔工资${ign?` · 之前 <b>${ign}</b> 笔跳过（当作已在期初）`:''}。`;
     };
     document.getElementById('cpfSalMode').addEventListener('click',ev=>{const b=ev.target.closest('[data-sm]');if(!b)return;salMode=b.dataset.sm;[...ev.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));salPrev();});
-    const cpfPayShiftEl=document.getElementById('cpfPayShift');
-    if(cpfPayShiftEl)cpfPayShiftEl.addEventListener('change',()=>{document.getElementById('cpfCredDayRow').style.display=cpfPayShiftEl.checked?'':'none';});
+    const cpfPayMode=document.getElementById('cpfPayMode');
+    if(cpfPayMode)cpfPayMode.addEventListener('click',ev=>{const b=ev.target.closest('[data-ps]');if(!b)return;[...cpfPayMode.children].forEach(x=>x.classList.toggle('on',x===b));const on=b.dataset.ps==='next';
+      document.getElementById('cpfCredDayRow').style.display=on?'':'none';
+      document.getElementById('cpfPayHint').textContent=on?'工资月尾进 → CPF 记到下个月 · 没到进账日不算进总额（跟 CPF app 对得上）':'工资一进就立刻算进 CPF 总额（跟工资同一个月）';});
     document.getElementById('cpfSalFromM').addEventListener('input',salPrev);
     document.getElementById('cpfSalFromM').addEventListener('change',salPrev);
     salPrev();
@@ -8830,7 +8836,7 @@ document.getElementById('cpfModSave').onclick=()=>{
     if(CPF.status==='citizen')CPF.prStart='';else if(/^\d{4}-\d{2}$/.test(gv('cpfPrStartS')||''))CPF.prStart=gv('cpfPrStartS');
     CPF.ceiling=cpfNum(gv('cpfCeil'),8000)||8000;
     CPF_ACCTS.forEach(([k])=>{const el=document.getElementById('cpfOpenS_'+k);if(el)CPF.open[k]=cpfNum(el.value,0);});
-    const psEl=document.getElementById('cpfPayShift');if(psEl)CPF.payShift=!!psEl.checked;   // CPF 进账时机
+    const pmBtn=document.querySelector('#cpfPayMode .cpf-stat.on');if(pmBtn)CPF.payShift=(pmBtn.dataset.ps==='next');   // CPF 进账时机
     CPF.creditDay=Math.min(Math.max(Math.round(cpfNum(gv('cpfCredDay'),14))||14,1),28);
     const salBtn=document.querySelector('#cpfSalMode .cpf-stat.on');   // 工资起记月
     if(salBtn){if(salBtn.dataset.sm==='all')CPF.salaryFrom='';else{const m=(gv('cpfSalFromM')||'').slice(0,7);if(/^\d{4}-\d{2}$/.test(m))CPF.salaryFrom=m;}}
