@@ -2617,7 +2617,8 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
         <li>加「<b>拍摄屏幕快照</b>」(Take Screenshot) —— 截当下这屏，只在内存、<b>不进相册</b></li>
         <li>加「<b>从图像中提取文本</b>」(Extract Text from Image) → 输入选上一步的<b>屏幕快照</b></li>
         <li>加「<b>获取 URL 内容</b>」：URL 贴上面「记账网址 · 截图版」；展开「显示更多」→ 方法 <b>POST</b>；请求体 <b>Body</b> 选「<b>文本</b>」→ 里面放「<b>提取的文本</b>」</li>
-        <li>（可选）加「<b>显示通知</b>」= 上一步结果 → 记完弹一下告诉你记了啥</li>
+        <li>加「<b>获取词典值</b>」→ 键填 <code>msg</code>（从上一步的返回里取那句人话）</li>
+        <li>加「<b>显示通知</b>」→ 内容选上一步的「<b>词典值</b>」<span style="color:var(--muted)">—— 记完手机弹「✅ 已记 · MYR 25.00 · JB Grocer」告诉你成没成</span></li>
         <li>起名「<b>拍一笔</b>」，存好</li>
       </ol>
     </div>
@@ -2639,7 +2640,7 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
     <div class="gdhint" style="margin:6px 2px 14px">捷径本身一模一样，只是绑哪个键的差别 —— 你可以两个都试，改来改去 30 秒的事，随时换。</div>
 
     <div class="sc-sec">④ 平时怎么用</div>
-    <div class="sc-card"><b>打开那笔交易的详情页 → 触发那个键</b><br>就这样。TnG / Maybank / Wise 的截图格式<b>已经内建、认得</b>，不用设。（可选加了「显示通知」的话，记完手机上会弹一下「记了 −RM 25.00」。）</div>
+    <div class="sc-card"><b>打开那笔交易的详情页 → 触发那个键</b><br>就这样。TnG / Maybank / Wise 的截图格式<b>已经内建、认得</b>，不用设。<br><b>记完手机会弹一条通知</b>：成功 →「<b>✅ 已记 · MYR 25.00 · JB Grocer</b>」；重复 →「↩︎ 记过了，跳过」；没读到 →「😕 没读到」。一眼知道成没成。</div>
 
     <div class="sc-sec">⑤ 记完，在哪看？</div>
     <div class="sc-card"><span class="sc-app" style="pointer-events:none">明细</span> <b>多一笔</b><br>截图记的那笔，跟平时一样出现在「<b>明细</b>」里 —— 金额 / 分类 / 商家都有，照样能改能删。</div>
