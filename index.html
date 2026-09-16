@@ -2570,7 +2570,7 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
 <div class="cpage" id="scPage">
   <div class="cp-top"><button class="dp-back" id="scBack">‹ 返回</button><span class="cp-title">捷径记账 · 轻点背面</span><span style="width:52px"></span></div>
   <div class="cp-body">
-    <div class="gdhint" style="margin:0 2px 12px">双击 iPhone <b>背面</b> → 自动【截图 → 认字 → 记一笔】，<b>截图不保存</b>。专治 <b>TnG / 支付宝 / 微信 / Wise</b> 这种只能开 app 看、不发短信的交易。原理：iOS 把<b>当下这屏</b> OCR 成文字，送给你的 Worker，Worker 自己解析（跟「粘贴短信」同一条路）。</div>
+    <div class="gdhint" style="margin:0 2px 12px">双击 iPhone <b>背面</b> → 自动【截图 → 认字 → 记一笔】，<b>截图不保存</b>。专治 <b>TnG / Maybank / Wise / 支付宝 / 微信</b> 这种只能开 app 看、不发邮件的交易。原理：iOS 把<b>当下这屏</b> OCR 成文字，送给你的 Worker，Worker 自己解析（跟「粘贴短信」同一条路）。</div>
 
     <div class="sc-sec">① 复制这个网址，等下贴进捷径</div>
     <div class="sc-copy" data-sccopy="shot"><div class="sc-l"><div class="sc-k">记账网址 · 截图版<span class="sc-tag">用这个</span></div><div class="sc-v" id="scUrlShot">…</div></div><span class="sc-btn">复制</span></div>
@@ -2587,16 +2587,25 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
         <li>起名「<b>拍一笔</b>」，存好</li>
       </ol>
     </div>
-    <div class="sc-step"><b>绑「轻点背面」</b>
+    <div class="sc-sec">③ 绑一个键（两个版本，挑一个）</div>
+    <div class="sc-step"><b>版本 A · 轻点背面</b><small style="font-weight:600;color:var(--muted);margin-left:5px">iPhone 8 以后都有</small>
       <ol>
-        <li>iPhone 设置 → <b>辅助功能</b> → <b>触控</b> → 划到底「<b>轻点背面</b>」</li>
+        <li>设置 → <b>辅助功能</b> → <b>触控</b> → 划到底「<b>轻点背面</b>」</li>
         <li>选「<b>轻点两下</b>」→ 最下面「捷径」区 → 选「拍一笔」</li>
-        <li>完成！<b>15 Pro/16</b> 也能改绑到<b>操作按钮</b>（音量上面那颗）🎉</li>
+        <li>以后<b>双击背面</b>就记 🎉</li>
       </ol>
     </div>
+    <div class="sc-step"><b>版本 B · 操作按钮</b><small style="font-weight:600;color:var(--muted);margin-left:5px">iPhone 15 Pro / 16（音量上面那颗）</small>
+      <ol>
+        <li>设置 → <b>操作按钮</b> → 左右划到「<b>捷径</b>」</li>
+        <li>「选择捷径」→ 选「拍一笔」</li>
+        <li>以后<b>长按那颗按钮</b>就记 🎉</li>
+      </ol>
+    </div>
+    <div class="gdhint" style="margin:6px 2px 14px">捷径本身一模一样，只是绑哪个键的差别 —— 你可以两个都试，改来改去 30 秒的事，随时换。</div>
 
-    <div class="sc-sec">③ 平时怎么用</div>
-    <div class="sc-card"><b>TnG · 支付宝 · 微信 · Wise · PayLah</b><br>打开那笔交易的<b>详情页</b> → <b>双击背面</b> → 自动截图认字记账。这几个 app 的截图格式<b>已经内建、认得</b>，不用设。</div>
+    <div class="sc-sec">④ 平时怎么用</div>
+    <div class="sc-card"><b>TnG · Maybank · Wise · 支付宝 · 微信</b>（不发邮件/短信的）<br>打开那笔交易的<b>详情页</b> → 触发那个键 → 自动截图认字记账。TnG / Maybank / Wise 的截图格式<b>已经内建、认得</b>，不用设。<br><span style="color:var(--muted)">（PayLah 和有邮件的银行不用截图 —— 转发邮件就自动记了。）</span></div>
     <div class="sc-card"><b>核对读得对不对</b><br>记完进「<b>收件箱 → 已记录</b>」，那笔标「📷 截图」→ 点开看「<b>原文</b>」= OCR 认到啥，跟金额一对就知道。读错就在明细里改那笔。</div>
 
     <div class="sc-sec">要知道的</div>
