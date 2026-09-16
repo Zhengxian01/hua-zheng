@@ -2241,7 +2241,7 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
         <button class="setrow" id="openRules"><span class="si">🧠</span><div class="st"><div class="sn">商家记忆</div><div class="sd">它学过的商家→分类 · 左滑改/删</div></div><span class="sar">›</span></button>
         <button class="setrow" id="openSubs"><span class="si">🔁</span><div class="st"><div class="sn">订阅侦测<span class="badge" id="subBadge" style="display:none">0</span></div><div class="sd" id="subSd">从你的账里找出定期扣款 · 只看不记</div></div><span class="sar">›</span></button>
         <button class="setrow" id="openRec"><span class="si">🔁</span><div class="st"><div class="sn">定期账单</div><div class="sd">Netflix / iCloud 这种，每月自动记</div></div><span class="sar">›</span></button>
-        <button class="setrow" id="openShortcut"><span class="si">⚡</span><div class="st"><div class="sn">捷径记账 · 轻点背面</div><div class="sd">双击 iPhone 背面就记一笔 · 不用截图（教你设 + 一键复制网址）</div></div><span class="sar">›</span></button>
+        <button class="setrow" id="openShortcut"><span class="si">⚡</span><div class="st"><div class="sn">捷径记账 · 轻点背面</div><div class="sd">双击背面 → 截图认字记一笔（TnG/支付宝/Wise 这种不发短信的）· 教你设</div></div><span class="sar">›</span></button>
       </div>
     </div>
 
@@ -2570,39 +2570,43 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
 <div class="cpage" id="scPage">
   <div class="cp-top"><button class="dp-back" id="scBack">‹ 返回</button><span class="cp-title">捷径记账 · 轻点背面</span><span style="width:52px"></span></div>
   <div class="cp-body">
-    <div class="gdhint" style="margin:0 2px 12px">双击 iPhone <b>背面</b>就记一笔，不用截图。原理：iOS「捷径」把一段文字（银行短信 / 你打的字）发给你的 Worker，<b>Worker 自己解析</b>成一笔账 —— 跟 App 里「粘贴短信」同一条路。</div>
+    <div class="gdhint" style="margin:0 2px 12px">双击 iPhone <b>背面</b> → 自动【截图 → 认字 → 记一笔】，<b>截图不保存</b>。专治 <b>TnG / 支付宝 / 微信 / Wise</b> 这种只能开 app 看、不发短信的交易。原理：iOS 把<b>当下这屏</b> OCR 成文字，送给你的 Worker，Worker 自己解析（跟「粘贴短信」同一条路）。</div>
 
-    <div class="sc-sec">① 复制下面这三样，等下贴进捷径</div>
-    <div class="sc-copy" data-sccopy="url"><div class="sc-l"><div class="sc-k">记账网址<span class="sc-tag">最重要</span></div><div class="sc-v" id="scUrl">…</div></div><span class="sc-btn">复制</span></div>
-    <div class="sc-copy" data-sccopy="wurl"><div class="sc-l"><div class="sc-k">Worker 网址</div><div class="sc-v" id="scWurl">…</div></div><span class="sc-btn">复制</span></div>
-    <div class="sc-copy" data-sccopy="tk"><div class="sc-l"><div class="sc-k">Token<span class="sc-tag warn">别外传</span></div><div class="sc-v" id="scTk">…</div></div><span class="sc-btn">复制</span></div>
-    <div class="gdhint" style="margin:6px 2px 14px">「记账网址」= Worker 网址 + <code>/api/paste?token=…</code>，已经帮你拼好、token 也带上了。捷径里只要用这一条。</div>
+    <div class="sc-sec">① 复制这个网址，等下贴进捷径</div>
+    <div class="sc-copy" data-sccopy="shot"><div class="sc-l"><div class="sc-k">记账网址 · 截图版<span class="sc-tag">用这个</span></div><div class="sc-v" id="scUrlShot">…</div></div><span class="sc-btn">复制</span></div>
+    <div class="gdhint" style="margin:6px 2px 14px">= Worker 网址 + <code>/api/paste?token=…&src=shot</code>（token 帮你带好了；<code>&src=shot</code> 让它记进收件箱标「📷 截图」，方便核对）。</div>
 
-    <div class="sc-sec">② 三种玩法（看你要哪种）</div>
-    <div class="sc-card"><b>A · 复制银行短信 → 双击背面</b>（不打字、不截图）<br>银行短信来了，长按复制那条 → 双击背面 → 捷径把剪贴板送出 → 解析好。文字比截图还准。</div>
-    <div class="sc-card"><b>B · 双击背面 → 弹框问金额</b>（现金 / 没短信时）<br>捷径里加「要求输入」，打一个数字送出。</div>
-    <div class="sc-card"><b>C · 固定预设一笔</b>（例：咖啡 S$4.50）<br>捷径里写死一段文字，双击背面直接记 —— 真·零输入。</div>
-
-    <div class="sc-sec">③ 怎么设（一次搞定）</div>
-    <div class="sc-step"><b>第一步 · 建捷径</b>
+    <div class="sc-sec">② 建捷径（截图 → 认字 → 记账）</div>
+    <div class="sc-step"><b>照顺序加这几个动作</b>
       <ol>
         <li>打开「<b>捷径</b>」App → 右上「＋」新建</li>
-        <li>加动作「<b>获取 URL 内容</b>」</li>
-        <li>URL 贴上面复制的「<b>记账网址</b>」</li>
-        <li>展开「显示更多」→ 方法选 <b>POST</b></li>
-        <li>请求体 <b>Body</b> 选「<b>文本</b>」→ 里面放「<b>剪贴板</b>」（玩法 A）／「<b>提供的输入</b>」／你打的字</li>
-        <li>（可选）最后加「<b>显示通知</b>」= 上一步结果，记完手机上就弹一下</li>
-        <li>给捷径起名，例如「<b>记一笔</b>」，存好</li>
+        <li>加「<b>拍摄屏幕快照</b>」(Take Screenshot) —— 截当下这屏，只在内存、<b>不进相册</b></li>
+        <li>加「<b>从图像中提取文本</b>」(Extract Text from Image) → 输入选上一步的<b>屏幕快照</b></li>
+        <li>加「<b>获取 URL 内容</b>」：URL 贴上面「记账网址 · 截图版」；展开「显示更多」→ 方法 <b>POST</b>；请求体 <b>Body</b> 选「<b>文本</b>」→ 里面放「<b>提取的文本</b>」</li>
+        <li>（可选）加「<b>显示通知</b>」= 上一步结果 → 记完弹一下告诉你记了啥</li>
+        <li>起名「<b>拍一笔</b>」，存好</li>
       </ol>
     </div>
-    <div class="sc-step"><b>第二步 · 绑「轻点背面」</b>
+    <div class="sc-step"><b>绑「轻点背面」</b>
       <ol>
         <li>iPhone 设置 → <b>辅助功能</b> → <b>触控</b> → 划到底「<b>轻点背面</b>」</li>
-        <li>选「<b>轻点两下</b>」→ 划到最下面「捷径」区 → 选你刚建的「记一笔」</li>
-        <li>完成！以后<b>双击背面</b>就记一笔 🎉</li>
+        <li>选「<b>轻点两下</b>」→ 最下面「捷径」区 → 选「拍一笔」</li>
+        <li>完成！<b>15 Pro/16</b> 也能改绑到<b>操作按钮</b>（音量上面那颗）🎉</li>
       </ol>
     </div>
-    <div class="gdhint" style="margin:8px 2px 20px">· iOS <b>不给</b>捷径自动读你短信（隐私），所以玩法 A 要先「复制」那条短信。<br>· 同一笔<b>重复发不会记两笔</b>（自动去重），手滑双击两次不怕。<br>· Token 明文写在捷径里 = 谁能碰你手机就能触发，知道一下就好。</div>
+
+    <div class="sc-sec">③ 平时怎么用</div>
+    <div class="sc-card"><b>TnG · 支付宝 · 微信 · Wise · PayLah</b><br>打开那笔交易的<b>详情页</b> → <b>双击背面</b> → 自动截图认字记账。这几个 app 的截图格式<b>已经内建、认得</b>，不用设。</div>
+    <div class="sc-card"><b>核对读得对不对</b><br>记完进「<b>收件箱 → 已记录</b>」，那笔标「📷 截图」→ 点开看「<b>原文</b>」= OCR 认到啥，跟金额一对就知道。读错就在明细里改那笔。</div>
+
+    <div class="sc-sec">要知道的</div>
+    <div class="gdhint" style="margin:2px 2px 14px">· 截图<b>只在内存、不进相册</b>（没加「保存到相簿」就不落地），用完自动丢、<b>不会累积</b>。<br>· 双击时<b>屏幕要正显示那笔交易</b>（在详情页 / 通知横幅还在），它截的是当下这屏。<br>· OCR 偶尔读错数目 —— 靠收件箱核对，读错手动改。<br>· 同一笔<b>重复发不会记两笔</b>（自动去重）。<br>· Token 写在捷径里 = 谁能碰你手机就能触发，知道一下就好。</div>
+
+    <details class="cpf-raw" style="margin:0 2px 24px"><summary>银行有发短信的？加个「复制短信」备用（更准）</summary>
+      <div style="padding:10px 2px;font-size:12.5px;line-height:1.75;color:var(--ink)">短信/邮件能<b>复制文字</b>的，比截图更准。<b>三击背面</b>绑另一个捷径，只要一个动作「<b>获取 URL 内容</b>」（同网址、body 放「<b>剪贴板</b>」）。用前先长按<b>复制</b>那条短信。
+        <div class="sc-copy" data-sccopy="url" style="margin-top:10px"><div class="sc-l"><div class="sc-k">记账网址 · 剪贴板版</div><div class="sc-v" id="scUrl">…</div></div><span class="sc-btn">复制</span></div>
+      </div>
+    </details>
   </div>
 </div>
 
@@ -9064,16 +9068,17 @@ function scRender(){
   const wurl=(CONFIG.WORKER_URL||'').replace(/\/+$/,'');
   const tk=CONFIG.TOKEN||'';
   const url=wurl?`${wurl}/api/paste?token=${encodeURIComponent(tk)}`:'（先连上 Worker）';
+  const urlShot=wurl?`${url}&src=shot`:'（先连上 Worker）';   // 截图版：记进收件箱标「📷 截图」
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  set('scUrl',url);set('scWurl',wurl||'（先连上 Worker）');set('scTk',tk||'（先连上 Worker）');
-  scPage._vals={url,wurl,tk};
+  set('scUrlShot',urlShot);set('scUrl',url);set('scWurl',wurl||'（先连上 Worker）');set('scTk',tk||'（先连上 Worker）');
+  scPage._vals={url,urlShot,wurl,tk};
 }
 document.getElementById('openShortcut').onclick=()=>{scRender();scPage.classList.add('show');scPage.scrollTop=0;syncPageOpen();};
 document.getElementById('scBack').onclick=()=>{scPage.classList.remove('show');syncPageOpen();};
 document.getElementById('scPage').addEventListener('click',async e=>{
   const b=e.target.closest('[data-sccopy]');if(!b)return;
   const v=scPage._vals||{},which=b.dataset.sccopy;
-  const txt=which==='url'?v.url:which==='wurl'?v.wurl:v.tk;
+  const txt=which==='shot'?v.urlShot:which==='url'?v.url:which==='wurl'?v.wurl:v.tk;
   if(!txt||/先连上/.test(txt)){toast('先连上 Worker 才有网址','err');return;}
   let ok=false;
   try{await navigator.clipboard.writeText(txt);ok=true;}
