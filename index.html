@@ -467,6 +467,7 @@ body.theme-journal .subitem{background:#FBF7EF;border-color:#E4DCCF}
 .sc-step ol{margin:8px 0 2px;padding-left:20px;line-height:1.85;color:var(--ink-2)}
 .sc-step li{margin-bottom:4px}
 .sc-step code,.gdhint code{background:var(--faint);padding:1px 5px;border-radius:5px;font-size:11px;font-family:ui-monospace,Menlo,monospace}
+.sc-step .en{font-family:-apple-system,ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;font-size:12px;font-weight:800;color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,transparent);border-radius:6px;padding:1px 6px;white-space:nowrap}
 body.phototheme .sc-copy,body.phototheme .sc-card,body.phototheme .sc-step{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1)}
 /* v11.56 捷径页美化：顶部流程图 + app 徽章 */
 .sc-hero{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 16%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--brand) 30%,var(--line));border-radius:18px;padding:16px 14px;margin:2px 2px 16px;text-align:center}
@@ -2611,29 +2612,29 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
     <div class="gdhint" style="margin:6px 2px 14px">= Worker 网址 + <code>/api/paste?token=…&src=shot</code>（token 帮你带好了；<code>&src=shot</code> 让它记进收件箱标「📷 截图」，方便核对）。</div>
 
     <div class="sc-sec">② 建捷径（截图 → 认字 → 记账）</div>
-    <div class="sc-step"><b>照顺序加这几个动作</b>
+    <div class="sc-step"><b>照顺序加这几个动作</b><small style="font-weight:600;color:var(--muted);margin-left:5px">手机是英文的，照蓝色英文名搜就找到</small>
       <ol>
-        <li>打开「<b>捷径</b>」App → 右上「＋」新建</li>
-        <li>加「<b>拍摄屏幕快照</b>」(Take Screenshot) —— 截当下这屏，只在内存、<b>不进相册</b></li>
-        <li>加「<b>从图像中提取文本</b>」(Extract Text from Image) → 输入选上一步的<b>屏幕快照</b></li>
-        <li>加「<b>获取 URL 内容</b>」：URL 贴上面「记账网址 · 截图版」；展开「显示更多」→ 方法 <b>POST</b>；请求体 <b>Body</b> 选「<b>文本</b>」→ 里面放「<b>提取的文本</b>」</li>
-        <li>加「<b>获取词典值</b>」→ 键填 <code>msg</code>（从上一步的返回里取那句人话）</li>
-        <li>加「<b>显示通知</b>」→ 内容选上一步的「<b>词典值</b>」<span style="color:var(--muted)">—— 记完手机弹「✅ 已记 · MYR 25.00 · JB Grocer」告诉你成没成</span></li>
-        <li>起名「<b>拍一笔</b>」，存好</li>
+        <li>开 <span class="en">Shortcuts</span> app → 右上「＋」新建</li>
+        <li>加 <span class="en">Take Screenshot</span> —— 截当下这屏，只在内存、<b>不进相册</b></li>
+        <li>加 <span class="en">Extract Text from Image</span> → 输入选上一步的 <span class="en">Screenshot</span></li>
+        <li>加 <span class="en">Get Contents of URL</span>：URL 贴上面那条；点 <span class="en">Show More</span> → <span class="en">Method</span> = <span class="en">POST</span>；<span class="en">Request Body</span> = <span class="en">File</span> → 放上一步 <span class="en">Extract Text</span> 的结果<span style="color:var(--muted)">（token 在网址里了，body 只要这段文字 · 别选 JSON / Form）</span></li>
+        <li>加 <span class="en">Get Dictionary Value</span> → <span class="en">Key</span> 填 <code>msg</code></li>
+        <li>加 <span class="en">Show Notification</span> → 内容选上一步的 <span class="en">Dictionary Value</span><span style="color:var(--muted)"> —— 记完弹「✅ 已记 · MYR 25.00 · JB Grocer」</span></li>
+        <li>右上起名「<b>拍一笔</b>」→ <span class="en">Done</span> 存好</li>
       </ol>
     </div>
     <div class="sc-sec">③ 绑一个键（两个版本，挑一个）</div>
-    <div class="sc-step"><b>版本 A · 轻点背面</b><small style="font-weight:600;color:var(--muted);margin-left:5px">iPhone 8 以后都有</small>
+    <div class="sc-step"><b>版本 A · <span class="en">Back Tap</span> 轻点背面</b><small style="font-weight:600;color:var(--muted);margin-left:5px">iPhone 8 以后都有</small>
       <ol>
-        <li>设置 → <b>辅助功能</b> → <b>触控</b> → 划到底「<b>轻点背面</b>」</li>
-        <li>选「<b>轻点两下</b>」→ 最下面「捷径」区 → 选「拍一笔」</li>
+        <li><span class="en">Settings</span> → <span class="en">Accessibility</span> → <span class="en">Touch</span> → 划到底 <span class="en">Back Tap</span></li>
+        <li>选 <span class="en">Double Tap</span> → 滚到最下 <span class="en">Shortcuts</span> 区 → 选「拍一笔」</li>
         <li>以后<b>双击背面</b>就记 🎉</li>
       </ol>
     </div>
-    <div class="sc-step"><b>版本 B · 操作按钮</b><small style="font-weight:600;color:var(--muted);margin-left:5px">iPhone 15 Pro / 16（音量上面那颗）</small>
+    <div class="sc-step"><b>版本 B · <span class="en">Action Button</span> 操作按钮</b><small style="font-weight:600;color:var(--muted);margin-left:5px">iPhone 15 Pro / 16（音量上面那颗）</small>
       <ol>
-        <li>设置 → <b>操作按钮</b> → 左右划到「<b>捷径</b>」</li>
-        <li>「选择捷径」→ 选「拍一笔」</li>
+        <li><span class="en">Settings</span> → <span class="en">Action Button</span> → 左右划到 <span class="en">Shortcut</span></li>
+        <li><span class="en">Choose a Shortcut</span> → 选「拍一笔」</li>
         <li>以后<b>长按那颗按钮</b>就记 🎉</li>
       </ol>
     </div>
@@ -2650,7 +2651,7 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
     <div class="gdhint" style="margin:2px 2px 14px">· 截图<b>只在内存、不进相册</b>（没加「保存到相簿」就不落地），用完自动丢、<b>不会累积</b>。<br>· <b>要开那笔交易的「详情页」再截</b> —— 光截<b>通知弹窗多半读不到</b>（弹窗字太少、没有 parser 要认的字段）。它截的是当下这屏。<br>· OCR 偶尔读错数目 —— 靠收件箱核对，读错手动改。<br>· 同一笔<b>重复发不会记两笔</b>（自动去重）。<br>· Token 写在捷径里 = 谁能碰你手机就能触发，知道一下就好。</div>
 
     <details class="cpf-raw" style="margin:0 2px 24px"><summary>银行有发短信的？加个「复制短信」备用（更准）</summary>
-      <div style="padding:10px 2px;font-size:12.5px;line-height:1.75;color:var(--ink)">短信/邮件能<b>复制文字</b>的，比截图更准。<b>三击背面</b>绑另一个捷径，只要一个动作「<b>获取 URL 内容</b>」（同网址、body 放「<b>剪贴板</b>」）。用前先长按<b>复制</b>那条短信。
+      <div style="padding:10px 2px;font-size:12.5px;line-height:1.75;color:var(--ink)">短信/邮件能<b>复制文字</b>的，比截图更准。<b>三击背面</b>（<span class="en">Triple Tap</span>）绑另一个捷径，只要一个动作 <span class="en">Get Contents of URL</span>（同网址、<span class="en">Request Body</span> = <span class="en">File</span> → 放 <span class="en">Clipboard</span>）。用前先长按<b>复制</b>那条短信。
         <div class="sc-copy" data-sccopy="url" style="margin-top:10px"><div class="sc-l"><div class="sc-k">记账网址 · 剪贴板版</div><div class="sc-v" id="scUrl">…</div></div><span class="sc-btn">复制</span></div>
       </div>
     </details>
