@@ -5366,6 +5366,12 @@ function syncPageOpen(){
     document.body.classList.remove('pagelock');
     document.body.style.top='';
     window.scrollTo(0,_pageScrollY);             // 还原到进去之前的位置
+    /* v11.06 单一收口：从任何设置子页（预算/分类/付款/定期/CPF/订阅/仪表板…）退回总览时，
+       把总览上「随设置变」的两块轻量刷一次 —— 「等你处理」卡 + 各设置卡的 chips。
+       ① 只在【关掉最后一个子页】这一刻跑一次（_pageWasOpen 守卫），不是每次 syncPageOpen 都跑；
+       ② 只刷这两块（都只 O(当前数据)，跟 buildAll 每次换月付的成本一样），不碰日历/趋势/环图/feed，
+          所以不会把之前调好的「不卡不 delay」搞回去。改了上限/分类/付款方式，退回来就是新的。 */
+    try{if(typeof buildTodo==='function')buildTodo();if(typeof buildSetChips==='function')buildSetChips();}catch(_){}
   }
   _pageWasOpen=any;
 }
@@ -8943,7 +8949,7 @@ document.getElementById('cpfModSave').onclick=()=>{
 };
 
 document.getElementById('openBud').onclick=()=>{budRender();budPage.classList.add('show');budPage.scrollTop=0;syncPageOpen();};
-document.getElementById('budBack').onclick=()=>{budPage.classList.remove('show');syncPageOpen();buildTodo();buildSetChips();};   /* v11.06 返回总览时保底再刷一次「等你处理」，改完上限立刻反映 */
+document.getElementById('budBack').onclick=()=>{budPage.classList.remove('show');syncPageOpen();};   /* v11.06 退回刷新已收口进 syncPageOpen（关最后一个子页时统一刷总览），这里不用再单独刷 */
 /* v11.36 预算仪表盘：设了上限的分类，一眼看完本月花到哪、谁快爆。只在打开预算页时算，O(当月)，不上热路径 */
 const budCol=r=>r>=1?'#F0665F':(r>=0.8?'#E7A33E':'#12b981');
 /* v11.38 只留「总体」那张总卡；各分类的进度并进下面可编辑那一行，不再各显示一次 */

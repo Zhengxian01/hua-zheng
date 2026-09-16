@@ -2764,6 +2764,27 @@ async function suiteEdit() {
       (budTodo.before && budTodo.hadInp && !budTodo.afterChange && !budTodo.afterBack)
         ? ok('改预算上限：超支时总览显示超支卡 → 改高上限，change 处理器立刻刷掉卡（返回也保底刷）', JSON.stringify(budTodo))
         : bad('改了预算上限，「等你处理」超支卡没立刻消', JSON.stringify(budTodo));
+      // 2x') v11.56 通用收口：从【任何】设置子页退回总览（走 syncPageOpen），总览的 chips 就跟着变。
+      //   拿「定期账单」页当代表：开着 recPage 时改 REC/PAYX → 关页 → autoChips「N 笔定期」+ moneyChips「N 张卡」都更新。
+      const chokeUniv = await pg.evaluate(async () => {
+        const keepR = REC.slice(), keepP = (typeof PAYX !== 'undefined' ? PAYX.slice() : []);
+        document.querySelectorAll('.cpage,.daypage,#report').forEach(el => el.classList.remove('show'));  // 清掉前面测试没关的页
+        syncPageOpen();                                       // any=false → _pageWasOpen 归位
+        buildSetChips();
+        document.getElementById('openRec').click();          // 开一个设置子页（非预算）→ _pageWasOpen=true
+        REC = [{ name: '房租', amount: 1000, day: 1, currency: 'SGD' }, { name: '网费', amount: 50, day: 5, currency: 'SGD' }];
+        PAYX = ['1234', '5678', '9012'];
+        document.getElementById('recBack').click();           // 走 syncPageOpen 收口 → 应刷 buildSetChips
+        await new Promise(r => setTimeout(r, 120));
+        const auto = document.getElementById('autoChips').textContent.replace(/\s+/g, ' ');
+        const money = document.getElementById('moneyChips').textContent.replace(/\s+/g, ' ');
+        const cardM = money.match(/(\d+) 张卡/);
+        REC = keepR; PAYX = keepP; buildSetChips();
+        return { rec: /2 笔定期/.test(auto), card: cardM ? +cardM[1] >= 3 : false, auto, money };  // 卡数=DATA里的卡 ∪ PAYX(3)，至少含我加的 3 张
+      });
+      (chokeUniv.rec && chokeUniv.card)
+        ? ok('通用收口：从任意设置子页（这里用定期账单页）退回总览 → chips 跟着更新（定期 2 · 卡≥3）', JSON.stringify(chokeUniv))
+        : bad('设置子页退回总览没刷新 chips（syncPageOpen 收口失效）', JSON.stringify(chokeUniv));
       // 2w) v11.55 CPF 进账时机：M 月工资 → CPF 记 M+1 月 + 到账日 cred；没到进账日→待进账、不算进总额；关 payShift→工资同月、全算
       const payShift = await pg.evaluate(() => {
         const keep = DATA.slice(); const tk = todayKey();   // 用「今天」往前后各推，避免依赖真实日期
