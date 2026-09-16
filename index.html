@@ -2640,14 +2640,14 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
     <div class="gdhint" style="margin:6px 2px 14px">捷径本身一模一样，只是绑哪个键的差别 —— 你可以两个都试，改来改去 30 秒的事，随时换。</div>
 
     <div class="sc-sec">④ 平时怎么用</div>
-    <div class="sc-card"><b>打开那笔交易的详情页 → 触发那个键</b><br>就这样。TnG / Maybank / Wise 的截图格式<b>已经内建、认得</b>，不用设。<br><b>记完手机会弹一条通知</b>：成功 →「<b>✅ 已记 · MYR 25.00 · JB Grocer</b>」；重复 →「↩︎ 记过了，跳过」；没读到 →「😕 没读到」。一眼知道成没成。</div>
+    <div class="sc-card"><b>先开那笔交易的「详情页」→ 再触发那个键</b><br><span style="color:#B87A18">⚠️ 别只截通知弹窗 —— 弹窗字太少，多半读不到；一定要点进<b>详情页</b>（有 Ref / 余额那些）再截。</span><br>TnG / Maybank / Wise 的详情页格式<b>已经内建、认得</b>，不用设。<br><b>记完手机会弹一条通知</b>：成功 →「<b>✅ 已记 · MYR 25.00 · JB Grocer</b>」；重复 →「↩︎ 记过了，跳过」；没读到 →「😕 没读到」。一眼知道成没成。</div>
 
     <div class="sc-sec">⑤ 记完，在哪看？</div>
     <div class="sc-card"><span class="sc-app" style="pointer-events:none">明细</span> <b>多一笔</b><br>截图记的那笔，跟平时一样出现在「<b>明细</b>」里 —— 金额 / 分类 / 商家都有，照样能改能删。</div>
     <div class="sc-card"><span class="sc-app" style="pointer-events:none">收件箱 → 已记录</span> <b>标「📷 截图记账」</b><br>那一条写着「<b>记了：−RM 25.00 · JB Grocer</b>」→ 点开看「<b>原文</b>」= OCR 到底认到啥，跟金额一对就知道读对没。读错就回明细改那笔。<br><span style="color:var(--muted)">（它<b>不会</b>占「读不到」的红点 —— 红点只给真的读不懂的。）</span></div>
 
     <div class="sc-sec">要知道的</div>
-    <div class="gdhint" style="margin:2px 2px 14px">· 截图<b>只在内存、不进相册</b>（没加「保存到相簿」就不落地），用完自动丢、<b>不会累积</b>。<br>· 双击时<b>屏幕要正显示那笔交易</b>（在详情页 / 通知横幅还在），它截的是当下这屏。<br>· OCR 偶尔读错数目 —— 靠收件箱核对，读错手动改。<br>· 同一笔<b>重复发不会记两笔</b>（自动去重）。<br>· Token 写在捷径里 = 谁能碰你手机就能触发，知道一下就好。</div>
+    <div class="gdhint" style="margin:2px 2px 14px">· 截图<b>只在内存、不进相册</b>（没加「保存到相簿」就不落地），用完自动丢、<b>不会累积</b>。<br>· <b>要开那笔交易的「详情页」再截</b> —— 光截<b>通知弹窗多半读不到</b>（弹窗字太少、没有 parser 要认的字段）。它截的是当下这屏。<br>· OCR 偶尔读错数目 —— 靠收件箱核对，读错手动改。<br>· 同一笔<b>重复发不会记两笔</b>（自动去重）。<br>· Token 写在捷径里 = 谁能碰你手机就能触发，知道一下就好。</div>
 
     <details class="cpf-raw" style="margin:0 2px 24px"><summary>银行有发短信的？加个「复制短信」备用（更准）</summary>
       <div style="padding:10px 2px;font-size:12.5px;line-height:1.75;color:var(--ink)">短信/邮件能<b>复制文字</b>的，比截图更准。<b>三击背面</b>绑另一个捷径，只要一个动作「<b>获取 URL 内容</b>」（同网址、body 放「<b>剪贴板</b>」）。用前先长按<b>复制</b>那条短信。
