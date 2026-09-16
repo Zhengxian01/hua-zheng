@@ -468,6 +468,22 @@ body.theme-journal .subitem{background:#FBF7EF;border-color:#E4DCCF}
 .sc-step li{margin-bottom:4px}
 .sc-step code,.gdhint code{background:var(--faint);padding:1px 5px;border-radius:5px;font-size:11px;font-family:ui-monospace,Menlo,monospace}
 body.phototheme .sc-copy,body.phototheme .sc-card,body.phototheme .sc-step{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1)}
+/* v11.56 捷径页美化：顶部流程图 + app 徽章 */
+.sc-hero{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 16%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--brand) 30%,var(--line));border-radius:18px;padding:16px 14px;margin:2px 2px 16px;text-align:center}
+.sc-hero-t{font-size:16px;font-weight:800;color:var(--ink);margin-bottom:12px}
+.sc-flow{display:flex;align-items:center;justify-content:center;gap:6px}
+.sc-fstep{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto}
+.sc-fi{width:46px;height:46px;border-radius:14px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:24px}
+.sc-fl{font-size:10.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.sc-farr{color:var(--brand);font-size:22px;font-weight:800;flex:0 0 auto}
+.sc-hero-d{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:12px;line-height:1.5}
+.sc-hero-d b{color:var(--ink)}
+.sc-apps{display:flex;flex-wrap:wrap;gap:7px;margin:0 2px 8px}
+.sc-app{font-size:12.5px;font-weight:800;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:100px;padding:6px 13px;display:inline-flex;align-items:center;gap:5px}
+.sc-app i{font-style:normal;font-size:9.5px;font-weight:800;color:var(--brand);background:color-mix(in srgb,var(--brand) 14%,transparent);border-radius:100px;padding:1px 6px}
+.sc-app.soon{color:var(--muted)}.sc-app.soon i{color:var(--muted);background:var(--faint)}
+.sc-app.dim{color:var(--muted);border-style:dashed}.sc-app.dim i{color:#B87A18;background:rgba(231,163,62,.16)}
+body.phototheme .sc-hero{background:rgba(59,130,246,.14)}body.phototheme .sc-app,body.phototheme .sc-fi{background:rgba(12,16,22,.5);border-color:rgba(255,255,255,.1)}
 .subitem .si-ign:active{transform:scale(.95);background:rgba(140,140,150,.16)}
 .icsf{display:flex;align-items:center;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line)}
 .icsf:last-child{border-bottom:0}
@@ -2570,7 +2586,25 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
 <div class="cpage" id="scPage">
   <div class="cp-top"><button class="dp-back" id="scBack">‹ 返回</button><span class="cp-title">捷径记账 · 轻点背面</span><span style="width:52px"></span></div>
   <div class="cp-body">
-    <div class="gdhint" style="margin:0 2px 12px">双击 iPhone <b>背面</b> → 自动【截图 → 认字 → 记一笔】，<b>截图不保存</b>。专治 <b>TnG / Maybank / Wise / 支付宝 / 微信</b> 这种只能开 app 看、不发邮件的交易。原理：iOS 把<b>当下这屏</b> OCR 成文字，送给你的 Worker，Worker 自己解析（跟「粘贴短信」同一条路）。</div>
+    <div class="sc-hero">
+      <div class="sc-hero-t">双击背面，一秒记一笔 📷</div>
+      <div class="sc-flow">
+        <div class="sc-fstep"><span class="sc-fi">📷</span><span class="sc-fl">截当下这屏</span></div>
+        <span class="sc-farr">›</span>
+        <div class="sc-fstep"><span class="sc-fi">🔤</span><span class="sc-fl">iOS 认字</span></div>
+        <span class="sc-farr">›</span>
+        <div class="sc-fstep"><span class="sc-fi">✅</span><span class="sc-fl">记进账</span></div>
+      </div>
+      <div class="sc-hero-d">截图<b>不保存</b> · 给只能开 app 看、不发邮件的交易用</div>
+    </div>
+
+    <div class="sc-sec">认得这些 app 的截图</div>
+    <div class="sc-apps">
+      <span class="sc-app">TnG</span><span class="sc-app">Maybank</span><span class="sc-app">Wise</span>
+      <span class="sc-app soon">支付宝<i>待加</i></span><span class="sc-app soon">微信<i>待加</i></span>
+      <span class="sc-app dim">PayLah<i>备用</i></span>
+    </div>
+    <div class="gdhint" style="margin:6px 2px 16px"><b>PayLah / 有邮件的银行</b>：转发邮件就自动记，一般<b>不用</b>截图；万一没转发到、你直接截了它<b>也认</b>（跟邮件那笔自动去重、<b>不会双记</b>，所以留着当备用）。<b>支付宝 / 微信</b>：给我几张交易页截图就能加。</div>
 
     <div class="sc-sec">① 复制这个网址，等下贴进捷径</div>
     <div class="sc-copy" data-sccopy="shot"><div class="sc-l"><div class="sc-k">记账网址 · 截图版<span class="sc-tag">用这个</span></div><div class="sc-v" id="scUrlShot">…</div></div><span class="sc-btn">复制</span></div>
@@ -2605,8 +2639,11 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
     <div class="gdhint" style="margin:6px 2px 14px">捷径本身一模一样，只是绑哪个键的差别 —— 你可以两个都试，改来改去 30 秒的事，随时换。</div>
 
     <div class="sc-sec">④ 平时怎么用</div>
-    <div class="sc-card"><b>TnG · Maybank · Wise · 支付宝 · 微信</b>（不发邮件/短信的）<br>打开那笔交易的<b>详情页</b> → 触发那个键 → 自动截图认字记账。TnG / Maybank / Wise 的截图格式<b>已经内建、认得</b>，不用设。<br><span style="color:var(--muted)">（PayLah 和有邮件的银行不用截图 —— 转发邮件就自动记了。）</span></div>
-    <div class="sc-card"><b>核对读得对不对</b><br>记完进「<b>收件箱 → 已记录</b>」，那笔标「📷 截图」→ 点开看「<b>原文</b>」= OCR 认到啥，跟金额一对就知道。读错就在明细里改那笔。</div>
+    <div class="sc-card"><b>打开那笔交易的详情页 → 触发那个键</b><br>就这样。TnG / Maybank / Wise 的截图格式<b>已经内建、认得</b>，不用设。（可选加了「显示通知」的话，记完手机上会弹一下「记了 −RM 25.00」。）</div>
+
+    <div class="sc-sec">⑤ 记完，在哪看？</div>
+    <div class="sc-card"><span class="sc-app" style="pointer-events:none">明细</span> <b>多一笔</b><br>截图记的那笔，跟平时一样出现在「<b>明细</b>」里 —— 金额 / 分类 / 商家都有，照样能改能删。</div>
+    <div class="sc-card"><span class="sc-app" style="pointer-events:none">收件箱 → 已记录</span> <b>标「📷 截图记账」</b><br>那一条写着「<b>记了：−RM 25.00 · JB Grocer</b>」→ 点开看「<b>原文</b>」= OCR 到底认到啥，跟金额一对就知道读对没。读错就回明细改那笔。<br><span style="color:var(--muted)">（它<b>不会</b>占「读不到」的红点 —— 红点只给真的读不懂的。）</span></div>
 
     <div class="sc-sec">要知道的</div>
     <div class="gdhint" style="margin:2px 2px 14px">· 截图<b>只在内存、不进相册</b>（没加「保存到相簿」就不落地），用完自动丢、<b>不会累积</b>。<br>· 双击时<b>屏幕要正显示那笔交易</b>（在详情页 / 通知横幅还在），它截的是当下这屏。<br>· OCR 偶尔读错数目 —— 靠收件箱核对，读错手动改。<br>· 同一笔<b>重复发不会记两笔</b>（自动去重）。<br>· Token 写在捷径里 = 谁能碰你手机就能触发，知道一下就好。</div>
