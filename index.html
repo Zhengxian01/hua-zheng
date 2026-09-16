@@ -8943,7 +8943,7 @@ document.getElementById('cpfModSave').onclick=()=>{
 };
 
 document.getElementById('openBud').onclick=()=>{budRender();budPage.classList.add('show');budPage.scrollTop=0;syncPageOpen();};
-document.getElementById('budBack').onclick=()=>{budPage.classList.remove('show');syncPageOpen();};
+document.getElementById('budBack').onclick=()=>{budPage.classList.remove('show');syncPageOpen();buildTodo();buildSetChips();};   /* v11.06 返回总览时保底再刷一次「等你处理」，改完上限立刻反映 */
 /* v11.36 预算仪表盘：设了上限的分类，一眼看完本月花到哪、谁快爆。只在打开预算页时算，O(当月)，不上热路径 */
 const budCol=r=>r>=1?'#F0665F':(r>=0.8?'#E7A33E':'#12b981');
 /* v11.38 只留「总体」那张总卡；各分类的进度并进下面可编辑那一行，不再各显示一次 */
@@ -8978,12 +8978,13 @@ document.getElementById('budList').addEventListener('change',async e=>{
   const k=inp.dataset.k, v=parseFloat(inp.value);
   const snap={...BUD};
   if(isFinite(v)&&v>0)BUD[k]=Math.round(v*100)/100; else {delete BUD[k];inp.value='';}
-  buildCats();budRender();        /* 主页分类条 + 预算页（总卡 + 各行进度条）一起刷新；change 在 blur 时触发，重建不抢焦点 */
+  buildCats();budRender();buildTodo();buildSetChips();   /* 主页分类条 + 预算页 + 「等你处理」超支卡 + 顶部 chips 一起刷新；change 在 blur 时触发，重建不抢焦点 */
   const ok=await saveBudgets();
   /* ⚠️ v9.2 修：回滚只做了 budRender()（预算页），漏了 buildCats()（主页的预算条）
      → 存失败时，主页会一直显示那个「其实没存进去」的预算。跟商家记忆那个是同一类 bug：
-     BUD 被 budRender **和** buildCats 两个画面读，还原时两个都要还。 */
-  if(!ok){BUD=snap;budRender();buildCats();toast('预算没存上（连不上 Worker）','err');}
+     BUD 被 budRender **和** buildCats 两个画面读，还原时两个都要还。
+     v11.06 再补 buildTodo/buildSetChips：改了上限，「等你处理」的「已经超支」卡要立刻跟着消/变，不能等下次刷新。 */
+  if(!ok){BUD=snap;budRender();buildCats();buildTodo();buildSetChips();toast('预算没存上（连不上 Worker）','err');}
 });
 
 /* ============ v6.3 商家记忆管理 ============ */

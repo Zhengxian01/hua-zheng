@@ -2743,6 +2743,27 @@ async function suiteEdit() {
         inlineCat.ruleTile && inlineCat.ruleCp === 'expense' && /记忆测试/.test(inlineCat.ruleSel) && inlineCat.ruleMade)
         ? ok('现场加分类：定期账单 + 商家记忆 都能「＋Cat」→ 存完自动选中（跟记账/编辑一套）', JSON.stringify(inlineCat))
         : bad('定期账单/商家记忆 现场加分类没生效', JSON.stringify(inlineCat));
+      // 2x) v11.56 改预算上限 → 「等你处理」超支卡立刻消：change 处理器 + 返回按钮都补刷 buildTodo（以前只刷预算页，总览卡是旧的）
+      const budTodo = await pg.evaluate(async () => {
+        const keepD = DATA.slice(), keepB = { ...BUD }, keepC = { ...CAT };
+        CAT = { __bt__: { i: '🔁', n: '预算测试', c: '#DB5A54', subs: [] } }; BUD = { __bt__: 50 };
+        const mk = mkOf(viewMonth);
+        DATA = [{ id: 'bt1', ts: mk + '-05T12:00:00+08:00', amount: 53.86, currency: 'SGD', type: 'expense', category: '__bt__', merchant: 'X' }];
+        buildTodo();
+        const before = /超支/.test(document.getElementById('todoWrap').textContent);
+        document.getElementById('openBud').click();
+        const inp = document.querySelector('.budinp[data-k="__bt__"]'); const hadInp = !!inp;
+        if (inp) { inp.value = '100'; inp.dispatchEvent(new Event('change', { bubbles: true })); }
+        await new Promise(r => setTimeout(r, 220));
+        const afterChange = /超支/.test(document.getElementById('todoWrap').textContent);
+        document.getElementById('budBack').click();
+        const afterBack = /超支/.test(document.getElementById('todoWrap').textContent);
+        DATA = keepD; BUD = keepB; CAT = keepC; buildTodo();
+        return { before, hadInp, afterChange, afterBack };
+      });
+      (budTodo.before && budTodo.hadInp && !budTodo.afterChange && !budTodo.afterBack)
+        ? ok('改预算上限：超支时总览显示超支卡 → 改高上限，change 处理器立刻刷掉卡（返回也保底刷）', JSON.stringify(budTodo))
+        : bad('改了预算上限，「等你处理」超支卡没立刻消', JSON.stringify(budTodo));
       // 2w) v11.55 CPF 进账时机：M 月工资 → CPF 记 M+1 月 + 到账日 cred；没到进账日→待进账、不算进总额；关 payShift→工资同月、全算
       const payShift = await pg.evaluate(() => {
         const keep = DATA.slice(); const tk = todayKey();   // 用「今天」往前后各推，避免依赖真实日期
