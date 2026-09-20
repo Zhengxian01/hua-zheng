@@ -2785,6 +2785,37 @@ async function suiteEdit() {
       (chokeUniv.rec && chokeUniv.card)
         ? ok('通用收口：从任意设置子页（这里用定期账单页）退回总览 → chips 跟着更新（定期 2 · 卡≥3）', JSON.stringify(chokeUniv))
         : bad('设置子页退回总览没刷新 chips（syncPageOpen 收口失效）', JSON.stringify(chokeUniv));
+      // 2y) v11.57 收入也能现场加子分类：编辑收入(未抵扣) → sub 排永远出、末尾「+Sub」→ 点开输入 → 加进 INC[cat].subs 并选中。
+      //   抵扣收入(offset)显示支出分类 → sub 跟着用支出那套（不能拿 INC 的 sub）。
+      const incSub = await pg.evaluate(async () => {
+        const keepD = DATA.slice(), keepI = JSON.parse(JSON.stringify(INC)), keepC = JSON.parse(JSON.stringify(CAT));
+        INC = { salary: { i: '💰', n: '工资', c: '#0BA678', subs: [] }, invest: { i: '📈', n: '投资', c: '#3B82F6', subs: ['股息'] } };
+        CAT = { food: { i: '🍜', n: '餐饮', c: '#DB5A54', subs: ['早餐'] }, shop: { i: '🛍️', n: '购物', c: '#E7A33E', subs: [] } };
+        DATA = [{ id: 'is1', ts: '2026-09-20T12:00:00+08:00', amount: 1.3, currency: 'SGD', type: 'income', category: 'salary', merchant: 'BCRS', offset: 0 }];
+        const out = {};
+        openEdit(DATA[0]);
+        out.type = emType; out.offset = emOffset;
+        out.incCatShown = /工资/.test(document.getElementById('emCats').textContent) && !/餐饮/.test(document.getElementById('emCats').textContent);
+        // 无子分类的收入分类：sub 排仍出 + 有 +Sub（以前会整排藏起来）
+        emCat = 'salary'; emSubVal = ''; emBuildSubs();
+        out.rowShown = !document.getElementById('emSubs').classList.contains('hide');
+        out.hasPlus = !!document.querySelector('#emSubs [data-subadd]');
+        // 现场加一个 sub → 进 INC.salary.subs + 选中
+        document.querySelector('#emSubs [data-subadd]').click();
+        const inp = document.querySelector('#emSubs [data-subinput]'); out.gotInput = !!inp;
+        if (inp) { inp.value = '奖金'; emConfirmAddSub('奖金'); }
+        await new Promise(r => setTimeout(r, 60));
+        out.addedToINC = (INC.salary.subs || []).includes('奖金'); out.addedToCAT = JSON.stringify(CAT.food.subs) === JSON.stringify(['早餐']);  // 没串到支出
+        out.selected = emSubVal === '奖金';
+        // offset 收入：显示支出分类 → sub 用支出那套（food 的 早餐），不是 INC
+        emOffset = true; emCat = 'food'; emBuildCats();
+        out.offsetUsesExpenseSub = /早餐/.test(document.getElementById('emSubs').textContent);
+        emOffset = false; try { closeEdit(); } catch (_) { }   // 关掉编辑弹窗，否则挡住后面测试的点击
+        DATA = keepD; INC = keepI; CAT = keepC; return out;
+      });
+      (incSub.type === 'income' && !incSub.offset && incSub.incCatShown && incSub.rowShown && incSub.hasPlus && incSub.gotInput && incSub.addedToINC && incSub.addedToCAT && incSub.selected && incSub.offsetUsesExpenseSub)
+        ? ok('收入现场加子分类：编辑收入(未抵扣) sub 排常驻 + 「+Sub」→ 加进 INC 并选中（没串到支出）；抵扣收入的 sub 用支出那套', JSON.stringify(incSub))
+        : bad('收入现场加子分类没生效 / sub 套用错', JSON.stringify(incSub));
       // 2w) v11.55 CPF 进账时机：M 月工资 → CPF 记 M+1 月 + 到账日 cred；没到进账日→待进账、不算进总额；关 payShift→工资同月、全算
       const payShift = await pg.evaluate(() => {
         const keep = DATA.slice(); const tk = todayKey();   // 用「今天」往前后各推，避免依赖真实日期

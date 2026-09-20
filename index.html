@@ -5057,15 +5057,16 @@ function emBuildSubs(){
     row.innerHTML=`<div class="rulenote">🍜 餐饮按交易时间自动记${meal?' · 这笔算「<b>'+meal+'</b>」':''}</div>`;
     return;
   }
-  const subs=(catDef(emCat,emType).subs)||[];
-  if(emType==='income'){   // 收入：维持原样（没子分类就不出这排，也不给内联加）
-    if(!subs.length){row.classList.add('hide');row.innerHTML='';emSubVal='';emSubAdding=false;return;}
-    row.classList.remove('hide');row.innerHTML=subRowHTML(subs,emSubVal,false);return;
-  }
-  row.classList.remove('hide');   // 支出（非餐饮）：永远出这排，末尾带「＋ 子分类」→ 没有想要的当场加
+  /* v11.57 子分类那套跟着「格子现在显示哪套分类」走：真收入(未抵扣)=收入那套；抵扣收入显示的是支出分类→用支出那套。
+     跟 emBuildCats 的 set 判断同一个条件，才不会拿错 subs。 */
+  const subType=(emType==='income'&&!emOffset)?'income':'expense';
+  const subs=(catDef(emCat,subType).subs)||[];
+  /* v11.57 收入也跟支出一样永远出这排、末尾带「＋Sub」→ 没有想要的当场加。
+     （以前收入「没子分类就整排藏起来」，结果第一个 sub 永远加不了；用户要跟支出一样能现场加。） */
+  row.classList.remove('hide');
   row.innerHTML=subRowHTML(subs,emSubVal,emSubAdding);
 }
-function emConfirmAddSub(v){emSubAdding=false;const n=addSubTo(emType,emCat,v);if(n)emSubVal=n;emBuildSubs();}
+function emConfirmAddSub(v){emSubAdding=false;const st=(emType==='income'&&!emOffset)?'income':'expense';const n=addSubTo(st,emCat,v);if(n)emSubVal=n;emBuildSubs();}   /* v11.57 加到正确那套（真收入→INC，抵扣收入→CAT） */
 function emValidate(){const v=parseFloat(document.getElementById('emAmt').value);document.getElementById('emConfirm').disabled=!(v>0);}
 function openEdit(r){
   emRow=r;emType=isInc(r)?'income':'expense';emCat=catKey(r);
@@ -5797,16 +5798,15 @@ function buildSubRow(){
     row.innerHTML=`<div class="rulenote">🍜 餐饮按时间自动记 · 现在算「<b>${meal}</b>」</div>`;
     return;
   }
-  const subs=(catDef(selCat,selType).subs)||[];
-  if(selType==='income'){   // 收入：维持原样（没子分类不出这排、不给内联加）
-    if(!subs.length){row.classList.add('hide');row.innerHTML='';selSub='';addSubAdding=false;return;}
-    row.classList.remove('hide');row.innerHTML=subRowHTML(subs,selSub,false);return;
-  }
-  row.classList.remove('hide');   // 支出（非餐饮）：永远出这排，末尾带「＋ 子分类」
+  /* v11.57 跟记账页格子显示的那套分类对齐（真收入→INC / 抵扣收入→CAT / 支出→CAT）；跟 curSet() 同条件 */
+  const subType=(selType==='income'&&!selOffset)?'income':'expense';
+  const subs=(catDef(selCat,subType).subs)||[];
+  /* v11.57 收入也跟支出一样永远出这排、末尾带「＋Sub」可现场加（以前收入没子分类就整排藏起来、加不了第一个） */
+  row.classList.remove('hide');
   row.innerHTML=subRowHTML(subs,selSub,addSubAdding);
 }
 let addSubAdding=false;
-function addConfirmAddSub(v){addSubAdding=false;const n=addSubTo(selType,selCat,v);if(n)selSub=n;buildSubRow();}
+function addConfirmAddSub(v){addSubAdding=false;const st=(selType==='income'&&!selOffset)?'income':'expense';const n=addSubTo(st,selCat,v);if(n)selSub=n;buildSubRow();}   /* v11.57 加到正确那套 */
 function updAmt(){const el=document.getElementById('amtDisp');el.innerHTML=`<span class="s">${esc(curSym(selCur))}</span>${amtStr}`;el.classList.toggle('zero',amtStr==='0');el.classList.toggle('inc',selType==='income');document.getElementById('save').disabled=(parseFloat(amtStr)||0)<=0;}
 function setType(t){selType=t;selCat=Object.keys(t==='income'?INC:CAT)[0]||'other';selSub='';[...document.getElementById('ieSeg').children].forEach(x=>x.classList.toggle('on',x.dataset.t===t));buildCatGrid();buildPayRow();addBuildOffset();updAmt();}
 /* v11.10 记一笔·退款抵扣开关：只在收入时显示；切到收入时按当前备注这家的记忆预设默认值。 */
