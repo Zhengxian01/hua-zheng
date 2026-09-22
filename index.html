@@ -2386,10 +2386,11 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
   <span class="fl">日期</span>
   <input class="edate" id="emDate" type="date">
   <div class="paywrap" id="emPayWrap" style="display:none"><span class="paylbl">付款方式</span><div class="payrow" id="emPayRow"></div></div>
-  <!-- v9.72 转账给人时出现：记住分类？OFF=只当下次提示（默认），ON=像商家一样锁死 -->
-  <div class="emremember" id="emRemWrap" style="display:none">
-    <div><div class="emrl1">记住这个名字的分类</div><div class="emrl2" id="emRemHint">转账给朋友：关掉的话下次只预填、不锁死</div></div>
-    <button class="emtoggle" id="emRemBtn" role="switch" aria-checked="false"><span class="emknob"></span></button>
+  <!-- v11.59 一颗「朋友 / 商家」切换（合并原本那颗令人困惑的记住开关）：
+       朋友=分类每次可能不同→只当上次的建议、随手改；商家=记住这名字的分类、以后自动填。 -->
+  <div class="emremember" id="emRemWrap" style="display:none;flex-direction:column;align-items:stretch;gap:9px">
+    <div class="ie" id="emKindSeg"><button type="button" data-person="1" style="flex:1" class="on">🧍 朋友 · 转账</button><button type="button" data-person="0" style="flex:1">🏪 商家 · 店</button></div>
+    <div class="emrl2" id="emRemHint"></div>
   </div>
   <!-- v11.10 退款/返现抵扣支出：只在「收入」时出现。开=这笔从总支出里减掉、不算收入；且记住这家，下次同名自动开。 -->
   <div class="emremember" id="emOffWrap" style="display:none">
@@ -5004,7 +5005,7 @@ rowActions(document.getElementById('dpBody'),()=>{if(openDayKey)buildDayPage(ope
 
 /* ============ 编辑弹窗（必须按确认才保存） ============ */
 const emScrim=document.getElementById('emScrim'),emod=document.getElementById('emod');
-let emRow=null,emCat='food',emSubVal='',emCur='SGD',emType='expense',emPay='cash',emRemember=false,emIsPerson=false,emOffset=false;
+let emRow=null,emCat='food',emSubVal='',emCur='SGD',emType='expense',emPay='cash',emIsPerson=false,emOffset=false;   /* v11.59 emIsPerson 就是「朋友(建议) / 商家(记住)」那颗切换的状态；不再需要 emRemember */
 /* v9.72 判断这笔是不是「转账给人」：
    ① 该商家在记忆表里是 is_hint（h:1）→ 之前就当人处理过
    ② PayLah/TnG 转账、或 Maybank Transfer to Wallet（这些 parser 已标 isPerson，但没存进 expenses，
@@ -5089,8 +5090,7 @@ function openEdit(r){
   emBuildPayRow();
   /* v9.72 记住分类开关：转账给人 → 默认关（只当提示）；商家 → 默认开（锁死，旧行为）。
      银行邮件自动分类的（ocbc/dbs 商家消费）本来就锁，这里只对可编辑的支出显示。 */
-  emIsPerson=detectPerson(r);
-  emRemember=!emIsPerson;                 // 人=OFF，商家=ON
+  emIsPerson=detectPerson(r);             // v11.59 初始猜「朋友/商家」，用户可以在弹窗里那颗切换随手改
   emBuildRemember();
   emOffset=!!r.offset;                     // v11.10 这笔本来有没有抵扣
   emBuildOffset();
@@ -5132,28 +5132,21 @@ emScrim.onclick=closeEdit;                               /* 点外面 = 不保�
 document.getElementById('emAmt').addEventListener('input',emValidate);
 document.getElementById('emCur').onclick=()=>{emCur=CURS[(CURS.indexOf(emCur)+1)%3];document.getElementById('emCur').textContent=emCur;};
 document.getElementById('emCats').addEventListener('click',e=>{if(e.target.closest('[data-catadd]')){openCatAddFromSheet('edit');return;}const b=e.target.closest('.ecat');if(!b)return;emCat=b.dataset.c;emSubVal='';emBuildCats();});
-/* v9.72 记住分类开关：只在「可编辑的支出」显示（收入 / 银行商家消费不显示）。 */
+/* v11.59「朋友 / 商家」一颗切换（合并原本那颗记住开关）：只在「可编辑的支出」显示（收入 / 银行商家消费不显示）。
+   朋友 = 分类每次可能不同 → 只把上次的当建议、随手改（改这笔只动这一笔，不碰以前的账）。
+   商家 = 记住这个名字的分类 → 以后同名自动填（可随时改）。emIsPerson 就是这颗切换的状态。 */
 function emBuildRemember(){
   const wrap=document.getElementById('emRemWrap');if(!wrap)return;
   const show=emType==='expense';
   wrap.style.display=show?'':'none';
   if(!show)return;
-  const l1=wrap.querySelector('.emrl1'),hint=document.getElementById('emRemHint'),btn=document.getElementById('emRemBtn');
-  if(emIsPerson){
-    /* v11.58 转账给人：分类每次可能不一样（这次请吃饭、下次借钱、再下次礼物）→ 永远只当「上次的建议」，
-       不锁死、也不给开关（免得手滑锁成硬规则）。下次同一个人预填上次用的分类、随手改就好；
-       改这笔【只动这一笔】，以前任何一笔账都不会跟着变。 */
-    emRemember=false;
-    if(l1)l1.textContent='转账给人 · 分类只当建议';
-    if(hint)hint.textContent='下次预填上次用的分类，随手改就好 · 改这笔不影响以前的账';
-    if(btn)btn.style.display='none';
-  }else{
-    if(l1)l1.textContent='记住这个名字的分类';
-    if(hint)hint.textContent='商家：开着的话下次自动填这个分类';
-    if(btn){btn.style.display='';btn.setAttribute('aria-checked',emRemember?'true':'false');}
-  }
+  const seg=document.getElementById('emKindSeg'),hint=document.getElementById('emRemHint');
+  if(seg)[...seg.children].forEach(b=>b.classList.toggle('on',(b.dataset.person==='1')===emIsPerson));
+  if(hint)hint.textContent=emIsPerson
+    ?'朋友：分类每次可能不同 → 只把上次的当建议、随手改 · 改这笔不影响以前的账'
+    :'商家：记住这个名字的分类 · 以后同名自动填（可随时改）';
 }
-document.getElementById('emRemBtn').onclick=()=>{emRemember=!emRemember;document.getElementById('emRemBtn').setAttribute('aria-checked',emRemember?'true':'false');};
+document.getElementById('emKindSeg').addEventListener('click',e=>{const b=e.target.closest('button[data-person]');if(!b)return;emIsPerson=b.dataset.person==='1';emBuildRemember();});   /* v11.59 点「朋友/商家」→ 切换 emIsPerson */
 /* v11.10 退款抵扣开关：只在「收入」时显示。 */
 function emBuildOffset(){
   const wrap=document.getElementById('emOffWrap');if(!wrap)return;
@@ -5200,8 +5193,8 @@ document.getElementById('emConfirm').onclick=()=>{
   if(emType==='income'){const ko=merchantKey(note)||merchantKey(origMerchant);if(ko&&!isGeneric(ko))RULES[ko]=Object.assign(RULES[ko]||{},{o:eoff});}
   /* 2) 记住这家商家：以后同一家 → 名字和分类都自动填 */
   if(emType!=='income'&&emCat){
-    /* v9.72 转账给人 + 开关关 → 只当提示（h:1），不锁死；商家或开关开 → 硬规则（旧行为）。 */
-    const asHint=emIsPerson&&!emRemember;
+    /* v11.59 朋友 → 提示(h:1)，只当建议不锁死；商家 → 硬规则(h:0)，记住自动填。emIsPerson 就是那颗切换。 */
+    const asHint=emIsPerson;
     const rule={c:emCat,d:note||null,s:(emCat===FOOD_KEY?null:(emSubVal||null)),h:asHint?1:0};
     const k1=merchantKey(origMerchant), k2=merchantKey(note);
     if(k1&&!isGeneric(k1))RULES[k1]=rule;
@@ -5216,7 +5209,7 @@ document.getElementById('emConfirm').onclick=()=>{
   /* 3) 后台写库；orig_merchant 让 worker 知道拿哪个 key 去记 */
   apiUpdate(r.id,{amount:amt,currency:emCur,category:emCat,sub:fsub,merchant:note,
                   type:emType,ts,orig_merchant:origMerchant,offset:eoff,   /* v11.10 抵扣旗标 */
-                  isPerson:emIsPerson,lockPerson:emRemember,   /* v9.72 人 vs 商家记忆 */
+                  isPerson:emIsPerson,lockPerson:!emIsPerson,   /* v11.59 朋友=hint / 商家=硬规则（worker isHint=isPerson&&!lockPerson，两边对齐） */
                   ...((r.source!=='ocbc'&&r.source!=='dbs'&&emType==='expense')?{card_last4:r.card_last4}:{})}).then(ok=>{
     if(ok)return;
     Object.assign(r,before);                 /* 回滚 */
