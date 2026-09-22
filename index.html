@@ -5138,11 +5138,20 @@ function emBuildRemember(){
   const show=emType==='expense';
   wrap.style.display=show?'':'none';
   if(!show)return;
-  document.getElementById('emRemHint').textContent=emIsPerson
-    ?'转账给朋友：关掉的话下次只预填、不锁死'
-    :'商家：开着的话下次自动填这个分类';
-  const btn=document.getElementById('emRemBtn');
-  btn.setAttribute('aria-checked',emRemember?'true':'false');
+  const l1=wrap.querySelector('.emrl1'),hint=document.getElementById('emRemHint'),btn=document.getElementById('emRemBtn');
+  if(emIsPerson){
+    /* v11.58 转账给人：分类每次可能不一样（这次请吃饭、下次借钱、再下次礼物）→ 永远只当「上次的建议」，
+       不锁死、也不给开关（免得手滑锁成硬规则）。下次同一个人预填上次用的分类、随手改就好；
+       改这笔【只动这一笔】，以前任何一笔账都不会跟着变。 */
+    emRemember=false;
+    if(l1)l1.textContent='转账给人 · 分类只当建议';
+    if(hint)hint.textContent='下次预填上次用的分类，随手改就好 · 改这笔不影响以前的账';
+    if(btn)btn.style.display='none';
+  }else{
+    if(l1)l1.textContent='记住这个名字的分类';
+    if(hint)hint.textContent='商家：开着的话下次自动填这个分类';
+    if(btn){btn.style.display='';btn.setAttribute('aria-checked',emRemember?'true':'false');}
+  }
 }
 document.getElementById('emRemBtn').onclick=()=>{emRemember=!emRemember;document.getElementById('emRemBtn').setAttribute('aria-checked',emRemember?'true':'false');};
 /* v11.10 退款抵扣开关：只在「收入」时显示。 */

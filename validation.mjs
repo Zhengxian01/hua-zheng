@@ -2816,6 +2816,41 @@ async function suiteEdit() {
       (incSub.type === 'income' && !incSub.offset && incSub.incCatShown && incSub.rowShown && incSub.hasPlus && incSub.gotInput && incSub.addedToINC && incSub.addedToCAT && incSub.selected && incSub.offsetUsesExpenseSub)
         ? ok('收入现场加子分类：编辑收入(未抵扣) sub 排常驻 + 「+Sub」→ 加进 INC 并选中（没串到支出）；抵扣收入的 sub 用支出那套', JSON.stringify(incSub))
         : bad('收入现场加子分类没生效 / sub 套用错', JSON.stringify(incSub));
+      // 2z) v11.58 转账给人：分类只当「上次的建议」——编辑弹窗藏掉记住开关；改一笔【只动这一笔】，同一个人以前的账绝不跟着变；
+      //   记忆存 hint(h:1) 最近一次赢；商家照旧显示开关、硬规则不变。
+      const person = await pg.evaluate(async () => {
+        const keepD = DATA.slice(), keepR = JSON.parse(JSON.stringify(RULES)), keepC = JSON.parse(JSON.stringify(CAT));
+        RULES = {}; CAT = { food: { i: '🍜', n: '餐饮', c: '#DB5A54', subs: [] }, gift: { i: '🎁', n: '礼物', c: '#E7A33E', subs: [] }, lend: { i: '💸', n: '借出', c: '#3B82F6', subs: [] } };
+        DATA = [
+          { id: 'pp1', ts: '2026-09-05T12:00:00+08:00', amount: 20, currency: 'SGD', type: 'expense', category: 'food', merchant: 'John Transfer', source: 'manual' },
+          { id: 'pp2', ts: '2026-09-18T12:00:00+08:00', amount: 50, currency: 'SGD', type: 'expense', category: 'gift', merchant: 'John Transfer', source: 'manual' },
+          { id: 'mm1', ts: '2026-09-10T12:00:00+08:00', amount: 5, currency: 'SGD', type: 'expense', category: 'food', merchant: 'Starbucks', source: 'manual' }
+        ];
+        const out = {};
+        // 人：开关藏起来 + 说明改成「建议」
+        openEdit(DATA.find(x => x.id === 'pp2'));
+        out.personDetected = emIsPerson; out.remember = emRemember;
+        out.toggleHidden = document.getElementById('emRemBtn').style.display === 'none';
+        out.titleSuggest = /建议/.test(document.querySelector('#emRemWrap .emrl1').textContent);
+        // 改 pp2 分类 gift→lend 存 → pp2 变、pp1【不动】、记忆=hint 最近一次
+        emCat = 'lend'; document.getElementById('emConfirm').click();
+        await new Promise(r => setTimeout(r, 120));
+        out.pp2 = DATA.find(x => x.id === 'pp2').category;
+        out.pp1_frozen = DATA.find(x => x.id === 'pp1').category;   // 必须仍是 food
+        const rk = Object.keys(RULES).find(k => /JOHN/i.test(k));
+        out.ruleHint = rk ? RULES[rk].h === 1 : false; out.ruleC = rk ? RULES[rk].c : null;
+        // 商家：开关照旧显示、硬规则
+        openEdit(DATA.find(x => x.id === 'mm1'));
+        out.merchantToggleShown = document.getElementById('emRemBtn').style.display !== 'none';
+        out.merchantNotPerson = !emIsPerson;
+        try { closeEdit(); } catch (_) { }
+        DATA = keepD; RULES = keepR; CAT = keepC; return out;
+      });
+      (person.personDetected && !person.remember && person.toggleHidden && person.titleSuggest &&
+        person.pp2 === 'lend' && person.pp1_frozen === 'food' && person.ruleHint && person.ruleC === 'lend' &&
+        person.merchantToggleShown && person.merchantNotPerson)
+        ? ok('转账给人：分类只当建议（藏开关）· 改一笔只动这一笔（pp1 仍 food）· 记忆存 hint 最近一次赢 · 商家照旧显示开关/硬规则', JSON.stringify(person))
+        : bad('转账给人分类记忆行为不对（可能牵动了以前的账 / 开关没藏 / 商家被误改）', JSON.stringify(person));
       // 2w) v11.55 CPF 进账时机：M 月工资 → CPF 记 M+1 月 + 到账日 cred；没到进账日→待进账、不算进总额；关 payShift→工资同月、全算
       const payShift = await pg.evaluate(() => {
         const keep = DATA.slice(); const tk = todayKey();   // 用「今天」往前后各推，避免依赖真实日期
