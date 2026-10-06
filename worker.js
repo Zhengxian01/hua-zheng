@@ -16,7 +16,7 @@
    （先留着旧值当 fallback，是为了让你「先部署、再设 secret」也不会整个 app 401 掉。） */
 const TOKEN_DEFAULT = "";
 const appToken = (env) => env.APP_TOKEN || TOKEN_DEFAULT;
-const WORKER_VER = "v10.36";   // 改这个档就顺手 +1，方便对版本
+const WORKER_VER = "v10.37";   // 改这个档就顺手 +1，方便对版本
 
 // 背景图上限（解码后字节）。前端 compressImage 目标 260KB，这里留一倍余量。
 const MAX_BG_BYTES = 600 * 1024;
@@ -2294,12 +2294,20 @@ export default {
         const r = await ingestRaw(env, text,
           isShot ? "📷 截图" : "paste",
           isShot ? "（截图记账）" : "（粘贴）");
-        /* v10.36 给 iOS 捷径一句人话，好直接丢进「显示通知」—— 记成功/重复/没读到，一眼看懂。 */
+        /* v10.37 给 iOS 捷径一句人话，好直接丢进「显示通知」—— 一眼看懂记了几笔、跳过几笔（已记过）、没读到。
+           一张截图里常有好几条（parseOCBC 等都是 matchAll 全收）→ 明确报「记了 N 笔 · 跳过 M 笔（记过了）」，
+           使用者重复截同一屏也放心：记过的靠 hash UNIQUE + INSERT OR IGNORE 静默跳过，这里把跳过数说出来。 */
         let msg;
-        if (r.saved > 0) msg = "✅ 已记 · " + (r.rows || []).map((x) => `${x.currency} ${Number(x.amount).toFixed(2)}${x.merchant ? " · " + x.merchant : ""}`).join(" ／ ");
-        else if (r.parsed > 0) msg = "↩︎ 这笔记过了 · 跳过（没双记）";
-        else msg = "😕 没读到 · 去 app「收件箱」看原文 / 手动补一笔";
-        return json({ ok: true, parsed: r.parsed, saved: r.saved, rows: r.rows, msg });
+        const skipped = Math.max(0, (r.parsed || 0) - (r.saved || 0));
+        if (r.saved > 0) {
+          const list = (r.rows || []).map((x) => `${x.currency} ${Number(x.amount).toFixed(2)}${x.merchant ? " · " + x.merchant : ""}`).join(" ／ ");
+          msg = `✅ 记了 ${r.saved} 笔 · ${list}` + (skipped > 0 ? ` · 跳过 ${skipped} 笔（记过了）` : "");
+        } else if (r.parsed > 0) {
+          msg = `↩︎ 这 ${r.parsed} 笔都记过了 · 全跳过（没双记）`;
+        } else {
+          msg = "😕 没读到 · 去 app「收件箱」看原文 / 手动补一笔";
+        }
+        return json({ ok: true, parsed: r.parsed, saved: r.saved, skipped, rows: r.rows, msg });
       }
 
       /* v2.0 JSON 恢复：POST /api/import { token, expenses:[], rules:{}, categories:{} }
