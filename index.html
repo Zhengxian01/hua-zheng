@@ -2620,7 +2620,7 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
         <li>加 <span class="en">Extract Text from Image</span> → 输入选上一步的 <span class="en">Screenshot</span></li>
         <li>加 <span class="en">Get Contents of URL</span>：URL 贴上面那条；点 <span class="en">Show More</span> → <span class="en">Method</span> = <span class="en">POST</span>；<span class="en">Request Body</span> = <span class="en">File</span> → 放上一步 <span class="en">Extract Text</span> 的结果<span style="color:var(--muted)">（token 在网址里了，body 只要这段文字 · 别选 JSON / Form）</span></li>
         <li>加 <span class="en">Get Dictionary Value</span> → <span class="en">Key</span> 填 <code>msg</code></li>
-        <li>加 <span class="en">Show Notification</span> → 内容选上一步的 <span class="en">Dictionary Value</span><span style="color:var(--muted)"> —— 记完弹「✅ 已记 · MYR 25.00 · JB Grocer」</span></li>
+        <li>加 <span class="en">Show Notification</span> → 内容选上一步的 <span class="en">Dictionary Value</span><span style="color:var(--muted)"> —— 记完弹「✅ 记了 1 笔 · MYR 25.00 · JB Grocer」；一屏多条就「✅ 记了 N 笔… · 跳过 M 笔（记过了）」</span></li>
         <li>右上起名「<b>拍一笔</b>」→ <span class="en">Done</span> 存好</li>
       </ol>
     </div>
@@ -2642,7 +2642,7 @@ body.theme-journal.blook.numamt .tx .amt.exp{color:#BC5637!important}   /* 纸�
     <div class="gdhint" style="margin:6px 2px 14px">捷径本身一模一样，只是绑哪个键的差别 —— 你可以两个都试，改来改去 30 秒的事，随时换。</div>
 
     <div class="sc-sec">④ 平时怎么用</div>
-    <div class="sc-card"><b>先开那笔交易的「详情页」→ 再触发那个键</b><br><span style="color:#B87A18">⚠️ 别只截通知弹窗 —— 弹窗字太少，多半读不到；一定要点进<b>详情页</b>（有 Ref / 余额那些）再截。</span><br>TnG / Maybank / Wise 的详情页格式<b>已经内建、认得</b>，不用设。<br><b>记完手机会弹一条通知</b>：成功 →「<b>✅ 已记 · MYR 25.00 · JB Grocer</b>」；重复 →「↩︎ 记过了，跳过」；没读到 →「😕 没读到」。一眼知道成没成。</div>
+    <div class="sc-card"><b>先开那笔交易的「详情页」→ 再触发那个键</b><br><span style="color:#B87A18">⚠️ 别只截通知弹窗 —— 弹窗字太少，多半读不到；一定要点进<b>详情页</b>（有 Ref / 余额那些）再截。</span><br>TnG / Maybank / Wise 的详情页格式<b>已经内建、认得</b>，不用设。<br><b>记完手机会弹一条通知</b>：成功 →「<b>✅ 记了 1 笔 · MYR 25.00 · JB Grocer</b>」；一屏截到好几条 →「<b>✅ 记了 N 笔… · 跳过 M 笔（记过了）</b>」；全是记过的 →「↩︎ 这 N 笔都记过了 · 全跳过」；没读到 →「😕 没读到」。一眼知道记了几笔、跳过几笔。</div>
 
     <div class="sc-sec">⑤ 记完，在哪看？</div>
     <div class="sc-card"><span class="sc-app" style="pointer-events:none">明细</span> <b>多一笔</b><br>截图记的那笔，跟平时一样出现在「<b>明细</b>」里 —— 金额 / 分类 / 商家都有，照样能改能删。</div>
