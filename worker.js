@@ -16,7 +16,7 @@
    （先留着旧值当 fallback，是为了让你「先部署、再设 secret」也不会整个 app 401 掉。） */
 const TOKEN_DEFAULT = "";
 const appToken = (env) => env.APP_TOKEN || TOKEN_DEFAULT;
-const WORKER_VER = "v10.37";   // 改这个档就顺手 +1，方便对版本
+const WORKER_VER = "v10.38";   // 改这个档就顺手 +1，方便对版本
 
 // 背景图上限（解码后字节）。前端 compressImage 目标 260KB，这里留一倍余量。
 const MAX_BG_BYTES = 600 * 1024;
@@ -4239,7 +4239,11 @@ function parseTnGShot(raw) {
     const pd = t.match(/\n\s*(?:Payment\s*Details?|Transaction\s*Details?)[ \t]*[:：]?[ \t]*\n?[ \t]*(.+)/i);
     if (pd) { const v = stripPrefix(pd[1].trim().replace(/\s{2,}/g, " ")); if (!badVal(v)) merchant = v; }
   }
-  // ③ Transfer To 下一行 → 转账给人（分类只当提示，不锁死）
+  // ③ Transfer To / Receiver 下一行 → 转账给人（分类只当提示，不锁死）
+  //    v10.38：TnG 付钱后【立刻弹出】的「Transferred」成功页用的是 `Receiver`（不是详情页的 `Transfer To`）：
+  //      ✓ RM 185.00 / Transferred / Receiver  KUA KIM SIA / Remark  KUA KIM SIA / Date & Time 08/10/2026 12:15:30
+  //    这页没有 UUID/Wallet Ref → hash 退回 tng:shot:ts:amount（同图重截去重）。金额/日期本来就抓得到，
+  //    只差把 `Receiver` 也当收款人认出来 → 这里加上，详情页那套 `Transfer To` 原样保留，两种页面都读得到。
   if (!merchant) {
   /* ⚠️⚠️ v23.26 第二轮，拿到真实 TnG 收据（IMG_6774）才发现的：
      ①②两条都写成 `\n?` = 「标签和值同一行、或值在下一行」两种 OCR 形态都吃，
@@ -4255,7 +4259,7 @@ function parseTnGShot(raw) {
        ① 改用 matchAll 逐个试，被 badVal 挡掉就继续往下找，而不是「第一个不合格就放弃」
        ② PAY_WORDS 补一个单独的 `wallet`
      两道齐了，两种形态都能抓到真正的收款人。 */
-    for (const pm of t.matchAll(/\n[ \t]*Transfer\s*To[ \t]*[:：]?[ \t]*\n?[ \t]*([^\n]+)/gi)) {
+    for (const pm of t.matchAll(/\n[ \t]*(?:Transfer\s*To|Receiver)[ \t]*[:：]?[ \t]*\n?[ \t]*([^\n]+)/gi)) {
       const v = pm[1].trim().replace(/\s{2,}/g, " ");
       if (badVal(v)) continue;
       merchant = v; fromPerson = true; break;
@@ -4710,7 +4714,11 @@ function parseRaw(raw, from) {
     [() => /DBS|digibank|POSB/i.test(raw) && /received\s+[A-Z]{3}\s*[\d,]+\.\d{2}\s+via\s+PayNow/i.test(raw), () => parseDBSPayNowIn(raw)],
     [() => isNetsQR(raw), () => parseNETS(raw)],
     [() => /Reference Number/i.test(raw) && /RM\s*[\d,]+\.\d{2}/.test(raw) && /(Maybank|Terminal ID|Approval Code|Merchant ID)/i.test(raw), () => parseMaybankShot(raw)],
-    [() => /(eWallet Balance|Wallet Ref|Transfer to Wallet)/i.test(raw), () => parseTnGShot(raw)],
+    /* TnG：详情页靠 eWallet Balance/Wallet Ref/Transfer to Wallet；v10.38 付款后立刻弹出的「成功页」
+       没有这些字（只有 Transferred + Receiver + Date & Time）→ 补一条闸门：RM 金额 + Transferred + Receiver。
+       钉得够死（三个条件同时成立），不会误吃别家的截图。 */
+    [() => /(eWallet Balance|Wallet Ref|Transfer to Wallet)/i.test(raw)
+        || (/RM\s*[\d,]+\.\d{2}/.test(raw) && /\bTransferred\b/i.test(raw) && /\bReceiver\b/i.test(raw)), () => parseTnGShot(raw)],
     [() => /You\s+paid/i.test(raw) && /Transaction\s*Ref/i.test(raw), () => parsePayLahShot(raw)],
     [() => /Which\s+card/i.test(raw) && /Authorised\s+via/i.test(raw), () => parseWiseShot(raw)],
     [() => isPayNowTransfer(raw), () => parsePayNow(raw)],

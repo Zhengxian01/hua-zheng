@@ -823,6 +823,28 @@ Status    Successful
 Transaction No.    c610428d-c427-4677-b175-8c6763f0dfd0
 Add To Favourites`;
 
+/* ── ⑧ TnG 付款【成功页】（付钱后立刻弹出的那一屏，真实布局）──
+      RM 185.00（有空格、无符号）· Transferred · 用的是 `Receiver`（不是详情页的 `Transfer To`）
+      · 这页没有 UUID/Wallet Ref → hash 退回 tng:shot:ts:amount。两种 OCR 形态（分行 / 同行）都要认。 */
+const TNG_PAID_SHOT = `12:15
+RM 185.00
+Transferred
+Receiver
+KUA KIM SIA
+Remark
+KUA KIM SIA
+Date & Time
+08/10/2026 12:15:30
+Done`;
+
+const TNG_PAID_1LINE = `12:15
+RM 185.00
+Transferred
+Receiver    KUA KIM SIA
+Remark    KUA KIM SIA
+Date & Time    08/10/2026 12:15:30
+Done`;
+
 /* ── ⑦ Maybank 截图（IMG_6781 · 真实收据）──
       -RM 86.00 · 商家名自带双空格「JB -  CONCE」 */
 const MAYBANK_SHOT = `14:00
@@ -873,6 +895,8 @@ const REAL = {
   '⑥ TnG 截图 · 同行': TNG_SHOT_1LINE,
   '⑦ Maybank 截图 · 分行': MAYBANK_SHOT,
   '⑦ Maybank 截图 · 同行': MAYBANK_SHOT_1LINE,
+  '⑧ TnG 截图 · 成功页分行': TNG_PAID_SHOT,
+  '⑧ TnG 截图 · 成功页同行': TNG_PAID_1LINE,
 };
 
 /* 每封信的寄件人（分流闸门会看 from） */
@@ -891,6 +915,8 @@ const FROM = {
   '⑥ TnG 截图 · 同行': '',
   '⑦ Maybank 截图 · 分行': '',
   '⑦ Maybank 截图 · 同行': '',
+  '⑧ TnG 截图 · 成功页分行': '',
+  '⑧ TnG 截图 · 成功页同行': '',
 };
 
 /* ── MIME 信封工具 ── */
@@ -921,6 +947,7 @@ const EXPECT = {
   '⑤ MariBank':     ['maribank', 'CNY', 20.00, 'Alipay*Taobao',                    '5831',   '2026-08-02T16:51:00+08:00', 'mbk:2026-08-02T16:51:00+08:00:20:5831'],
   '⑥ TnG 截图':     ['tng', 'MYR', 380.00, 'EPHRAIM LEVI SOLIBUN',      'TnG',  '2026-07-18T16:39:40+08:00', 'tng:c610428d-c427-4677-b175-8c6763f0dfd0'],
   '⑦ Maybank 截图': ['mbb', 'MYR',  86.00, 'GSC - SOUTHKEY JB - CONCE', '3869', '2026-07-25T13:59:00+08:00', 'mbb:620605020913'],
+  '⑧ TnG 成功页':   ['tng', 'MYR', 185.00, 'KUA KIM SIA',               'TnG',  '2026-10-08T12:15:30+08:00', 'tng:shot:2026-10-08T12:15:30+08:00:185'],
 };
 
 /* ══════════════════════════════════════════════════════════════════════
