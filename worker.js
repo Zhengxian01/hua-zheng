@@ -16,7 +16,7 @@
    （先留着旧值当 fallback，是为了让你「先部署、再设 secret」也不会整个 app 401 掉。） */
 const TOKEN_DEFAULT = "";
 const appToken = (env) => env.APP_TOKEN || TOKEN_DEFAULT;
-const WORKER_VER = "v10.38";   // 改这个档就顺手 +1，方便对版本
+const WORKER_VER = "v10.39";   // 改这个档就顺手 +1，方便对版本
 
 // 背景图上限（解码后字节）。前端 compressImage 目标 260KB，这里留一倍余量。
 const MAX_BG_BYTES = 600 * 1024;
@@ -4215,8 +4215,21 @@ function parseTnGShot(raw) {
 
   // 坑 1：UUID 跨行接回来；接不到就退而用 Wallet Ref
   const um = t.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\s*[0-9a-f]{12})/i);
-  const wm = t.match(/Wallet\s*Ref[^\n]*\n\s*(\d{10,})/i);
-  const ref = um ? um[1].replace(/\s+/g, "") : (wm ? wm[1] : "");
+  /* ⚠️⚠️ v10.39 坑 5（真实踩到：DuitNow QR 付款成功页，SM TUN AMINAH RM54.05）：
+     成功页的 eWallet Ref No. **中间夹字母、还被折成两行**：
+       20261010101100000100000TNGOW3MY17
+       1916953323339
+     旧正则 `(\d{10,})` 只吃纯数字 → 只抓到前面「日期 + 固定码」那段 `20261010101100000100000`，
+     真正每笔不同的尾巴全丢了 → **同一天几笔 DuitNow 撞同一个指纹** → 第二笔起被 INSERT OR IGNORE
+     当重复**静默丢掉**（看起来像读不到）。
+     修：把整串（含字母、含折行的下一行）接回来；
+       · 整串是纯数字（旧详情页那种 Wallet Ref）→ 照旧当指纹，hash 跟以前一字不差，不会让旧账变两笔；
+       · 夹了字母（成功页）→ 长串 + 字母 O/0 很容易 OCR 认错、又会折行 → **不拿来当指纹**，
+         退回「日期时间(到秒)+金额」，同样唯一、而且重截同一张一定对得上。
+     值的字元类故意**区分大小写**（只认 0-9A-Z）：下一行若是 `Status` / `Successful` 这种标签不会被误接。 */
+  const wl = t.match(/[Ww]allet\s*[Rr]ef(?:\s*[Nn]o\.?)?[ \t]*[:：]?[ \t]*\n?[ \t]*([0-9A-Z]{10,})[ \t]*(?:\n[ \t]*([0-9A-Z]{6,})[ \t]*(?=\n|$))?/);
+  const wfull = wl ? wl[1] + (wl[2] || "") : "";
+  const ref = um ? um[1].replace(/\s+/g, "") : (/^\d+$/.test(wfull) ? wfull : "");
 
   /* v9.87 统一商家提取（跟 DBS/OCBC/PayNow 同一套思路，不给 TnG 开小灶）：
      按优先级找真正的商家名，绝不把「支付方式」当商家。
@@ -4272,7 +4285,7 @@ function parseTnGShot(raw) {
     card_last4: "TnG",        // 付款方式会显示成 TnG，之后可以自己改名
     isPerson: fromPerson,                      // v9.88 只有「Transfer To 某人」才是转账给人；商家消费(Merchant字段)= false，分类照锁
     source: "tng",
-    raw: `TnG ${ref || "shot"}`,
+    raw: `TnG ${ref || wfull || "shot"}`,   // 原文里留完整 eWallet Ref（就算没拿来当指纹，对账时看得到）
     hash: ref ? `tng:${ref}` : `tng:shot:${ts}:${amount}`,
   }];
 }

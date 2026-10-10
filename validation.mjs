@@ -837,6 +837,41 @@ Date & Time
 08/10/2026 12:15:30
 Done`;
 
+/* ── ⑨ TnG DuitNow QR 付款成功页（真实：SM TUN AMINAH RM54.05）──
+      eWallet Ref No. 中间夹字母 + 折两行 → 旧版只抓前面「日期+固定码」→ 同天几笔撞指纹被静默吞掉。
+      现在：夹字母的 ref 不当指纹，退回 ts(到秒)+金额；两种 OCR 形态必须同一个指纹。 */
+const TNG_QR_SHOT = `18:55
+RM 54.05
+Paid
++ 54 points
+Merchant
+SM TUN AMINAH
+Transaction Type
+DuitNow QR TNGD
+Date/Time
+10/10/2026 18:55:03
+eWallet Ref No.
+20261010101100000100000TNGOW3MY17
+1916953323339
+Payment Method
+eWallet Balance
+Pay without the hassle of reloading!
+Set up now
+Done`;
+
+const TNG_QR_1LINE = `18:55
+RM 54.05
+Paid
++ 54 points
+Merchant SM TUN AMINAH
+Transaction Type DuitNow QR TNGD
+Date/Time 10/10/2026 18:55:03
+eWallet Ref No. 20261010101100000100000TNGOW3MY17
+1916953323339
+Payment Method eWallet Balance
+Set up now
+Done`;
+
 const TNG_PAID_1LINE = `12:15
 RM 185.00
 Transferred
@@ -897,6 +932,8 @@ const REAL = {
   '⑦ Maybank 截图 · 同行': MAYBANK_SHOT_1LINE,
   '⑧ TnG 截图 · 成功页分行': TNG_PAID_SHOT,
   '⑧ TnG 截图 · 成功页同行': TNG_PAID_1LINE,
+  '⑨ TnG 截图 · QR成功页分行': TNG_QR_SHOT,
+  '⑨ TnG 截图 · QR成功页同行': TNG_QR_1LINE,
 };
 
 /* 每封信的寄件人（分流闸门会看 from） */
@@ -917,6 +954,8 @@ const FROM = {
   '⑦ Maybank 截图 · 同行': '',
   '⑧ TnG 截图 · 成功页分行': '',
   '⑧ TnG 截图 · 成功页同行': '',
+  '⑨ TnG 截图 · QR成功页分行': '',
+  '⑨ TnG 截图 · QR成功页同行': '',
 };
 
 /* ── MIME 信封工具 ── */
@@ -948,6 +987,7 @@ const EXPECT = {
   '⑥ TnG 截图':     ['tng', 'MYR', 380.00, 'EPHRAIM LEVI SOLIBUN',      'TnG',  '2026-07-18T16:39:40+08:00', 'tng:c610428d-c427-4677-b175-8c6763f0dfd0'],
   '⑦ Maybank 截图': ['mbb', 'MYR',  86.00, 'GSC - SOUTHKEY JB - CONCE', '3869', '2026-07-25T13:59:00+08:00', 'mbb:620605020913'],
   '⑧ TnG 成功页':   ['tng', 'MYR', 185.00, 'KUA KIM SIA',               'TnG',  '2026-10-08T12:15:30+08:00', 'tng:shot:2026-10-08T12:15:30+08:00:185'],
+  '⑨ TnG QR成功页': ['tng', 'MYR',  54.05, 'SM TUN AMINAH',             'TnG',  '2026-10-10T18:55:03+08:00', 'tng:shot:2026-10-10T18:55:03+08:00:54.05'],
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -994,6 +1034,16 @@ for (const [name, raw] of Object.entries(REAL)) {
   for (const cte of ['base64', 'quoted-printable']) {
     run(`${k}  [${cte}]`, W.mailText(wrapMime(raw, cte)), FROM[name], EXPECT[k]);
   }
+}
+
+/* ── D. v10.39 TnG 同一天两笔 DuitNow QR 不能撞指纹（真实踩到：旧版 ref 只抓「日期+固定码」前缀 → 第二笔被静默吞掉）── */
+console.log('\n── TnG 同天多笔不撞指纹 ──');
+{
+  const other = TNG_QR_SHOT.replace('RM 54.05', 'RM 8.50').replace('SM TUN AMINAH', 'KEDAI KOPI')
+    .replace('18:55:03', '12:30:41').replace('1916953323339', '1916900001111');
+  const h1 = (W.parseRaw(TNG_QR_SHOT, '')[0] || {}).hash, h2 = (W.parseRaw(other, '')[0] || {}).hash;
+  if (h1 && h2 && h1 !== h2) { pass++; console.log(`✅ 同一天两笔不同付款 → 指纹不同（${h1} ≠ ${h2}）`); }
+  else { fail++; console.log(`❌ 同一天两笔不同付款撞同一个指纹 → 第二笔会被当重复吞掉\n     ${h1} / ${h2}`); }
 }
 
   return { name: '§B parser 回归', pass, fail, warn: 0, skipped: false };
