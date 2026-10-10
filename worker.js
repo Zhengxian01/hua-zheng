@@ -16,7 +16,7 @@
    （先留着旧值当 fallback，是为了让你「先部署、再设 secret」也不会整个 app 401 掉。） */
 const TOKEN_DEFAULT = "";
 const appToken = (env) => env.APP_TOKEN || TOKEN_DEFAULT;
-const WORKER_VER = "v10.40";   // 改这个档就顺手 +1，方便对版本
+const WORKER_VER = "v10.41";   // 改这个档就顺手 +1，方便对版本
 
 // 背景图上限（解码后字节）。前端 compressImage 目标 260KB，这里留一倍余量。
 const MAX_BG_BYTES = 600 * 1024;
@@ -4285,7 +4285,10 @@ function parseTnGShot(raw) {
     card_last4: "TnG",        // 付款方式会显示成 TnG，之后可以自己改名
     isPerson: fromPerson,                      // v9.88 只有「Transfer To 某人」才是转账给人；商家消费(Merchant字段)= false，分类照锁
     source: "tng",
-    raw: `TnG ${ref || wfull || "shot"}`,   // 原文里留完整 eWallet Ref（就算没拿来当指纹，对账时看得到）
+    /* 原文里留完整 eWallet Ref（就算没拿来当指纹，对账时看得到）。
+       v10.41 再留一份「截图上读到的原始商家名」：expenses.merchant 之后可能被你改名 / 被商家记忆换成别名，
+       tngTwin 判断「两张截图是不是同一家」要看原始名，不能看改过的名。 */
+    raw: `TnG ${ref || wfull || "shot"}${merchant ? " · " + merchant : ""}`,
     hash: ref ? `tng:${ref}` : `tng:shot:${ts}:${amount}`,
   }];
 }
@@ -4776,6 +4779,22 @@ function parseRaw(raw, from) {
    要误并只可能是「一分钟内、同金额、一笔截成功页另一笔截详情页」—— 极少，而且通知会写
    「跳过 1 笔（记过了）」，看得到、可以手动补。 */
 const TNG_TWIN_MS = 60 * 1000;
+/* v10.41 商家名当第二道锁。
+   名字只拿「截图上读到的原始名」比（存在 raw 的「 · 名字」那段）—— expenses.merchant 可能被你改过名 /
+   被商家记忆换成别名，拿它比会把真的同一笔误判成两家。
+   通用名（TnG Transfer）或旧资料没存原始名 → 不当证据，照旧只靠时间+金额。 */
+const tngGeneric = (s) => !s || /^\s*(?:tng(?:\s*(?:transfer|ewallet))?|touch\s*'?n\s*go)?\s*$/i.test(String(s));
+const tngWords = (s) => String(s || "").toUpperCase()
+  .replace(/^\s*(?:DUITNOW\s*QR|DUITNOW|PAYMENT)\s*[-:\u2013]\s*/, "")
+  .split(/[^A-Z0-9]+/).filter((w) => w.length >= 2);
+const tngOrigName = (raw) => { const m = String(raw || "").match(/^TnG \S+ · (.+)$/); return m ? m[1].trim() : ""; };
+/* 两个名字「明显是不同家」：都是真名字，而且一个共同的字都没有 */
+function tngNameClash(a, b) {
+  if (tngGeneric(a) || tngGeneric(b)) return false;
+  const A = tngWords(a), B = new Set(tngWords(b));
+  return A.length > 0 && B.size > 0 && !A.some((w) => B.has(w));
+}
+/* 回传「这一笔其实已经记过了」的那笔（同指纹 或 另一页的同一笔），没有就 null。 */
 async function tngTwin(env, r) {
   if (!r || r.source !== "tng") return null;
   const t = Date.parse(r.ts); if (!Number.isFinite(t)) return null;
@@ -4783,16 +4802,18 @@ async function tngTwin(env, r) {
   const sg = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(0, 19) + "+08:00";   // TnG 的 ts 一律存 +08:00，字串可直接比大小
   try {
     const res = await env.DB.prepare(
-      "SELECT ts, amount, currency, merchant, hash, source FROM expenses WHERE source='tng' AND ts>=? AND ts<=?"
+      "SELECT ts, amount, currency, merchant, hash, source, raw FROM expenses WHERE source='tng' AND ts>=? AND ts<=?"
     ).bind(sg(t - TNG_TWIN_MS), sg(t + TNG_TWIN_MS)).all();
     for (const o of (res && res.results) || []) {
       /* SQL 只是粗筛；下面每个条件在 JS 里再验一次（不靠 SQL 的字串比较、也不怕时区写法不同） */
       if (o.source && o.source !== "tng") continue;
-      if (!o.hash || o.hash === r.hash) continue;   // 同指纹交给 INSERT OR IGNORE
+      if (!o.hash) continue;
+      if (o.hash === r.hash) return o;   // 同一张（或 QR 成功页 / QR 详情页 —— 两页都没 UUID，时间+金额指纹天然一样）
       if ((o.currency || "MYR") !== (r.currency || "MYR")) continue;
       if (Math.abs(Number(o.amount) - Number(r.amount)) > 0.005) continue;
       const ot = Date.parse(o.ts); if (!Number.isFinite(ot) || Math.abs(ot - t) > TNG_TWIN_MS) continue;
-      if (String(o.hash).startsWith("tng:shot:") === isShot) continue;   // 同一种页面 = 真的两笔
+      if (String(o.hash).startsWith("tng:shot:") === isShot) continue;   // 同一种页面、指纹不同 = 真的两笔
+      if (tngNameClash(tngOrigName(o.raw), r.merchant)) continue;      // v10.41 两边都读到真名字、而且明显不同家 → 不是同一笔
       return o;
     }
   } catch (e) { console.log("tng twin:", e.message); }
@@ -4909,7 +4930,17 @@ async function ingestRaw(env, raw, from, subject, opts) {
        跳过时把这条收件箱记录的指纹改成那一笔的指纹，删账时才会连这张截图的记录一起清掉。 */
     const twin = await tngTwin(env, r);
     if (twin) {
-      notes.push(`↩︎ ${r.currency} ${Number(r.amount).toFixed(2)} 没再记：同一笔 TnG 已经从另一页记过（${String(twin.ts).slice(5, 16).replace("T", " ")} · ${twin.merchant || "?"}）`);
+      /* v10.41 不只是跳过，顺手「补强」那一笔：先截的那张没读到商家（只剩通用名 TnG Transfer），
+         这张读到了 → 把名字补上。只在原本是通用名时才补 —— 你改过的名字绝不动。 */
+      let filled = "";
+      if (tngGeneric(twin.merchant) && !tngGeneric(r.merchant)) {
+        try {
+          await env.DB.prepare("UPDATE expenses SET merchant=?, raw=? WHERE hash=?")
+            .bind(r.merchant, String(twin.raw || "TnG shot").replace(/ · .*$/, "") + " · " + r.merchant, twin.hash).run();
+          filled = ` · 补上商家名「${r.merchant}」`;
+        } catch (e) { console.log("tng fill merchant:", e.message); }
+      }
+      notes.push(`↩︎ ${r.currency} ${Number(r.amount).toFixed(2)} 没再记：同一笔 TnG 已经记过（${String(twin.ts).slice(5, 16).replace("T", " ")} · ${twin.merchant || "?"}）${filled}`);
       r.hash = twin.hash;
       continue;
     }

@@ -872,6 +872,47 @@ Payment Method eWallet Balance
 Set up now
 Done`;
 
+/* ── ⑩ TnG DuitNow QR【详情页】（真实：同一笔 SM TUN AMINAH RM54.05，事后从交易记录点开）──
+      跟 ⑨ 成功页是同一笔：时间同为 18:55:03；但 Wallet Ref 尾数跟成功页不同（…3323339 vs …3328927），
+      Transaction No. 也不是 UUID 格式 → 两页没有共同编号，只能靠「时间到秒 + 金额」。
+      这页 ref 夹字母 → 指纹退回 tng:shot:时间:金额 → 跟 ⑨ 天然同一个指纹 = 同一笔，不会重复。 */
+const TNG_QR_DETAIL = `19:37
+Details
+-RM54.05
++54 points
+Transaction Type
+DuitNow QR TNGD
+Merchant
+SM TUN AMINAH
+Payment Details
+Payment - SM TUN AMINAH
+Payment Method
+eWallet Balance
+Date/Time
+10/10/2026 18:55:03
+Wallet Ref
+20261010101100000100000TNGOW3MY17191
+6953328927
+Status
+Successful
+Transaction No.
+20261010TNGDMYNB030OQRmlp34u9
+1`;
+
+const TNG_QR_DETAIL_1LINE = `19:37
+Details
+-RM54.05    +54 points
+Transaction Type    DuitNow QR TNGD
+Merchant    SM TUN AMINAH
+Payment Details    Payment - SM TUN AMINAH
+Payment Method    eWallet Balance
+Date/Time    10/10/2026 18:55:03
+Wallet Ref    20261010101100000100000TNGOW3MY17191
+6953328927
+Status    Successful
+Transaction No.    20261010TNGDMYNB030OQRmlp34u9
+1`;
+
 const TNG_PAID_1LINE = `12:15
 RM 185.00
 Transferred
@@ -934,6 +975,8 @@ const REAL = {
   '⑧ TnG 截图 · 成功页同行': TNG_PAID_1LINE,
   '⑨ TnG 截图 · QR成功页分行': TNG_QR_SHOT,
   '⑨ TnG 截图 · QR成功页同行': TNG_QR_1LINE,
+  '⑩ TnG 截图 · QR详情页分行': TNG_QR_DETAIL,
+  '⑩ TnG 截图 · QR详情页同行': TNG_QR_DETAIL_1LINE,
 };
 
 /* 每封信的寄件人（分流闸门会看 from） */
@@ -956,6 +999,8 @@ const FROM = {
   '⑧ TnG 截图 · 成功页同行': '',
   '⑨ TnG 截图 · QR成功页分行': '',
   '⑨ TnG 截图 · QR成功页同行': '',
+  '⑩ TnG 截图 · QR详情页分行': '',
+  '⑩ TnG 截图 · QR详情页同行': '',
 };
 
 /* ── MIME 信封工具 ── */
@@ -988,6 +1033,7 @@ const EXPECT = {
   '⑦ Maybank 截图': ['mbb', 'MYR',  86.00, 'GSC - SOUTHKEY JB - CONCE', '3869', '2026-07-25T13:59:00+08:00', 'mbb:620605020913'],
   '⑧ TnG 成功页':   ['tng', 'MYR', 185.00, 'KUA KIM SIA',               'TnG',  '2026-10-08T12:15:30+08:00', 'tng:shot:2026-10-08T12:15:30+08:00:185'],
   '⑨ TnG QR成功页': ['tng', 'MYR',  54.05, 'SM TUN AMINAH',             'TnG',  '2026-10-10T18:55:03+08:00', 'tng:shot:2026-10-10T18:55:03+08:00:54.05'],
+  '⑩ TnG QR详情页': ['tng', 'MYR',  54.05, 'SM TUN AMINAH',             'TnG',  '2026-10-10T18:55:03+08:00', 'tng:shot:2026-10-10T18:55:03+08:00:54.05'],   // 跟 ⑨ 同一个指纹 = 同一笔
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1796,7 +1842,7 @@ async function suiteIron(W) {
   /* ── §D1t v10.40 TnG 同一笔、不同页面（付款成功页 + 事后详情页）只算一笔 ──
      成功页没 UUID（指纹 tng:shot:时间:金额），详情页有 UUID（指纹 tng:UUID）→ hash 对不上。
      靠「日期时间(到秒) + 金额，一边成功页一边详情页」对撞。但两张都是详情页、UUID 不同 = 真的两笔，绝不能并。 */
-  head('§D1t TnG 成功页 + 详情页 = 同一笔（v10.40）');
+  head('§D1t TnG 成功页 + 详情页 = 同一笔（v10.40 · v10.41 名字锁+补名）');
   if (typeof W.ingestRaw !== 'function') { console.log(`${L.warn}  §D1t 跳过：worker 没导出 ingestRaw${L.off}`); }
   else {
     const mkTng = () => {
@@ -1807,6 +1853,9 @@ async function suiteIron(W) {
             const [ts, amount, currency, merchant, card_last4, source, raw, hash] = a;
             if (ex.some(e => e.hash === hash)) return { meta: { changes: 0 } };
             ex.push({ ts, amount, currency, merchant, card_last4, source, raw, hash }); return { meta: { changes: 1, last_row_id: ex.length } };
+          }
+          if (/UPDATE\s+expenses\s+SET\s+merchant=\?,\s*raw=\?\s+WHERE\s+hash=\?/i.test(sql)) {
+            const row = ex.find(e => e.hash === a[2]); if (row) { row.merchant = a[0]; row.raw = a[1]; return { meta: { changes: 1 } }; }
           }
           return { meta: { changes: 0 } };
         },
@@ -1819,20 +1868,39 @@ async function suiteIron(W) {
     const DET = (time, uuid, amt = '54.05') => `19:10\nDetails\n-RM${amt}\nTransaction Type\nDuitNow QR\nMerchant\nSM TUN AMINAH\nPayment Method\neWallet Balance\nDate/Time\n10/10/2026 ${time}\nWallet Ref\n20261010111217000101001719169678833346\nStatus\nSuccessful\nTransaction No.\n${uuid}`;
     const U1 = 'a1b2c3d4-1111-2222-3333-444455556666', U2 = 'b1b2c3d4-1111-2222-3333-444455556666';
     const _log = console.log; console.log = () => {};   // ingestRaw 里 purgeInbox 之类的 log 别洗版
-    const sc = async (...pages) => { const e = mkTng(); for (const p of pages) await W.ingestRaw(e.env, p, '📷 截图', 't', {}); return e.ex.length; };
-    let A, B, C, D, E;
+    const run = async (...pages) => { const e = mkTng(); for (const p of pages) await W.ingestRaw(e.env, p, '📷 截图', 't', {}); return e.ex; };
+    const sc = async (...pages) => (await run(...pages)).length;
+    /* v10.41 真实那一对：同一笔 SM TUN AMINAH 的 QR 成功页 + 事后的 QR 详情页（两页都没 UUID、Wallet Ref 尾数还不一样） */
+    const QR_SUC = `18:55\nRM 54.05\nPaid\n+ 54 points\nMerchant\nSM TUN AMINAH\nTransaction Type\nDuitNow QR TNGD\nDate/Time\n10/10/2026 18:55:03\neWallet Ref No.\n20261010101100000100000TNGOW3MY17\n1916953323339\nPayment Method\neWallet Balance\nDone`;
+    const QR_DET = `19:37\nDetails\n-RM54.05\n+54 points\nTransaction Type\nDuitNow QR TNGD\nMerchant\nSM TUN AMINAH\nPayment Details\nPayment - SM TUN AMINAH\nPayment Method\neWallet Balance\nDate/Time\n10/10/2026 18:55:03\nWallet Ref\n20261010101100000100000TNGOW3MY17191\n6953328927\nStatus\nSuccessful\nTransaction No.\n20261010TNGDMYNB030OQRmlp34u9\n1`;
+    /* 转账成功页（Transferred / Receiver，没 ref）+ 转账详情页（有 UUID） */
+    const P2P_SUC = (who) => `12:15\nRM 185.00\nTransferred\nReceiver\n${who}\nRemark\n${who}\nDate & Time\n08/10/2026 12:15:30\nDone`;
+    const P2P_DET = (who, time, uuid) => `12:20\nDetails\n-RM185.00\nTransaction Type\nTransfer to Wallet\nTransfer To\n${who}\nPayment Method\neWallet Balance\nDate/Time\n08/10/2026 ${time}\nWallet Ref\n20261008111217000101001719169678800001\nStatus\nSuccessful\nTransaction No.\n${uuid}`;
+    /* 成功页读不到商家（OCR 把标签/值分两栏读，Merchant 下一行变成 Transaction Type）→ 只剩通用名 */
+    const SUC_NONAME = `18:55\nRM 54.05\nPaid\nMerchant\nTransaction Type\nDate/Time\neWallet Ref No.\nPayment Method\n10/10/2026 18:55:03\neWallet Balance\nDone`;
+    let A, B, C, D, E, F, G, H, I;
     try {
       A = await sc(SUC, DET('18:55:03', U1));          // 先成功页、后详情页
       B = await sc(DET('18:55:03', U1), SUC);          // 先详情页、后成功页
       C = await sc(SUC, DET('18:55:05', U1));          // 两页秒数差 2 秒
       D = await sc(DET('18:55:03', U1), DET('18:55:40', U2));   // 一分钟内两笔不同付款、都截详情页
       E = await sc(SUC, DET('19:05:03', U1));          // 同金额、隔 10 分钟 = 另一笔
+      F = await sc(QR_SUC, QR_DET);                    // 真实那一对（QR 成功页 + QR 详情页）
+      G = await sc(P2P_SUC('KUA KIM SIA'), P2P_DET('KUA KIM SIA', '12:15:30', U1));   // 转账成功页 + 转账详情页
+      H = await sc(P2P_SUC('KUA KIM SIA'), P2P_DET('LIEW XIN YI', '12:15:50', U2));   // 同金额、20 秒内、但转给不同的人 → 两笔
+      I = await run(SUC_NONAME, QR_DET);               // 先截的那张没读到商家 → 后截详情页补上名字
     } finally { console.log = _log; }
     A === 1 ? ok('先成功页、后详情页（同一笔）→ 只记 1 笔') : bad('同一笔截两页变成两笔', `${A} 笔`);
     B === 1 ? ok('先详情页、后成功页（同一笔）→ 只记 1 笔') : bad('同一笔截两页变成两笔（反方向）', `${B} 笔`);
     C === 1 ? ok('两页秒数差 2 秒 → 仍认得是同一笔') : bad('秒数差一点就对不上', `${C} 笔`);
     D === 2 ? ok('一分钟内两笔不同付款（都截详情页、UUID 不同）→ 2 笔，没误并') : bad('两笔真的不同的付款被误并', `${D} 笔`);
     E === 2 ? ok('同金额、隔 10 分钟 → 2 笔（不是同一笔）') : bad('隔很久的同金额付款被误并', `${E} 笔`);
+    F === 1 ? ok('真实那一对：QR 成功页 + QR 详情页（SM TUN AMINAH RM54.05）→ 1 笔') : bad('真实 QR 成功页 + 详情页变两笔', `${F} 笔`);
+    G === 1 ? ok('转账成功页（Receiver）+ 转账详情页（Transfer To、有 UUID）→ 1 笔') : bad('转账两页变两笔', `${G} 笔`);
+    H === 2 ? ok('同金额、20 秒内、但转给不同的人（KUA KIM SIA / LIEW XIN YI）→ 2 笔，名字锁挡住误并') : bad('不同人被误并成一笔（名字锁没生效）', `${H} 笔`);
+    (I.length === 1 && I[0].merchant === 'SM TUN AMINAH')
+      ? ok('先截的那张没读到商家（TnG Transfer）→ 后截详情页时补上「SM TUN AMINAH」，仍 1 笔')
+      : bad('补商家名没生效', JSON.stringify(I.map(x => x.merchant)));
   }
 
   head('§D1g OCBC 存款 → Refund 收入（v10.21）');
