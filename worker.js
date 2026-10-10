@@ -16,7 +16,7 @@
    （先留着旧值当 fallback，是为了让你「先部署、再设 secret」也不会整个 app 401 掉。） */
 const TOKEN_DEFAULT = "";
 const appToken = (env) => env.APP_TOKEN || TOKEN_DEFAULT;
-const WORKER_VER = "v10.39";   // 改这个档就顺手 +1，方便对版本
+const WORKER_VER = "v10.40";   // 改这个档就顺手 +1，方便对版本
 
 // 背景图上限（解码后字节）。前端 compressImage 目标 260KB，这里留一倍余量。
 const MAX_BG_BYTES = 600 * 1024;
@@ -4763,6 +4763,41 @@ function parseRaw(raw, from) {
         收件箱照样标「已记录」「重复」，账其实一笔都没进去）
    两种长得一模一样 → 你看到「重复」就查不下去了。现在：撞到的是哪一笔、指纹是什么，
    全部写进收件箱那一行；②那种还会掉进「读不到」（红角标），不会再假装记好了。 */
+/* ═══ v10.40 TnG「同一笔、不同页面」去重 ═══
+   同一笔 TnG 付款有两种页面可截：
+     · 付完立刻弹的「成功页」(Paid / Transferred)：没有 UUID → 指纹 tng:shot:<时间到秒>:<金额>
+     · 事后从交易记录点开的「详情页」：有 UUID → 指纹 tng:<UUID>
+   两个指纹对不上 → 光靠 hash UNIQUE 会记成两笔。
+   两页共有、而且是机器打的稳定值：日期时间(到秒) + 金额 → 拿它们对。
+   ⚠️ 只合并「一边是成功页、一边是详情页」：
+      两张都是详情页、UUID 不同 = 真的两笔（例如一分钟内付两次 RM5），绝不能并；
+      两张都是成功页 = 时间+金额一样指纹就一样，本来就被 hash 挡掉，不用这里管。
+   时间容差 60 秒：防两页显示的秒数差一两秒（一页取下单时间、一页取入账时间）。
+   要误并只可能是「一分钟内、同金额、一笔截成功页另一笔截详情页」—— 极少，而且通知会写
+   「跳过 1 笔（记过了）」，看得到、可以手动补。 */
+const TNG_TWIN_MS = 60 * 1000;
+async function tngTwin(env, r) {
+  if (!r || r.source !== "tng") return null;
+  const t = Date.parse(r.ts); if (!Number.isFinite(t)) return null;
+  const isShot = String(r.hash || "").startsWith("tng:shot:");
+  const sg = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(0, 19) + "+08:00";   // TnG 的 ts 一律存 +08:00，字串可直接比大小
+  try {
+    const res = await env.DB.prepare(
+      "SELECT ts, amount, currency, merchant, hash, source FROM expenses WHERE source='tng' AND ts>=? AND ts<=?"
+    ).bind(sg(t - TNG_TWIN_MS), sg(t + TNG_TWIN_MS)).all();
+    for (const o of (res && res.results) || []) {
+      /* SQL 只是粗筛；下面每个条件在 JS 里再验一次（不靠 SQL 的字串比较、也不怕时区写法不同） */
+      if (o.source && o.source !== "tng") continue;
+      if (!o.hash || o.hash === r.hash) continue;   // 同指纹交给 INSERT OR IGNORE
+      if ((o.currency || "MYR") !== (r.currency || "MYR")) continue;
+      if (Math.abs(Number(o.amount) - Number(r.amount)) > 0.005) continue;
+      const ot = Date.parse(o.ts); if (!Number.isFinite(ot) || Math.abs(ot - t) > TNG_TWIN_MS) continue;
+      if (String(o.hash).startsWith("tng:shot:") === isShot) continue;   // 同一种页面 = 真的两笔
+      return o;
+    }
+  } catch (e) { console.log("tng twin:", e.message); }
+  return null;
+}
 async function skipNote(env, r) {
   const me = `${r.currency} ${Number(r.amount).toFixed(2)}`;
   try {
@@ -4870,6 +4905,14 @@ async function ingestRaw(env, raw, from, subject, opts) {
   const savedRows = [];
   const notes = [];                   // v10.12 没记成的每一笔，各自写一句为什么
   for (const r of rows) {
+    /* v10.40 TnG「同一笔、不同页面」：付款成功页 + 事后的交易详情页 → 只算一笔（见 tngTwin）。
+       跳过时把这条收件箱记录的指纹改成那一笔的指纹，删账时才会连这张截图的记录一起清掉。 */
+    const twin = await tngTwin(env, r);
+    if (twin) {
+      notes.push(`↩︎ ${r.currency} ${Number(r.amount).toFixed(2)} 没再记：同一笔 TnG 已经从另一页记过（${String(twin.ts).slice(5, 16).replace("T", " ")} · ${twin.merchant || "?"}）`);
+      r.hash = twin.hash;
+      continue;
+    }
     /** @type {any} */ let category = null;
     /** @type {any} */ let subCat = null;
     try {

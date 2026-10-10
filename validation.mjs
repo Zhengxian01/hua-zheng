@@ -1793,6 +1793,48 @@ async function suiteIron(W) {
      使用者要求：OCBC「Deposit in your account」这类进账没有商家，一律记成商家名 "Refund"、type income
      （跟 MariBank/PayLah 退款同一套收入破例，可开抵扣）。日期在 `Reference: 06/08/26`（DD/MM/YY，不是参考号）。
      正反都钉：① 真样本逐字；② 卡消费/提款不准被它吃；③ DD/MM/YY 日期解对（别跑到别的月）。 */
+  /* ── §D1t v10.40 TnG 同一笔、不同页面（付款成功页 + 事后详情页）只算一笔 ──
+     成功页没 UUID（指纹 tng:shot:时间:金额），详情页有 UUID（指纹 tng:UUID）→ hash 对不上。
+     靠「日期时间(到秒) + 金额，一边成功页一边详情页」对撞。但两张都是详情页、UUID 不同 = 真的两笔，绝不能并。 */
+  head('§D1t TnG 成功页 + 详情页 = 同一笔（v10.40）');
+  if (typeof W.ingestRaw !== 'function') { console.log(`${L.warn}  §D1t 跳过：worker 没导出 ingestRaw${L.off}`); }
+  else {
+    const mkTng = () => {
+      const ex = [];
+      const prepare = (sql) => ({ bind: (...a) => ({
+        run: async () => {
+          if (/INSERT\s+OR\s+IGNORE\s+INTO\s+expenses/i.test(sql)) {
+            const [ts, amount, currency, merchant, card_last4, source, raw, hash] = a;
+            if (ex.some(e => e.hash === hash)) return { meta: { changes: 0 } };
+            ex.push({ ts, amount, currency, merchant, card_last4, source, raw, hash }); return { meta: { changes: 1, last_row_id: ex.length } };
+          }
+          return { meta: { changes: 0 } };
+        },
+        first: async () => (/WHERE hash=\?/i.test(sql) ? (ex.find(e => e.hash === a[0]) || null) : null),
+        all: async () => (/FROM expenses WHERE source='tng'/i.test(sql) ? { results: ex.filter(e => e.source === 'tng' && e.ts >= a[0] && e.ts <= a[1]) } : { results: [] }),
+      }), all: async () => ({ results: [] }), first: async () => null, run: async () => ({ meta: {} }) });
+      return { env: { DB: { prepare } }, ex };
+    };
+    const SUC = `18:55\nRM 54.05\nPaid\nMerchant\nSM TUN AMINAH\nTransaction Type\nDuitNow QR TNGD\nDate/Time\n10/10/2026 18:55:03\neWallet Ref No.\n20261010101100000100000TNGOW3MY17\n1916953323339\nPayment Method\neWallet Balance\nDone`;
+    const DET = (time, uuid, amt = '54.05') => `19:10\nDetails\n-RM${amt}\nTransaction Type\nDuitNow QR\nMerchant\nSM TUN AMINAH\nPayment Method\neWallet Balance\nDate/Time\n10/10/2026 ${time}\nWallet Ref\n20261010111217000101001719169678833346\nStatus\nSuccessful\nTransaction No.\n${uuid}`;
+    const U1 = 'a1b2c3d4-1111-2222-3333-444455556666', U2 = 'b1b2c3d4-1111-2222-3333-444455556666';
+    const _log = console.log; console.log = () => {};   // ingestRaw 里 purgeInbox 之类的 log 别洗版
+    const sc = async (...pages) => { const e = mkTng(); for (const p of pages) await W.ingestRaw(e.env, p, '📷 截图', 't', {}); return e.ex.length; };
+    let A, B, C, D, E;
+    try {
+      A = await sc(SUC, DET('18:55:03', U1));          // 先成功页、后详情页
+      B = await sc(DET('18:55:03', U1), SUC);          // 先详情页、后成功页
+      C = await sc(SUC, DET('18:55:05', U1));          // 两页秒数差 2 秒
+      D = await sc(DET('18:55:03', U1), DET('18:55:40', U2));   // 一分钟内两笔不同付款、都截详情页
+      E = await sc(SUC, DET('19:05:03', U1));          // 同金额、隔 10 分钟 = 另一笔
+    } finally { console.log = _log; }
+    A === 1 ? ok('先成功页、后详情页（同一笔）→ 只记 1 笔') : bad('同一笔截两页变成两笔', `${A} 笔`);
+    B === 1 ? ok('先详情页、后成功页（同一笔）→ 只记 1 笔') : bad('同一笔截两页变成两笔（反方向）', `${B} 笔`);
+    C === 1 ? ok('两页秒数差 2 秒 → 仍认得是同一笔') : bad('秒数差一点就对不上', `${C} 笔`);
+    D === 2 ? ok('一分钟内两笔不同付款（都截详情页、UUID 不同）→ 2 笔，没误并') : bad('两笔真的不同的付款被误并', `${D} 笔`);
+    E === 2 ? ok('同金额、隔 10 分钟 → 2 笔（不是同一笔）') : bad('隔很久的同金额付款被误并', `${E} 笔`);
+  }
+
   head('§D1g OCBC 存款 → Refund 收入（v10.21）');
   {
     // ① 逐字抄真实 OCBC 存款邮件（含结尾防诈骗那段，验它不干扰）
